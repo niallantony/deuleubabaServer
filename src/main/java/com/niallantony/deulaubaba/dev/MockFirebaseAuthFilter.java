@@ -7,42 +7,33 @@ import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.context.annotation.Profile;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Component;
 import org.springframework.web.filter.OncePerRequestFilter;
 
 import java.io.IOException;
+import java.util.List;
 
+@Slf4j
 @Component
 @Profile("dev")
 public class MockFirebaseAuthFilter extends OncePerRequestFilter {
-    private final RoleRepository roleRepository;
 
-    public MockFirebaseAuthFilter(RoleRepository roleRepository) {
-        this.roleRepository = roleRepository;
+    public MockFirebaseAuthFilter() {
     }
 
     @Override
     protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response, FilterChain filterChain) throws ServletException, IOException {
         String authHeader = request.getHeader("Authorization");
         if (authHeader == null || !authHeader.startsWith("Bearer ")) {
-            Long fakeUid = 12345L;
-            String fakeEmail = "mock@example.com";
-            String fakeUsername = "mock-user";
-            String fakeUserType = "교사";
+           String fakeUid = "1";
 
-            Role userRole = roleRepository.findByName("ROLE_USER")
-                    .orElseThrow(() -> new RuntimeException("User Role not found"));
+            MockFirebaseUser user = new MockFirebaseUser();
+            user.setUid(fakeUid);
 
-            User user = new User();
-            user.setId(fakeUid);
-            user.setEmail(fakeEmail);
-            user.setUsername(fakeUsername);
-            user.setUserType(fakeUserType);
-            user.getRoles().add(userRole);
-
-            FirebaseAuthenticationToken authenticationToken = new FirebaseAuthenticationToken(user, null, user.authorities());
+            FirebaseAuthenticationToken authenticationToken = new FirebaseAuthenticationToken(user, null, List.of());
             SecurityContextHolder.getContext().setAuthentication(authenticationToken);
         }
 

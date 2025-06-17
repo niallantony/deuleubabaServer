@@ -1,18 +1,24 @@
 package com.niallantony.deulaubaba;
 
-import jakarta.persistence.Column;
-import jakarta.persistence.Entity;
-import jakarta.persistence.Id;
+import jakarta.persistence.*;
 import jakarta.validation.constraints.NotNull;
-import lombok.Data;
+import lombok.*;
 
-@Data
+import java.util.Dictionary;
+import java.util.HashSet;
+import java.util.Set;
+
+@Getter
+@Setter
+@NoArgsConstructor
 @Entity
 public class Student {
+    @EqualsAndHashCode.Include
     @Id
     @Column(name="student_id")
     private String studentId;
 
+    @EqualsAndHashCode.Include
     @NotNull
     @Column(nullable = false)
     private String name;
@@ -36,9 +42,11 @@ public class Student {
 
     private String communicationDetails;
 
-    private String chanllengesDetails;
+    private String challengesDetails;
 
+    @ManyToMany(mappedBy = "students")
+    private Set<User> users = new HashSet<>();
 
-
-
+    @OneToMany(mappedBy = "student")
+    private Set<DictionaryEntry> dictionaries = new HashSet<>();
 }

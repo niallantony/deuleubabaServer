@@ -3,30 +3,33 @@ package com.niallantony.deulaubaba;
 import jakarta.persistence.*;
 import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.NotNull;
-import lombok.Data;
-import lombok.Getter;
-import lombok.NoArgsConstructor;
-import lombok.Setter;
+import lombok.*;
 import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
 
 import java.util.Collection;
+import java.util.Collections;
 import java.util.HashSet;
 import java.util.Set;
-import java.util.stream.Collectors;
 
-@Data
+@Getter
+@Setter
 @Entity
 @NoArgsConstructor
-@Table(name="app_user", uniqueConstraints = @UniqueConstraint(columnNames = {"id", "username", "email"}))
+@Table(name="app_user", uniqueConstraints = @UniqueConstraint(columnNames = { "username", "email"}))
 public class User {
 
+    @EqualsAndHashCode.Include
     @Id
-    private Long id;
+    @Column(nullable = false, updatable = false)
+    private String id;
+
+    @EqualsAndHashCode.Include
+    @NotNull
+    private String username;
 
     @NotNull
-    @Getter @Setter
-    private String username;
+    private String name;
 
     @NotNull
     @Email
@@ -35,17 +38,20 @@ public class User {
     @NotNull
     private String userType;
 
-    @ManyToMany(fetch = FetchType.EAGER)
+    @ManyToOne(fetch = FetchType.EAGER)
+    @JoinColumn(name = "role_id", referencedColumnName = "id")
+    private Role role;
+
+    @ManyToMany(fetch = FetchType.LAZY)
     @JoinTable(
-            name="user_roles",
+            name="user_students",
             joinColumns = @JoinColumn(name = "user_id", referencedColumnName = "id"),
-            inverseJoinColumns = @JoinColumn(name= "role_id", referencedColumnName = "id")
+            inverseJoinColumns = @JoinColumn(name = "student_id")
     )
-    private Set<Role> roles = new HashSet<>();
+    private Set<Student> students = new HashSet<>();
 
     public Collection<? extends GrantedAuthority> authorities() {
-        return roles.stream()
-                .map(role -> new SimpleGrantedAuthority(role.getName()))
-                .collect(Collectors.toSet());
+        return Collections.singleton(new SimpleGrantedAuthority(role.getName()));
     }
+
 }
