@@ -4,6 +4,7 @@ import lombok.Data;
 
 @Data
 public class StudentRequest {
+    private String uid;
     private String name;
     private String school;
     private Integer age;
