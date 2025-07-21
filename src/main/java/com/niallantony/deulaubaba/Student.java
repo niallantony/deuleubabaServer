@@ -1,5 +1,6 @@
 package com.niallantony.deulaubaba;
 
+import com.fasterxml.jackson.annotation.JsonBackReference;
 import jakarta.persistence.*;
 import jakarta.validation.constraints.NotNull;
 import lombok.*;
@@ -45,8 +46,10 @@ public class Student {
     private String challengesDetails;
 
     @ManyToMany(mappedBy = "students")
+    @JsonBackReference
     private Set<User> users = new HashSet<>();
 
     @OneToMany(mappedBy = "student")
+    @JsonBackReference
     private Set<DictionaryEntry> dictionaries = new HashSet<>();
 }

@@ -1,5 +1,6 @@
 package com.niallantony.deulaubaba;
 
+import com.fasterxml.jackson.annotation.JsonManagedReference;
 import jakarta.persistence.*;
 import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.NotNull;
@@ -26,6 +27,7 @@ public class User {
 
     @EqualsAndHashCode.Include
     @NotNull
+    @Column(unique = true, nullable = false)
     private String username;
 
     @NotNull
@@ -38,6 +40,8 @@ public class User {
     @NotNull
     private String userType;
 
+    private String imagesrc;
+
     @ManyToOne(fetch = FetchType.EAGER)
     @JoinColumn(name = "role_id", referencedColumnName = "id")
     private Role role;
@@ -48,6 +52,7 @@ public class User {
             joinColumns = @JoinColumn(name = "user_id", referencedColumnName = "id"),
             inverseJoinColumns = @JoinColumn(name = "student_id")
     )
+    @JsonManagedReference
     private Set<Student> students = new HashSet<>();
 
     public Collection<? extends GrantedAuthority> authorities() {

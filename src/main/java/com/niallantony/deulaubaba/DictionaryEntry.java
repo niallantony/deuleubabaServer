@@ -1,7 +1,10 @@
 package com.niallantony.deulaubaba;
 
+import com.fasterxml.jackson.annotation.JsonManagedReference;
 import jakarta.persistence.*;
 import lombok.*;
+
+import java.util.Set;
 
 @Getter
 @Setter
@@ -19,16 +22,21 @@ public class DictionaryEntry {
 
     @Column(nullable = false)
     @Enumerated(EnumType.STRING)
-    private ExpressionType expressionType;
+    private ExpressionType type;
 
     @Column(nullable = false)
     private String title;
 
-    @Column(nullable = false)
-    @Enumerated(EnumType.STRING)
-    private CommunicationCategory category;
+    @ManyToMany(fetch = FetchType.EAGER)
+    @JoinTable(
+            name = "student_communication_category",
+            joinColumns = @JoinColumn(name = "entry_id", referencedColumnName = "id"),
+            inverseJoinColumns = @JoinColumn(name = "category_id", referencedColumnName = "id")
+    )
+    @JsonManagedReference
+    private Set<CommunicationCategory> category;
 
-    private String imageSrc;
+    private String imgSrc;
 
     private String description;
 
