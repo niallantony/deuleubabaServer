@@ -1,8 +1,5 @@
 package com.niallantony.deulaubaba.dev;
 
-import com.niallantony.deulaubaba.Role;
-import com.niallantony.deulaubaba.User;
-import com.niallantony.deulaubaba.data.RoleRepository;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;

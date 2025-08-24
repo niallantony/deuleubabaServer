@@ -1,8 +1,8 @@
 package com.niallantony.deulaubaba.services;
 
-import com.niallantony.deulaubaba.Role;
-import com.niallantony.deulaubaba.Student;
-import com.niallantony.deulaubaba.User;
+import com.niallantony.deulaubaba.domain.Role;
+import com.niallantony.deulaubaba.domain.Student;
+import com.niallantony.deulaubaba.domain.User;
 import com.niallantony.deulaubaba.data.RoleRepository;
 import com.niallantony.deulaubaba.data.StudentRepository;
 import com.niallantony.deulaubaba.data.UserRepository;

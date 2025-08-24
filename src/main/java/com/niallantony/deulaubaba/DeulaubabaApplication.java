@@ -1,6 +1,7 @@
 package com.niallantony.deulaubaba;
 
 import com.niallantony.deulaubaba.data.RoleRepository;
+import com.niallantony.deulaubaba.domain.Role;
 import org.springframework.boot.CommandLineRunner;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;

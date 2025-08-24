@@ -1,11 +1,10 @@
-package com.niallantony.deulaubaba;
+package com.niallantony.deulaubaba.domain;
 
 import com.fasterxml.jackson.annotation.JsonBackReference;
 import jakarta.persistence.*;
 import jakarta.validation.constraints.NotNull;
 import lombok.*;
 
-import java.util.Dictionary;
 import java.util.HashSet;
 import java.util.Set;
 

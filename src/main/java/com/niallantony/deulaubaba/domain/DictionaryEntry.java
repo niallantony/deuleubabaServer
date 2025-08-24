@@ -1,4 +1,4 @@
-package com.niallantony.deulaubaba;
+package com.niallantony.deulaubaba.domain;
 
 import com.fasterxml.jackson.annotation.JsonManagedReference;
 import jakarta.persistence.*;

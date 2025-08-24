@@ -1,6 +1,6 @@
 package com.niallantony.deulaubaba.data;
 
-import com.niallantony.deulaubaba.Student;
+import com.niallantony.deulaubaba.domain.Student;
 import com.niallantony.deulaubaba.dto.StudentIdAvatar;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.CrudRepository;

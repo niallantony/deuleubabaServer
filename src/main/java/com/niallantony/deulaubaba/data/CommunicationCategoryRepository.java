@@ -1,7 +1,7 @@
 package com.niallantony.deulaubaba.data;
 
-import com.niallantony.deulaubaba.CommunicationCategory;
-import com.niallantony.deulaubaba.CommunicationCategoryLabel;
+import com.niallantony.deulaubaba.domain.CommunicationCategory;
+import com.niallantony.deulaubaba.domain.CommunicationCategoryLabel;
 import org.springframework.data.jpa.repository.JpaRepository;
 
 import java.util.Optional;

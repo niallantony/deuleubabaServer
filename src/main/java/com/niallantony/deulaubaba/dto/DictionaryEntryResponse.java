@@ -1,7 +1,7 @@
 package com.niallantony.deulaubaba.dto;
 
-import com.niallantony.deulaubaba.CommunicationCategoryLabel;
-import com.niallantony.deulaubaba.ExpressionType;
+import com.niallantony.deulaubaba.domain.CommunicationCategoryLabel;
+import com.niallantony.deulaubaba.domain.ExpressionType;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 

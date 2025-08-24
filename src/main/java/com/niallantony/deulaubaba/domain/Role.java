@@ -1,11 +1,9 @@
-package com.niallantony.deulaubaba;
+package com.niallantony.deulaubaba.domain;
 
 import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
-
-import java.util.Set;
 
 @Data
 @Entity

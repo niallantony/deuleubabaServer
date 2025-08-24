@@ -1,6 +1,6 @@
 package com.niallantony.deulaubaba.dto;
 
-import com.niallantony.deulaubaba.ExpressionType;
+import com.niallantony.deulaubaba.domain.ExpressionType;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
