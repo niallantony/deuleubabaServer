@@ -9,7 +9,8 @@ import java.util.Set;
 
 @Data
 @AllArgsConstructor
-public class DictionaryPostRequest implements DictionaryRequest {
+public class DictionaryPutRequest implements DictionaryRequest {
+    private Long id;
     private String studentId;
     private ExpressionType type;
     private String title;

@@ -1,5 +1,6 @@
 package com.niallantony.deulaubaba.services;
 
+import com.niallantony.deulaubaba.domain.HasImageSrc;
 import com.niallantony.deulaubaba.domain.Student;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -22,14 +23,13 @@ public class FileStorageService {
         return filename;
     }
 
-    public void deleteImage(Student student) {
-        String oldAvatar = student.getImagesrc();
+    public void deleteImage(HasImageSrc data) {
+        String oldAvatar = data.getImagesrc();
         if (oldAvatar != null && !oldAvatar.isEmpty()) {
             Path oldPath = Paths.get("uploads", oldAvatar);
             try {
                 Files.deleteIfExists(oldPath);
             } catch (IOException e) {
-                // log and continue, don’t break the whole update
                 log.warn("Failed to delete old avatar: {}", oldPath, e);
             }
         }

@@ -43,4 +43,23 @@ public class DictionaryController {
         }
         return ResponseEntity.ok(dictionaryServices.addDictionaryEntryWithImage(dictionaryEntry, imageFile));
     }
+    @PutMapping(path = "/{id}")
+    @ResponseStatus(HttpStatus.CREATED)
+    public ResponseEntity<?> updateStudent(
+            @PathVariable String id,
+            @RequestPart("data") String request,
+            @RequestPart(value = "image", required = false) MultipartFile image) throws IOException {
+        if (image != null) {
+            return ResponseEntity.ok(dictionaryServices.updateDictionaryEntry(request, image));
+        }
+        return ResponseEntity.ok(dictionaryServices.updateDictionaryEntry(request));
+    }
+
+    @DeleteMapping(path = "/{id}")
+    @ResponseStatus(HttpStatus.NO_CONTENT)
+    public ResponseEntity<?> deleteStudent(@PathVariable String id) {
+        dictionaryServices.deleteDictionaryEntry(id);
+        return ResponseEntity.noContent().build();
+    }
+
 }

@@ -99,18 +99,7 @@ public class StudentServices {
 
 
         studentRepository.save(student);
-        return new StudentDTO(
-                student.getStudentId(),
-                student.getName(),
-                student.getSchool(),
-                student.getAge(),
-                student.getGrade(),
-                student.getSetting(),
-                student.getDisability(),
-                student.getImagesrc(),
-                student.getCommunicationDetails(),
-                student.getChallengesDetails()
-        );
+        return getStudentDTO(student);
     }
 
     public StudentDTO createStudent(String request, MultipartFile image) throws UserNotAuthorizedException, IOException {
@@ -121,67 +110,53 @@ public class StudentServices {
         student.setImagesrc(filename);
 
         studentRepository.save(student);
-        return new StudentDTO(
-                student.getStudentId(),
-                student.getName(),
-                student.getSchool(),
-                student.getAge(),
-                student.getGrade(),
-                student.getSetting(),
-                student.getDisability(),
-                student.getImagesrc(),
-                student.getCommunicationDetails(),
-                student.getChallengesDetails()
-        );
+        return getStudentDTO(student);
     }
 
     @Transactional
     public StudentDTO updateStudent(String studentId, String request) throws UserNotAuthorizedException, ResourceNotFoundException, JsonProcessingException {
         StudentRequest studentRequest = jacksonObjectMapper.readValue(request, StudentRequest.class);
-       Student student = studentRepository.findById(studentId).orElseThrow(() -> new ResourceNotFoundException("Student not found" + studentId));
-       User user = userRepository.findById(studentRequest.getUid()).orElseThrow(() -> new UserNotAuthorizedException("User not found" + studentRequest.getUid()));
-       if (!student.getUsers().contains(user)) {
-           throw new UserNotAuthorizedException("Unauthorized Access");
-       }
+        Student student = getAuthorisedStudent(studentId, studentRequest);
 
-       student.setName(studentRequest.getName());
-       student.setSchool(studentRequest.getSchool());
-       student.setAge(studentRequest.getAge());
-       student.setGrade(studentRequest.getGrade());
-       student.setDisability(studentRequest.getDisability());
-       student.setSetting(studentRequest.getSetting());
-       student.setCommunicationDetails(studentRequest.getCommunicationDetails());
-       student.setChallengesDetails(studentRequest.getChallengesDetails());
+       applyUpdates(student, studentRequest);
 
        studentRepository.save(student);
-
-       return new StudentDTO(
-               student.getStudentId(),
-               student.getName(),
-               student.getSchool(),
-               student.getAge(),
-               student.getGrade(),
-               student.getSetting(),
-               student.getDisability(),
-               student.getImagesrc(),
-               student.getCommunicationDetails(),
-               student.getChallengesDetails()
-       );
+       return getStudentDTO(student);
     }
 
     @Transactional
     public StudentDTO updateStudent(String studentId, String request, MultipartFile image) throws UserNotAuthorizedException, ResourceNotFoundException, IOException {
         StudentRequest studentRequest = jacksonObjectMapper.readValue(request, StudentRequest.class);
-        Student student = studentRepository.findById(studentId).orElseThrow(() -> new ResourceNotFoundException("Student not found" + studentId));
-        User user = userRepository.findById(studentRequest.getUid()).orElseThrow(() -> new UserNotAuthorizedException("User not found" + studentRequest.getUid()));
-        if (!student.getUsers().contains(user)) {
-            throw new UserNotAuthorizedException("Unauthorized Access");
-        }
+        Student student = getAuthorisedStudent(studentId, studentRequest);
         fileStorageService.deleteImage(student);
 
         String filename = fileStorageService.storeImage(image);
 
         student.setImagesrc(filename);
+        applyUpdates(student, studentRequest);
+
+        studentRepository.save(student);
+
+        return getStudentDTO(student);
+    }
+
+    private Student getAuthorisedStudent(String studentId, StudentRequest studentRequest)
+            throws UserNotAuthorizedException, ResourceNotFoundException {
+
+        Student student = studentRepository.findById(studentId)
+                .orElseThrow(() -> new ResourceNotFoundException("Student not found " + studentId));
+
+        User user = userRepository.findById(studentRequest.getUid())
+                .orElseThrow(() -> new UserNotAuthorizedException("User not found " + studentRequest.getUid()));
+
+        if (!student.getUsers().contains(user)) {
+            throw new UserNotAuthorizedException("Unauthorized Access");
+        }
+
+        return student;
+    }
+    
+    private void applyUpdates(Student student, StudentRequest studentRequest) {
         student.setName(studentRequest.getName());
         student.setSchool(studentRequest.getSchool());
         student.setAge(studentRequest.getAge());
@@ -190,9 +165,9 @@ public class StudentServices {
         student.setSetting(studentRequest.getSetting());
         student.setCommunicationDetails(studentRequest.getCommunicationDetails());
         student.setChallengesDetails(studentRequest.getChallengesDetails());
-
-        studentRepository.save(student);
-
+    }
+    
+    private StudentDTO getStudentDTO(Student student) {
         return new StudentDTO(
                 student.getStudentId(),
                 student.getName(),

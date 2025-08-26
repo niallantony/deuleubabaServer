@@ -11,7 +11,7 @@ import java.util.Set;
 @NoArgsConstructor
 @AllArgsConstructor
 @Entity
-public class DictionaryEntry {
+public class DictionaryEntry implements HasImageSrc{
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
@@ -40,5 +40,9 @@ public class DictionaryEntry {
 
     private String description;
 
+    @Override
+    public String getImagesrc() {
+        return imgSrc;
+    }
 
 }
