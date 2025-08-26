@@ -43,10 +43,9 @@ public class DictionaryController {
         }
         return ResponseEntity.ok(dictionaryServices.addDictionaryEntryWithImage(dictionaryEntry, imageFile));
     }
-    @PutMapping(path = "/{id}")
+    @PutMapping
     @ResponseStatus(HttpStatus.CREATED)
     public ResponseEntity<?> updateStudent(
-            @PathVariable String id,
             @RequestPart("data") String request,
             @RequestPart(value = "image", required = false) MultipartFile image) throws IOException {
         if (image != null) {

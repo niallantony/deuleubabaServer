@@ -108,7 +108,7 @@ public class DictionaryServices {
     public DictionaryEntry updateDictionaryEntry(String data) throws IOException {
         DictionaryPutRequest dictionaryPutRequest = jacksonObjectMapper.readValue(data, DictionaryPutRequest.class);
 
-        DictionaryEntry entry = dictionaryRepository.getReferenceById(dictionaryPutRequest.getId());
+        DictionaryEntry entry = dictionaryRepository.findById(dictionaryPutRequest.getId()).orElseThrow(() -> new ResourceNotFoundException("Entry Not Found"));
         assignChanges(entry, dictionaryPutRequest);
         dictionaryRepository.save(entry);
         return entry;
@@ -117,7 +117,7 @@ public class DictionaryServices {
     @Transactional
     public DictionaryEntry updateDictionaryEntry(String data, MultipartFile image) throws IOException {
         DictionaryPutRequest dictionaryPutRequest = jacksonObjectMapper.readValue(data, DictionaryPutRequest.class);
-        DictionaryEntry entry = dictionaryRepository.getReferenceById(dictionaryPutRequest.getId());
+        DictionaryEntry entry = dictionaryRepository.findById(dictionaryPutRequest.getId()).orElseThrow(() -> new ResourceNotFoundException("Entry Not Found"));
         try {
             String filename = fileStorageService.storeImage(image);
             fileStorageService.deleteImage(entry);
@@ -135,6 +135,10 @@ public class DictionaryServices {
         Long longId = Long.parseLong(id);
         if (!dictionaryRepository.existsById(longId)) {
             throw new ResourceNotFoundException("Dictionary Not Found");
+        }
+        DictionaryEntry entry = dictionaryRepository.getReferenceById(longId);
+        if (entry.getImgSrc() != null) {
+            fileStorageService.deleteImage(entry);
         }
         dictionaryRepository.deleteById(longId);
     }

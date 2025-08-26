@@ -29,7 +29,7 @@ public class DictionaryEntry implements HasImageSrc{
 
     @ManyToMany(fetch = FetchType.EAGER)
     @JoinTable(
-            name = "student_communication_category",
+            name = "entry_communication_category",
             joinColumns = @JoinColumn(name = "entry_id", referencedColumnName = "id"),
             inverseJoinColumns = @JoinColumn(name = "category_id", referencedColumnName = "id")
     )
