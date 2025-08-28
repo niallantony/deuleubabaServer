@@ -1,10 +1,17 @@
 package com.niallantony.deulaubaba.web;
 
+import com.niallantony.deulaubaba.data.UserRepository;
+import com.niallantony.deulaubaba.domain.User;
 import com.niallantony.deulaubaba.dto.*;
 import com.niallantony.deulaubaba.services.StudentServices;
+import jakarta.persistence.JoinTable;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
+import org.springframework.security.oauth2.jwt.Jwt;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
@@ -14,11 +21,14 @@ import java.util.List;
 @RestController
 @RequestMapping(path = "/student", produces = "application/json")
 public class StudentController {
+    private static final Logger log = LoggerFactory.getLogger(StudentController.class);
     private final StudentServices studentServices;
+    private final UserRepository userRepository;
 
     @Autowired
-    public StudentController(StudentServices studentServices) {
+    public StudentController(StudentServices studentServices, UserRepository userRepository) {
         this.studentServices = studentServices;
+        this.userRepository = userRepository;
     }
 
     @GetMapping
@@ -32,8 +42,11 @@ public class StudentController {
     }
 
     @GetMapping(path = "/all")
-    public ResponseEntity<List<StudentIdAvatar>> getStudents(@RequestParam String id) {
-        return ResponseEntity.ok(studentServices.getStudents(id));
+    public ResponseEntity<List<StudentIdAvatar>> getStudents(@AuthenticationPrincipal Jwt principal) {
+        String userId = (String) principal.getClaims().get("sub");
+        log.info("Get all students from user id {}", userId);
+        User user = userRepository.findByUsername(userId).orElseThrow();
+        return ResponseEntity.ok(studentServices.getStudents(userId));
     }
 
     @PostMapping

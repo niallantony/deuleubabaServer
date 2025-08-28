@@ -40,18 +40,7 @@ public class StudentServices {
     public StudentDTO getStudentById(String id) throws ResourceNotFoundException {
         Student student = studentRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Student not found" + id));
-        return new StudentDTO(
-                student.getStudentId(),
-                student.getName(),
-                student.getSchool(),
-                student.getAge(),
-                student.getGrade(),
-                student.getSetting(),
-                student.getDisability(),
-                student.getImagesrc(),
-                student.getCommunicationDetails(),
-                student.getChallengesDetails()
-        );
+        return getStudentDTO(student);
     }
 
     public List<UserAvatar> getStudentTeam(String id) throws ResourceNotFoundException {

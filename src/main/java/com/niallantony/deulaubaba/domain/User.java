@@ -18,12 +18,12 @@ import java.util.Set;
 @Entity
 @NoArgsConstructor
 @Table(name="app_user", uniqueConstraints = @UniqueConstraint(columnNames = { "username", "email"}))
-public class User {
+public class User implements HasImageSrc{
 
     @EqualsAndHashCode.Include
     @Id
     @Column(nullable = false, updatable = false)
-    private String id;
+    private String userId;
 
     @EqualsAndHashCode.Include
     @NotNull
@@ -31,8 +31,10 @@ public class User {
     private String username;
 
     @NotNull
+    @EqualsAndHashCode.Include
     private String name;
 
+    @EqualsAndHashCode.Include
     @NotNull
     @Email
     private String email;
@@ -49,7 +51,7 @@ public class User {
     @ManyToMany(fetch = FetchType.LAZY)
     @JoinTable(
             name="user_students",
-            joinColumns = @JoinColumn(name = "user_id", referencedColumnName = "id"),
+            joinColumns = @JoinColumn(name = "user_id", referencedColumnName = "userId"),
             inverseJoinColumns = @JoinColumn(name = "student_id")
     )
     @JsonManagedReference
