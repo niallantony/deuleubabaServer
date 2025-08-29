@@ -43,7 +43,7 @@ public class UserServices {
     }
 
     public UserDTO getUser(String id) {
-        User user = userRepository.findByUsername(id)
+        User user = userRepository.findByUserId(id)
                 .orElseThrow(() -> new ResourceNotFoundException("User Not Found"));
         return new UserDTO(
                 user.getName(),

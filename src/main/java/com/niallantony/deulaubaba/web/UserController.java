@@ -31,7 +31,6 @@ public class UserController {
     public ResponseEntity<UserDTO> getProfile(@AuthenticationPrincipal Jwt principal) {
 
         String userId = (String) principal.getClaims().get("sub");
-        log.info("userId = " + userId);
         return ResponseEntity.ok(userServices.getUser(userId));
     }
 

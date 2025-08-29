@@ -45,7 +45,7 @@ public class StudentController {
     public ResponseEntity<List<StudentIdAvatar>> getStudents(@AuthenticationPrincipal Jwt principal) {
         String userId = (String) principal.getClaims().get("sub");
         log.info("Get all students from user id {}", userId);
-        User user = userRepository.findByUsername(userId).orElseThrow();
+        User user = userRepository.findByUserId(userId).orElseThrow();
         return ResponseEntity.ok(studentServices.getStudents(userId));
     }
 
