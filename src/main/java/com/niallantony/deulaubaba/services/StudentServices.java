@@ -37,6 +37,12 @@ public class StudentServices {
         this.fileStorageService = fileStorageService;
     }
 
+    public StudentIdAvatar getStudentPreviewById(String id) throws ResourceNotFoundException {
+        Student student = studentRepository.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException("Student not found" + id));
+        return getStudentIdAvatar(student);
+    }
+
     public StudentDTO getStudentById(String id) throws ResourceNotFoundException {
         Student student = studentRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Student not found" + id));
@@ -44,6 +50,7 @@ public class StudentServices {
     }
 
     public List<UserAvatar> getStudentTeam(String id) throws ResourceNotFoundException {
+
        Student student = studentRepository.findById(id)
                .orElseThrow(() -> new ResourceNotFoundException("Student not found" + id));
        Set<User> users = student.getUsers();
@@ -82,30 +89,29 @@ public class StudentServices {
         return student;
     }
 
-    public StudentDTO createStudent(String request) throws UserNotAuthorizedException, JsonProcessingException {
+    public StudentDTO createStudent(String request, String userId) throws UserNotAuthorizedException, JsonProcessingException {
         StudentRequest studentRequest = jacksonObjectMapper.readValue(request, StudentRequest.class);
         Student student = extractStudent(studentRequest);
-
-
+        linkStudentToUser(student, userId);
         studentRepository.save(student);
         return getStudentDTO(student);
     }
 
-    public StudentDTO createStudent(String request, MultipartFile image) throws UserNotAuthorizedException, IOException {
+    public StudentDTO createStudent(String request, MultipartFile image, String userId) throws UserNotAuthorizedException, IOException {
         StudentRequest studentRequest = jacksonObjectMapper.readValue(request, StudentRequest.class);
         String filename = fileStorageService.storeImage(image);
 
         Student student = extractStudent(studentRequest);
         student.setImagesrc(filename);
-
+        linkStudentToUser(student, userId);
         studentRepository.save(student);
         return getStudentDTO(student);
     }
 
     @Transactional
-    public StudentDTO updateStudent(String studentId, String request) throws UserNotAuthorizedException, ResourceNotFoundException, JsonProcessingException {
+    public StudentDTO updateStudent(String studentId, String request, String userId) throws UserNotAuthorizedException, ResourceNotFoundException, JsonProcessingException {
         StudentRequest studentRequest = jacksonObjectMapper.readValue(request, StudentRequest.class);
-        Student student = getAuthorisedStudent(studentId, studentRequest);
+        Student student = getAuthorisedStudent(studentId, userId);
 
        applyUpdates(student, studentRequest);
 
@@ -114,9 +120,9 @@ public class StudentServices {
     }
 
     @Transactional
-    public StudentDTO updateStudent(String studentId, String request, MultipartFile image) throws UserNotAuthorizedException, ResourceNotFoundException, IOException {
+    public StudentDTO updateStudent(String studentId, String request, MultipartFile image, String userId) throws UserNotAuthorizedException, ResourceNotFoundException, IOException {
         StudentRequest studentRequest = jacksonObjectMapper.readValue(request, StudentRequest.class);
-        Student student = getAuthorisedStudent(studentId, studentRequest);
+        Student student = getAuthorisedStudent(studentId, userId);
         fileStorageService.deleteImage(student);
 
         String filename = fileStorageService.storeImage(image);
@@ -129,19 +135,15 @@ public class StudentServices {
         return getStudentDTO(student);
     }
 
-    private Student getAuthorisedStudent(String studentId, StudentRequest studentRequest)
+    private Student getAuthorisedStudent(String studentId, String userId)
             throws UserNotAuthorizedException, ResourceNotFoundException {
-
         Student student = studentRepository.findById(studentId)
                 .orElseThrow(() -> new ResourceNotFoundException("Student not found " + studentId));
-
-        User user = userRepository.findById(studentRequest.getUid())
-                .orElseThrow(() -> new UserNotAuthorizedException("User not found " + studentRequest.getUid()));
-
+        User user = userRepository.findByUserId(userId)
+                .orElseThrow(() -> new UserNotAuthorizedException("User not found " + userId));
         if (!student.getUsers().contains(user)) {
             throw new UserNotAuthorizedException("Unauthorized Access");
         }
-
         return student;
     }
     
@@ -156,7 +158,7 @@ public class StudentServices {
         student.setChallengesDetails(studentRequest.getChallengesDetails());
     }
     
-    private StudentDTO getStudentDTO(Student student) {
+    public StudentDTO getStudentDTO(Student student) {
         return new StudentDTO(
                 student.getStudentId(),
                 student.getName(),
@@ -171,5 +173,28 @@ public class StudentServices {
         );
     }
 
+    private StudentIdAvatar getStudentIdAvatar(Student student) {
+        return new StudentIdAvatar(
+                student.getStudentId(),
+                student.getName(),
+                student.getImagesrc()
+        );
+    }
+
+    public boolean studentBelongsToUser(String studentId, String userId) {
+        Student student = studentRepository.findById(studentId)
+                .orElseThrow(() -> new ResourceNotFoundException("Student not found " + studentId));
+        User user = userRepository.findByUserId(userId)
+                .orElseThrow(() -> new ResourceNotFoundException("User not found " + userId));
+        return student.getUsers().contains(user);
+    }
+
+    private void linkStudentToUser(Student student, String userId) {
+        User user = userRepository.findByUserId(userId)
+                .orElseThrow(() -> new ResourceNotFoundException("User Not Found"));
+        user.getStudents().add(student);
+        student.getUsers().add(user);
+        userRepository.save(user);
+    }
 
 }

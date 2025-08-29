@@ -8,16 +8,13 @@ import com.niallantony.deulaubaba.domain.User;
 import com.niallantony.deulaubaba.data.RoleRepository;
 import com.niallantony.deulaubaba.data.StudentRepository;
 import com.niallantony.deulaubaba.data.UserRepository;
-import com.niallantony.deulaubaba.dev.MockFirebaseUser;
-import com.niallantony.deulaubaba.dto.StudentCodeRequest;
+import com.niallantony.deulaubaba.dto.StudentDTO;
 import com.niallantony.deulaubaba.dto.UserDTO;
 import com.niallantony.deulaubaba.dto.UserRequest;
 import com.niallantony.deulaubaba.exceptions.ResourceNotFoundException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.security.core.Authentication;
-import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
 
@@ -31,15 +28,17 @@ public class UserServices {
     private final UserRepository userRepository;
     private final ObjectMapper jacksonObjectMapper;
     private final FileStorageService fileStorageService;
+    private final StudentServices studentServices;
 
 
     @Autowired
-    public UserServices(StudentRepository studentRepository, RoleRepository roleRepository, UserRepository userRepository, ObjectMapper jacksonObjectMapper, FileStorageService fileStorageService) {
+    public UserServices(StudentRepository studentRepository, RoleRepository roleRepository, UserRepository userRepository, ObjectMapper jacksonObjectMapper, FileStorageService fileStorageService, StudentServices studentServices) {
         this.studentRepository = studentRepository;
         this.roleRepository = roleRepository;
         this.userRepository = userRepository;
         this.jacksonObjectMapper = jacksonObjectMapper;
         this.fileStorageService = fileStorageService;
+        this.studentServices = studentServices;
     }
 
     public UserDTO getUser(String id) {
@@ -78,19 +77,15 @@ public class UserServices {
         return user;
     }
 
-    public String linkStudent(StudentCodeRequest request) {
-        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
-        MockFirebaseUser firebaseUser = (MockFirebaseUser) authentication.getPrincipal();
-
-        // Dev Only - Remove Later
-        User user = userRepository.findById(firebaseUser.getUid())
+    public StudentDTO linkStudent(String userId, String studentCode) {
+        User user = userRepository.findByUserId(userId)
                 .orElseThrow(() -> new ResourceNotFoundException("User Not Found"));
-        Student student = studentRepository.findById(request.getStudentCode())
+        Student student = studentRepository.findById(studentCode)
                 .orElseThrow(() -> new ResourceNotFoundException("Student Not Found"));
         user.getStudents().add(student);
         student.getUsers().add(user);
         userRepository.save(user);
-        return "Student Linked" + student.getStudentId();
+        return studentServices.getStudentDTO(student);
     }
 
     private User newUser (String userId, UserRequest userRequest) {
