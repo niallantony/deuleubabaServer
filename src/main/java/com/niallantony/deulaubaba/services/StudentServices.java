@@ -70,11 +70,11 @@ public class StudentServices {
         return students;
     }
 
-    public Student extractStudent(StudentRequest studentRequest) {
+    public Student extractStudent(StudentRequest studentRequest, String userId) {
 
         char[] alphabet = {'1', '2', '3', '4', '5', '6', '7', '8', '9', 'a', 'b', 'c', 'd', 'e', 'f'};
         Random random = new Random();
-        User user = userRepository.findById(studentRequest.getUid()).orElseThrow(() -> new UserNotAuthorizedException("Unauthorized Access"));
+        User user = userRepository.findByUserId(userId).orElseThrow(() -> new UserNotAuthorizedException("Unauthorized Access"));
 
         Student student = new Student();
         student.setName(studentRequest.getName());
@@ -89,22 +89,25 @@ public class StudentServices {
         return student;
     }
 
+    @Transactional
     public StudentDTO createStudent(String request, String userId) throws UserNotAuthorizedException, JsonProcessingException {
         StudentRequest studentRequest = jacksonObjectMapper.readValue(request, StudentRequest.class);
-        Student student = extractStudent(studentRequest);
-        linkStudentToUser(student, userId);
+        Student student = extractStudent(studentRequest, userId);
         studentRepository.save(student);
+        linkStudentToUser(student, userId);
         return getStudentDTO(student);
     }
 
+    @Transactional
     public StudentDTO createStudent(String request, MultipartFile image, String userId) throws UserNotAuthorizedException, IOException {
         StudentRequest studentRequest = jacksonObjectMapper.readValue(request, StudentRequest.class);
         String filename = fileStorageService.storeImage(image);
 
-        Student student = extractStudent(studentRequest);
+        Student student = extractStudent(studentRequest, userId);
         student.setImagesrc(filename);
-        linkStudentToUser(student, userId);
         studentRepository.save(student);
+        linkStudentToUser(student, userId);
+
         return getStudentDTO(student);
     }
 

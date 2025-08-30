@@ -2,6 +2,7 @@ package com.niallantony.deulaubaba.web;
 
 import com.niallantony.deulaubaba.domain.DictionaryEntry;
 import com.niallantony.deulaubaba.dto.DictionaryListingsResponse;
+import com.niallantony.deulaubaba.security.CurrentUser;
 import com.niallantony.deulaubaba.services.DictionaryServices;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -25,8 +26,11 @@ public class DictionaryController {
     }
 
     @GetMapping
-    public ResponseEntity<DictionaryListingsResponse> getDictionaryListings(@RequestParam String student_id) {
-        DictionaryListingsResponse dictionaryListingsResponse = dictionaryServices.getDictionaryListings(student_id);
+    public ResponseEntity<DictionaryListingsResponse> getDictionaryListings(
+            @RequestParam String student_id,
+            @CurrentUser String userId
+    ) {
+        DictionaryListingsResponse dictionaryListingsResponse = dictionaryServices.getDictionaryListings(student_id, userId);
         if (dictionaryListingsResponse.getListings() == null || dictionaryListingsResponse.getListings().isEmpty()) {
             return ResponseEntity.noContent().build();
         }
@@ -34,30 +38,31 @@ public class DictionaryController {
     }
 
     @PostMapping
-    @ResponseStatus(HttpStatus.CREATED)
     public ResponseEntity<DictionaryEntry> addDictionary(
             @RequestPart("data") String dictionaryEntry,
-            @RequestPart(value = "image", required = false)MultipartFile imageFile ) throws IOException {
-        if (imageFile == null || imageFile.isEmpty()) {
-           return ResponseEntity.ok(dictionaryServices.addDictionaryEntry(dictionaryEntry));
-        }
-        return ResponseEntity.ok(dictionaryServices.addDictionaryEntryWithImage(dictionaryEntry, imageFile));
+            @RequestPart(value = "image", required = false)MultipartFile imageFile,
+            @CurrentUser String userId
+    ) throws IOException {
+        DictionaryEntry entry = dictionaryServices.addDictionaryEntry(dictionaryEntry, imageFile, userId);
+        return ResponseEntity.status(HttpStatus.CREATED).body(entry);
     }
+
     @PutMapping
-    @ResponseStatus(HttpStatus.CREATED)
-    public ResponseEntity<?> updateStudent(
+    public ResponseEntity<?> updateDictionary(
             @RequestPart("data") String request,
-            @RequestPart(value = "image", required = false) MultipartFile image) throws IOException {
-        if (image != null) {
-            return ResponseEntity.ok(dictionaryServices.updateDictionaryEntry(request, image));
-        }
-        return ResponseEntity.ok(dictionaryServices.updateDictionaryEntry(request));
+            @RequestPart(value = "image", required = false) MultipartFile image,
+            @CurrentUser String userId
+    ) throws IOException {
+        DictionaryEntry entry = dictionaryServices.updateDictionaryEntry(request, image, userId);
+        return ResponseEntity.ok(entry);
     }
 
     @DeleteMapping(path = "/{id}")
-    @ResponseStatus(HttpStatus.NO_CONTENT)
-    public ResponseEntity<?> deleteStudent(@PathVariable String id) {
-        dictionaryServices.deleteDictionaryEntry(id);
+    public ResponseEntity<?> deleteDictionary(
+            @PathVariable String id,
+            @CurrentUser String userId
+    ) {
+        dictionaryServices.deleteDictionaryEntry(id, userId);
         return ResponseEntity.noContent().build();
     }
 

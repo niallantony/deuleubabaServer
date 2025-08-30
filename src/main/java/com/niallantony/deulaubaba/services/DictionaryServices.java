@@ -10,6 +10,7 @@ import com.niallantony.deulaubaba.data.DictionaryRepository;
 import com.niallantony.deulaubaba.data.StudentRepository;
 import com.niallantony.deulaubaba.dto.*;
 import com.niallantony.deulaubaba.exceptions.ResourceNotFoundException;
+import com.niallantony.deulaubaba.exceptions.UserNotAuthorizedException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
@@ -29,24 +30,29 @@ public class DictionaryServices {
     private final CommunicationCategoryRepository communicationCategoryRepository;
     private final ObjectMapper jacksonObjectMapper;
     private final FileStorageService fileStorageService;
+    private final StudentServices studentServices;
 
     public DictionaryServices(
             DictionaryRepository dictionaryRepository,
             StudentRepository studentRepository,
             CommunicationCategoryRepository communicationCategoryRepository,
             ObjectMapper jacksonObjectMapper,
-            FileStorageService fileStorageService
-    ) {
+            FileStorageService fileStorageService,
+            StudentServices studentServices) {
         this.dictionaryRepository = dictionaryRepository;
         this.studentRepository = studentRepository;
         this.communicationCategoryRepository = communicationCategoryRepository;
         this.jacksonObjectMapper = jacksonObjectMapper;
         this.fileStorageService = fileStorageService;
+        this.studentServices = studentServices;
     }
 
-    public DictionaryListingsResponse getDictionaryListings(String studentId) {
+    public DictionaryListingsResponse getDictionaryListings(String studentId, String userId) {
        Student student = studentRepository.findById(studentId)
                .orElseThrow(() -> new ResourceNotFoundException("Student Not Found"));
+       if (!studentServices.studentBelongsToUser(studentId, userId)) {
+           throw new UserNotAuthorizedException("User Not Authorized");
+       }
        DictionaryListingsResponse response = new DictionaryListingsResponse();
        List<DictionaryEntry> listings = dictionaryRepository.findAllByStudent(student);
        if (listings.isEmpty()) {
@@ -73,57 +79,40 @@ public class DictionaryServices {
     }
 
     @Transactional
-    public DictionaryEntry addDictionaryEntry(String data) throws IOException {
-
+    public DictionaryEntry addDictionaryEntry(String data, MultipartFile imageFile, String userId) throws IOException {
         DictionaryPostRequest dictionaryPostRequest = jacksonObjectMapper.readValue(data, DictionaryPostRequest.class);
-
         Student student = studentRepository.findById(dictionaryPostRequest.getStudentId())
                 .orElseThrow(() -> new ResourceNotFoundException("Student Not Found"));
-
+        if (!studentServices.studentBelongsToUser(student.getStudentId(), userId)) {
+            throw new UserNotAuthorizedException("User Not Authorized");
+        }
         DictionaryEntry entry = new DictionaryEntry();
-        entry.setStudent(student);
-        assignChanges(entry, dictionaryPostRequest);
-        dictionaryRepository.save(entry);
-        return entry;
-    }
-
-    @Transactional
-    public DictionaryEntry addDictionaryEntryWithImage(String data, MultipartFile imageFile) throws IOException {
-
-        DictionaryPostRequest dictionaryPostRequest = jacksonObjectMapper.readValue(data, DictionaryPostRequest.class);
-        String filename = fileStorageService.storeImage(imageFile);
-
-        Student student = studentRepository.findById(dictionaryPostRequest.getStudentId())
-                .orElseThrow(() -> new ResourceNotFoundException("Student Not Found"));
-
-        DictionaryEntry entry = new DictionaryEntry();
-        entry.setStudent(student);
-        entry.setImgSrc(filename);
-        assignChanges(entry, dictionaryPostRequest);
-        dictionaryRepository.save(entry);
-        return entry;
-    }
-
-    @Transactional
-    public DictionaryEntry updateDictionaryEntry(String data) throws IOException {
-        DictionaryPutRequest dictionaryPutRequest = jacksonObjectMapper.readValue(data, DictionaryPutRequest.class);
-
-        DictionaryEntry entry = dictionaryRepository.findById(dictionaryPutRequest.getId()).orElseThrow(() -> new ResourceNotFoundException("Entry Not Found"));
-        assignChanges(entry, dictionaryPutRequest);
-        dictionaryRepository.save(entry);
-        return entry;
-    }
-
-    @Transactional
-    public DictionaryEntry updateDictionaryEntry(String data, MultipartFile image) throws IOException {
-        DictionaryPutRequest dictionaryPutRequest = jacksonObjectMapper.readValue(data, DictionaryPutRequest.class);
-        DictionaryEntry entry = dictionaryRepository.findById(dictionaryPutRequest.getId()).orElseThrow(() -> new ResourceNotFoundException("Entry Not Found"));
-        try {
-            String filename = fileStorageService.storeImage(image);
-            fileStorageService.deleteImage(entry);
+        if (imageFile != null) {
+            String filename = fileStorageService.storeImage(imageFile);
             entry.setImgSrc(filename);
-        } catch (IOException e) {
-            log.warn("Image failed to save into dictionary", e);
+        }
+        entry.setStudent(student);
+        assignChanges(entry, dictionaryPostRequest);
+        dictionaryRepository.save(entry);
+        return entry;
+    }
+
+    @Transactional
+    public DictionaryEntry updateDictionaryEntry(String data, MultipartFile image, String userId) throws IOException {
+        DictionaryPutRequest dictionaryPutRequest = jacksonObjectMapper.readValue(data, DictionaryPutRequest.class);
+        if (!studentServices.studentBelongsToUser(dictionaryPutRequest.getStudentId(), userId)) {
+            throw new UserNotAuthorizedException("User Not Authorized");
+        }
+        DictionaryEntry entry = dictionaryRepository.findById(dictionaryPutRequest.getId())
+                .orElseThrow(() -> new ResourceNotFoundException("Entry Not Found"));
+        if (image != null) {
+            try {
+                String filename = fileStorageService.storeImage(image);
+                fileStorageService.deleteImage(entry);
+                entry.setImgSrc(filename);
+            } catch (IOException e) {
+                log.warn("Image failed to save into dictionary", e);
+            }
         }
         assignChanges(entry, dictionaryPutRequest);
         dictionaryRepository.save(entry);
@@ -131,12 +120,15 @@ public class DictionaryServices {
     }
 
     @Transactional
-    public void deleteDictionaryEntry(String id) throws ResourceNotFoundException {
+    public void deleteDictionaryEntry(String id, String userId) throws ResourceNotFoundException {
         Long longId = Long.parseLong(id);
         if (!dictionaryRepository.existsById(longId)) {
             throw new ResourceNotFoundException("Dictionary Not Found");
         }
         DictionaryEntry entry = dictionaryRepository.getReferenceById(longId);
+        if (!studentServices.studentBelongsToUser(entry.getStudent().getStudentId(), userId)) {
+            throw new UserNotAuthorizedException("User Not Authorized");
+        }
         if (entry.getImgSrc() != null) {
             fileStorageService.deleteImage(entry);
         }
