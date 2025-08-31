@@ -38,13 +38,13 @@ public class StudentServices {
     }
 
     public StudentIdAvatar getStudentPreviewById(String id) throws ResourceNotFoundException {
-        Student student = studentRepository.findById(id)
+        Student student = studentRepository.findById(id.toLowerCase())
                 .orElseThrow(() -> new ResourceNotFoundException("Student not found" + id));
         return getStudentIdAvatar(student);
     }
 
     public StudentDTO getStudentById(String id) throws ResourceNotFoundException {
-        Student student = studentRepository.findById(id)
+        Student student = studentRepository.findById(id.toLowerCase())
                 .orElseThrow(() -> new ResourceNotFoundException("Student not found" + id));
         return getStudentDTO(student);
     }
