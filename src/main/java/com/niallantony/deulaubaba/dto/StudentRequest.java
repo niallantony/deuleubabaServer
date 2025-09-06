@@ -12,6 +12,4 @@ public class StudentRequest {
     private String setting;
     private String disability;
     private String imgsrc;
-    private String communicationDetails; // optional
-    private String challengesDetails; // optional
 }

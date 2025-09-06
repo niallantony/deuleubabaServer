@@ -112,18 +112,18 @@ public class StudentServices {
     }
 
     @Transactional
-    public StudentDTO updateStudent(String studentId, String request, String userId) throws UserNotAuthorizedException, ResourceNotFoundException, JsonProcessingException {
+    public StudentDTO updateStudentDetails(String studentId, String request, String userId) throws UserNotAuthorizedException, ResourceNotFoundException, JsonProcessingException {
         StudentRequest studentRequest = jacksonObjectMapper.readValue(request, StudentRequest.class);
         Student student = getAuthorisedStudent(studentId, userId);
 
-       applyUpdates(student, studentRequest);
+       applyDetailUpdates(student, studentRequest);
 
        studentRepository.save(student);
        return getStudentDTO(student);
     }
 
     @Transactional
-    public StudentDTO updateStudent(String studentId, String request, MultipartFile image, String userId) throws UserNotAuthorizedException, ResourceNotFoundException, IOException {
+    public StudentDTO updateStudentDetails(String studentId, String request, MultipartFile image, String userId) throws UserNotAuthorizedException, ResourceNotFoundException, IOException {
         StudentRequest studentRequest = jacksonObjectMapper.readValue(request, StudentRequest.class);
         Student student = getAuthorisedStudent(studentId, userId);
         fileStorageService.deleteImage(student);
@@ -131,10 +131,28 @@ public class StudentServices {
         String filename = fileStorageService.storeImage(image);
 
         student.setImagesrc(filename);
-        applyUpdates(student, studentRequest);
+        applyDetailUpdates(student, studentRequest);
 
         studentRepository.save(student);
 
+        return getStudentDTO(student);
+    }
+
+    @Transactional
+    public StudentDTO updateStudentCommunication(String studentId, String request, String userId) throws UserNotAuthorizedException, ResourceNotFoundException, IOException {
+        StudentCommunicationRequest studentCommunicationRequest = jacksonObjectMapper.readValue(request, StudentCommunicationRequest.class);
+        Student student = getAuthorisedStudent(studentId, userId);
+        student.setCommunicationDetails(studentCommunicationRequest.getCommunicationDetails());
+        studentRepository.save(student);
+        return getStudentDTO(student);
+    }
+
+    @Transactional
+    public StudentDTO updateStudentChallenge(String studentId, String request, String userId) throws UserNotAuthorizedException, ResourceNotFoundException, IOException {
+        StudentChallengeRequest studentChallengeRequest = jacksonObjectMapper.readValue(request, StudentChallengeRequest.class);
+        Student student = getAuthorisedStudent(studentId, userId);
+        student.setCommunicationDetails(studentChallengeRequest.getChallengesDetails());
+        studentRepository.save(student);
         return getStudentDTO(student);
     }
 
@@ -150,15 +168,13 @@ public class StudentServices {
         return student;
     }
     
-    private void applyUpdates(Student student, StudentRequest studentRequest) {
+    private void applyDetailUpdates(Student student, StudentRequest studentRequest) {
         student.setName(studentRequest.getName());
         student.setSchool(studentRequest.getSchool());
         student.setAge(studentRequest.getAge());
         student.setGrade(studentRequest.getGrade());
         student.setDisability(studentRequest.getDisability());
         student.setSetting(studentRequest.getSetting());
-        student.setCommunicationDetails(studentRequest.getCommunicationDetails());
-        student.setChallengesDetails(studentRequest.getChallengesDetails());
     }
     
     public StudentDTO getStudentDTO(Student student) {

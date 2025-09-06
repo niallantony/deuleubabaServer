@@ -84,8 +84,28 @@ public class StudentController {
             @RequestPart("data") String request,
             @RequestPart(value = "image", required = false) MultipartFile image) throws IOException {
         if (image != null) {
-            return ResponseEntity.ok(studentServices.updateStudent(studentId, request, image, userId));
+            return ResponseEntity.ok(studentServices.updateStudentDetails(studentId, request, image, userId));
         }
-        return ResponseEntity.ok(studentServices.updateStudent(studentId, request, userId));
+        return ResponseEntity.ok(studentServices.updateStudentDetails(studentId, request, userId));
+    }
+
+    @PutMapping(path = "/{studentId}/communication")
+    @ResponseStatus(HttpStatus.CREATED)
+    public ResponseEntity<?> updateStudentCommunication(
+            @PathVariable String studentId,
+            @CurrentUser String userId,
+            @RequestBody String request
+            ) throws IOException {
+        return ResponseEntity.ok(studentServices.updateStudentCommunication(studentId, request, userId));
+    }
+
+    @PutMapping(path = "/{studentId}/challenge")
+    @ResponseStatus(HttpStatus.CREATED)
+    public ResponseEntity<?> updateStudentChallenges(
+            @PathVariable String studentId,
+            @CurrentUser String userId,
+            @RequestBody String request
+    ) throws IOException {
+        return ResponseEntity.ok(studentServices.updateStudentChallenge(studentId, request, userId));
     }
 }
