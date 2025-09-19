@@ -31,16 +31,12 @@ public class UserController {
     }
 
     @PostMapping
-    public ResponseEntity<User> createUser(
+    public ResponseEntity<UserDTO> createUser(
             @RequestPart("data") String request,
             @RequestPart(value = "image", required = false) MultipartFile image,
             @CurrentUser String userId
     ) throws IOException {
-        if (image != null) {
             return ResponseEntity.ok(userService.createUser(userId, request, image));
-
-        }
-        return ResponseEntity.ok(userService.createUser(userId, request));
     }
 
     @PostMapping("/link-student")

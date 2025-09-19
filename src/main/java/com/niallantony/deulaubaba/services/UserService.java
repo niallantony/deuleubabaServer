@@ -14,6 +14,7 @@ import com.niallantony.deulaubaba.mapper.StudentMapper;
 import com.niallantony.deulaubaba.mapper.UserMapper;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.io.IOException;
@@ -45,34 +46,28 @@ public class UserService {
         this.studentMapper = studentMapper;
     }
 
-    public UserDTO getUser(String id) {
-        User user = userRepository.findByUserId(id)
-                .orElseThrow(() -> new ResourceNotFoundException("User Not Found"));
+    public UserDTO getUser(String userId) {
+        User user = getUserOrThrow(userId);
         return userMapper.toDTO(user);
 
     }
 
-    public User createUser(String userId, String data) throws ResourceNotFoundException, JsonProcessingException {
+
+    public UserDTO createUser(String userId,  String data, MultipartFile image) throws ResourceNotFoundException, IOException {
         UserRequest userRequest = jacksonObjectMapper.readValue(data, UserRequest.class);
         User user = userMapper.toUser(userRequest, userId);
-        userRepository.save(user);
-        return user;
-    }
-
-    public User createUser(String userId,  String data, MultipartFile image) throws ResourceNotFoundException, IOException {
-        UserRequest userRequest = jacksonObjectMapper.readValue(data, UserRequest.class);
-        String filename = fileStorageService.storeImage(image);
-
-        User user = userMapper.toUser(userRequest, userId);
-        user.setImagesrc(filename);
+        if (image != null && !image.isEmpty()) {
+            String filename = fileStorageService.storeImage(image);
+            user.setImagesrc(filename);
+        }
         userRepository.save(user);
 
-        return user;
+        return userMapper.toDTO(user);
     }
 
+    @Transactional
     public StudentDTO linkStudent(String userId, String studentCode) {
-        User user = userRepository.findByUserId(userId)
-                .orElseThrow(() -> new ResourceNotFoundException("User Not Found"));
+        User user = getUserOrThrow(userId);
         Student student = studentRepository.findById(studentCode)
                 .orElseThrow(() -> new ResourceNotFoundException("Student Not Found"));
         user.getStudents().add(student);
@@ -81,4 +76,8 @@ public class UserService {
         return studentMapper.toDTO(student);
     }
 
+    private User getUserOrThrow(String userId) {
+        return userRepository.findByUserId(userId)
+                .orElseThrow(() -> new ResourceNotFoundException("User Not Found"));
+    }
 }
