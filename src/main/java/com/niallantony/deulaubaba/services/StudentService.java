@@ -23,14 +23,14 @@ import java.util.Set;
 
 @Slf4j
 @Service
-public class StudentServices {
+public class StudentService {
     private final StudentRepository studentRepository;
     private final UserRepository userRepository;
     private final FileStorageService fileStorageService;
     private final ObjectMapper jacksonObjectMapper;
 
     @Autowired
-    public StudentServices(StudentRepository studentRepository, UserRepository userRepository, ObjectMapper jacksonObjectMapper, FileStorageService fileStorageService) {
+    public StudentService(StudentRepository studentRepository, UserRepository userRepository, ObjectMapper jacksonObjectMapper, FileStorageService fileStorageService) {
         this.studentRepository = studentRepository;
         this.userRepository = userRepository;
         this.jacksonObjectMapper = jacksonObjectMapper;
@@ -151,7 +151,7 @@ public class StudentServices {
     public StudentDTO updateStudentChallenge(String studentId, String request, String userId) throws UserNotAuthorizedException, ResourceNotFoundException, IOException {
         StudentChallengeRequest studentChallengeRequest = jacksonObjectMapper.readValue(request, StudentChallengeRequest.class);
         Student student = getAuthorisedStudent(studentId, userId);
-        student.setCommunicationDetails(studentChallengeRequest.getChallengesDetails());
+        student.setChallengesDetails(studentChallengeRequest.getChallengesDetails());
         studentRepository.save(student);
         return getStudentDTO(student);
     }

@@ -3,7 +3,7 @@ package com.niallantony.deulaubaba.web;
 import com.niallantony.deulaubaba.data.UserRepository;
 import com.niallantony.deulaubaba.dto.*;
 import com.niallantony.deulaubaba.security.CurrentUser;
-import com.niallantony.deulaubaba.services.StudentServices;
+import com.niallantony.deulaubaba.services.StudentService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -16,12 +16,12 @@ import java.util.List;
 @RestController
 @RequestMapping(path = "/student", produces = "application/json")
 public class StudentController {
-    private final StudentServices studentServices;
+    private final StudentService studentService;
     private final UserRepository userRepository;
 
     @Autowired
-    public StudentController(StudentServices studentServices, UserRepository userRepository) {
-        this.studentServices = studentServices;
+    public StudentController(StudentService studentService, UserRepository userRepository) {
+        this.studentService = studentService;
         this.userRepository = userRepository;
     }
 
@@ -34,7 +34,7 @@ public class StudentController {
         if (userId == null) {
             return new ResponseEntity<>(HttpStatus.UNAUTHORIZED);
         }
-        return ResponseEntity.ok(studentServices.getStudentPreviewById(id));
+        return ResponseEntity.ok(studentService.getStudentPreviewById(id));
     }
 
     @GetMapping
@@ -42,8 +42,8 @@ public class StudentController {
             @RequestParam String id,
             @CurrentUser String userId
     ) {
-        if (studentServices.studentBelongsToUser(id, userId)) {
-            return ResponseEntity.ok(studentServices.getStudentById(id));
+        if (studentService.studentBelongsToUser(id, userId)) {
+            return ResponseEntity.ok(studentService.getStudentById(id));
         }
         return new ResponseEntity<>(HttpStatus.UNAUTHORIZED);
     }
@@ -53,15 +53,15 @@ public class StudentController {
             @RequestParam String id,
             @CurrentUser String userId
     ) {
-        if (studentServices.studentBelongsToUser(id, userId)) {
-            return ResponseEntity.ok(studentServices.getStudentTeam(id));
+        if (studentService.studentBelongsToUser(id, userId)) {
+            return ResponseEntity.ok(studentService.getStudentTeam(id));
         }
         return new ResponseEntity<>(HttpStatus.UNAUTHORIZED);
     }
 
     @GetMapping(path = "/all")
     public ResponseEntity<List<StudentIdAvatar>> getStudents(@CurrentUser String userId) {
-        return ResponseEntity.ok(studentServices.getStudents(userId));
+        return ResponseEntity.ok(studentService.getStudents(userId));
     }
 
     @PostMapping
@@ -71,9 +71,9 @@ public class StudentController {
             @CurrentUser String userId,
             @RequestPart(value = "image", required = false) MultipartFile image) throws IOException {
         if (image != null) {
-            return ResponseEntity.ok(studentServices.createStudent(request, image, userId));
+            return ResponseEntity.ok(studentService.createStudent(request, image, userId));
         }
-        return ResponseEntity.ok(studentServices.createStudent(request, userId));
+        return ResponseEntity.ok(studentService.createStudent(request, userId));
     }
 
     @PutMapping(path = "/{studentId}")
@@ -84,9 +84,9 @@ public class StudentController {
             @RequestPart("data") String request,
             @RequestPart(value = "image", required = false) MultipartFile image) throws IOException {
         if (image != null) {
-            return ResponseEntity.ok(studentServices.updateStudentDetails(studentId, request, image, userId));
+            return ResponseEntity.ok(studentService.updateStudentDetails(studentId, request, image, userId));
         }
-        return ResponseEntity.ok(studentServices.updateStudentDetails(studentId, request, userId));
+        return ResponseEntity.ok(studentService.updateStudentDetails(studentId, request, userId));
     }
 
     @PutMapping(path = "/{studentId}/communication")
@@ -96,7 +96,7 @@ public class StudentController {
             @CurrentUser String userId,
             @RequestBody String request
             ) throws IOException {
-        return ResponseEntity.ok(studentServices.updateStudentCommunication(studentId, request, userId));
+        return ResponseEntity.ok(studentService.updateStudentCommunication(studentId, request, userId));
     }
 
     @PutMapping(path = "/{studentId}/challenge")
@@ -106,6 +106,6 @@ public class StudentController {
             @CurrentUser String userId,
             @RequestBody String request
     ) throws IOException {
-        return ResponseEntity.ok(studentServices.updateStudentChallenge(studentId, request, userId));
+        return ResponseEntity.ok(studentService.updateStudentChallenge(studentId, request, userId));
     }
 }

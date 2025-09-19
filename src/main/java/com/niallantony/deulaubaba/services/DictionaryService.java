@@ -23,34 +23,34 @@ import java.util.Set;
 import java.util.stream.Collectors;
 
 @Service
-public class DictionaryServices {
-    private static final Logger log = LoggerFactory.getLogger(DictionaryServices.class);
+public class DictionaryService {
+    private static final Logger log = LoggerFactory.getLogger(DictionaryService.class);
     private final DictionaryRepository dictionaryRepository;
     private final StudentRepository studentRepository;
     private final CommunicationCategoryRepository communicationCategoryRepository;
     private final ObjectMapper jacksonObjectMapper;
     private final FileStorageService fileStorageService;
-    private final StudentServices studentServices;
+    private final StudentService studentService;
 
-    public DictionaryServices(
+    public DictionaryService(
             DictionaryRepository dictionaryRepository,
             StudentRepository studentRepository,
             CommunicationCategoryRepository communicationCategoryRepository,
             ObjectMapper jacksonObjectMapper,
             FileStorageService fileStorageService,
-            StudentServices studentServices) {
+            StudentService studentService) {
         this.dictionaryRepository = dictionaryRepository;
         this.studentRepository = studentRepository;
         this.communicationCategoryRepository = communicationCategoryRepository;
         this.jacksonObjectMapper = jacksonObjectMapper;
         this.fileStorageService = fileStorageService;
-        this.studentServices = studentServices;
+        this.studentService = studentService;
     }
 
     public DictionaryListingsResponse getDictionaryListings(String studentId, String userId) {
        Student student = studentRepository.findById(studentId)
                .orElseThrow(() -> new ResourceNotFoundException("Student Not Found"));
-       if (!studentServices.studentBelongsToUser(studentId, userId)) {
+       if (!studentService.studentBelongsToUser(studentId, userId)) {
            throw new UserNotAuthorizedException("User Not Authorized");
        }
        DictionaryListingsResponse response = new DictionaryListingsResponse();
@@ -83,7 +83,7 @@ public class DictionaryServices {
         DictionaryPostRequest dictionaryPostRequest = jacksonObjectMapper.readValue(data, DictionaryPostRequest.class);
         Student student = studentRepository.findById(dictionaryPostRequest.getStudentId())
                 .orElseThrow(() -> new ResourceNotFoundException("Student Not Found"));
-        if (!studentServices.studentBelongsToUser(student.getStudentId(), userId)) {
+        if (!studentService.studentBelongsToUser(student.getStudentId(), userId)) {
             throw new UserNotAuthorizedException("User Not Authorized");
         }
         DictionaryEntry entry = new DictionaryEntry();
@@ -100,7 +100,7 @@ public class DictionaryServices {
     @Transactional
     public DictionaryEntry updateDictionaryEntry(String data, MultipartFile image, String userId) throws IOException {
         DictionaryPutRequest dictionaryPutRequest = jacksonObjectMapper.readValue(data, DictionaryPutRequest.class);
-        if (!studentServices.studentBelongsToUser(dictionaryPutRequest.getStudentId(), userId)) {
+        if (!studentService.studentBelongsToUser(dictionaryPutRequest.getStudentId(), userId)) {
             throw new UserNotAuthorizedException("User Not Authorized");
         }
         DictionaryEntry entry = dictionaryRepository.findById(dictionaryPutRequest.getId())
@@ -126,7 +126,7 @@ public class DictionaryServices {
             throw new ResourceNotFoundException("Dictionary Not Found");
         }
         DictionaryEntry entry = dictionaryRepository.getReferenceById(longId);
-        if (!studentServices.studentBelongsToUser(entry.getStudent().getStudentId(), userId)) {
+        if (!studentService.studentBelongsToUser(entry.getStudent().getStudentId(), userId)) {
             throw new UserNotAuthorizedException("User Not Authorized");
         }
         if (entry.getImgSrc() != null) {

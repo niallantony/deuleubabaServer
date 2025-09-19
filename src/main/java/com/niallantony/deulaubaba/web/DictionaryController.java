@@ -3,7 +3,7 @@ package com.niallantony.deulaubaba.web;
 import com.niallantony.deulaubaba.domain.DictionaryEntry;
 import com.niallantony.deulaubaba.dto.DictionaryListingsResponse;
 import com.niallantony.deulaubaba.security.CurrentUser;
-import com.niallantony.deulaubaba.services.DictionaryServices;
+import com.niallantony.deulaubaba.services.DictionaryService;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
@@ -18,11 +18,11 @@ import java.io.IOException;
 @RequestMapping(path = "/dictionary", produces = "application/json")
 public class DictionaryController {
 
-    private final DictionaryServices dictionaryServices;
+    private final DictionaryService dictionaryService;
 
     @Autowired
-    public DictionaryController(DictionaryServices dictionaryServices) {
-        this.dictionaryServices = dictionaryServices;
+    public DictionaryController(DictionaryService dictionaryService) {
+        this.dictionaryService = dictionaryService;
     }
 
     @GetMapping
@@ -30,7 +30,7 @@ public class DictionaryController {
             @RequestParam String student_id,
             @CurrentUser String userId
     ) {
-        DictionaryListingsResponse dictionaryListingsResponse = dictionaryServices.getDictionaryListings(student_id, userId);
+        DictionaryListingsResponse dictionaryListingsResponse = dictionaryService.getDictionaryListings(student_id, userId);
         if (dictionaryListingsResponse.getListings() == null || dictionaryListingsResponse.getListings().isEmpty()) {
             return ResponseEntity.noContent().build();
         }
@@ -43,7 +43,7 @@ public class DictionaryController {
             @RequestPart(value = "image", required = false)MultipartFile imageFile,
             @CurrentUser String userId
     ) throws IOException {
-        DictionaryEntry entry = dictionaryServices.addDictionaryEntry(dictionaryEntry, imageFile, userId);
+        DictionaryEntry entry = dictionaryService.addDictionaryEntry(dictionaryEntry, imageFile, userId);
         return ResponseEntity.status(HttpStatus.CREATED).body(entry);
     }
 
@@ -53,7 +53,7 @@ public class DictionaryController {
             @RequestPart(value = "image", required = false) MultipartFile image,
             @CurrentUser String userId
     ) throws IOException {
-        DictionaryEntry entry = dictionaryServices.updateDictionaryEntry(request, image, userId);
+        DictionaryEntry entry = dictionaryService.updateDictionaryEntry(request, image, userId);
         return ResponseEntity.ok(entry);
     }
 
@@ -62,7 +62,7 @@ public class DictionaryController {
             @PathVariable String id,
             @CurrentUser String userId
     ) {
-        dictionaryServices.deleteDictionaryEntry(id, userId);
+        dictionaryService.deleteDictionaryEntry(id, userId);
         return ResponseEntity.noContent().build();
     }
 
