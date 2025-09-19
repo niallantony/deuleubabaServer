@@ -56,9 +56,4 @@ public class User implements HasImageSrc{
     )
     @JsonManagedReference
     private Set<Student> students = new HashSet<>();
-
-    public Collection<? extends GrantedAuthority> authorities() {
-        return Collections.singleton(new SimpleGrantedAuthority(role.getName()));
-    }
-
 }
