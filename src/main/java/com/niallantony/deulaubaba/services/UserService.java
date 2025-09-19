@@ -12,6 +12,7 @@ import com.niallantony.deulaubaba.dto.StudentDTO;
 import com.niallantony.deulaubaba.dto.UserDTO;
 import com.niallantony.deulaubaba.dto.UserRequest;
 import com.niallantony.deulaubaba.exceptions.ResourceNotFoundException;
+import com.niallantony.deulaubaba.mapper.StudentMapper;
 import com.niallantony.deulaubaba.mapper.UserMapper;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
@@ -28,6 +29,7 @@ public class UserService {
     private final FileStorageService fileStorageService;
     private final StudentService studentService;
     private final UserMapper userMapper;
+    private final StudentMapper studentMapper;
 
 
     @Autowired
@@ -38,7 +40,8 @@ public class UserService {
             ObjectMapper jacksonObjectMapper,
             FileStorageService fileStorageService,
             StudentService studentService,
-            UserMapper userMapper
+            UserMapper userMapper,
+            StudentMapper studentMapper
     ) {
         this.studentRepository = studentRepository;
         this.roleRepository = roleRepository;
@@ -47,6 +50,7 @@ public class UserService {
         this.fileStorageService = fileStorageService;
         this.studentService = studentService;
         this.userMapper = userMapper;
+        this.studentMapper = studentMapper;
     }
 
     public UserDTO getUser(String id) {
@@ -82,7 +86,7 @@ public class UserService {
         user.getStudents().add(student);
         student.getUsers().add(user);
         userRepository.save(user);
-        return studentService.getStudentDTO(student);
+        return studentMapper.toDTO(student);
     }
 
     private User newUser (String userId, UserRequest userRequest) {

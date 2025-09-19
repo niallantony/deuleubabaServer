@@ -10,6 +10,7 @@ import com.niallantony.deulaubaba.data.UserRepository;
 import com.niallantony.deulaubaba.dto.*;
 import com.niallantony.deulaubaba.exceptions.ResourceNotFoundException;
 import com.niallantony.deulaubaba.exceptions.UserNotAuthorizedException;
+import com.niallantony.deulaubaba.mapper.StudentMapper;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
@@ -28,13 +29,21 @@ public class StudentService {
     private final UserRepository userRepository;
     private final FileStorageService fileStorageService;
     private final ObjectMapper jacksonObjectMapper;
+    private final StudentMapper studentMapper;
 
     @Autowired
-    public StudentService(StudentRepository studentRepository, UserRepository userRepository, ObjectMapper jacksonObjectMapper, FileStorageService fileStorageService) {
+    public StudentService(
+            StudentRepository studentRepository,
+            UserRepository userRepository,
+            ObjectMapper jacksonObjectMapper,
+            FileStorageService fileStorageService,
+            StudentMapper studentMapper
+    ) {
         this.studentRepository = studentRepository;
         this.userRepository = userRepository;
         this.jacksonObjectMapper = jacksonObjectMapper;
         this.fileStorageService = fileStorageService;
+        this.studentMapper = studentMapper;
     }
 
     public StudentIdAvatar getStudentPreviewById(String id) throws ResourceNotFoundException {
@@ -46,7 +55,7 @@ public class StudentService {
     public StudentDTO getStudentById(String id) throws ResourceNotFoundException {
         Student student = studentRepository.findById(id.toLowerCase())
                 .orElseThrow(() -> new ResourceNotFoundException("Student not found" + id));
-        return getStudentDTO(student);
+        return studentMapper.toDTO(student);
     }
 
     public List<UserAvatar> getStudentTeam(String id) throws ResourceNotFoundException {
@@ -95,7 +104,7 @@ public class StudentService {
         Student student = extractStudent(studentRequest, userId);
         studentRepository.save(student);
         linkStudentToUser(student, userId);
-        return getStudentDTO(student);
+        return studentMapper.toDTO(student);
     }
 
     @Transactional
@@ -108,7 +117,7 @@ public class StudentService {
         studentRepository.save(student);
         linkStudentToUser(student, userId);
 
-        return getStudentDTO(student);
+        return studentMapper.toDTO(student);
     }
 
     @Transactional
@@ -119,7 +128,7 @@ public class StudentService {
        applyDetailUpdates(student, studentRequest);
 
        studentRepository.save(student);
-       return getStudentDTO(student);
+       return studentMapper.toDTO(student);
     }
 
     @Transactional
@@ -135,7 +144,7 @@ public class StudentService {
 
         studentRepository.save(student);
 
-        return getStudentDTO(student);
+        return studentMapper.toDTO(student);
     }
 
     @Transactional
@@ -144,7 +153,7 @@ public class StudentService {
         Student student = getAuthorisedStudent(studentId, userId);
         student.setCommunicationDetails(studentCommunicationRequest.getCommunicationDetails());
         studentRepository.save(student);
-        return getStudentDTO(student);
+        return studentMapper.toDTO(student);
     }
 
     @Transactional
@@ -153,7 +162,7 @@ public class StudentService {
         Student student = getAuthorisedStudent(studentId, userId);
         student.setChallengesDetails(studentChallengeRequest.getChallengesDetails());
         studentRepository.save(student);
-        return getStudentDTO(student);
+        return studentMapper.toDTO(student);
     }
 
     private Student getAuthorisedStudent(String studentId, String userId)
@@ -177,21 +186,6 @@ public class StudentService {
         student.setSetting(studentRequest.getSetting());
     }
     
-    public StudentDTO getStudentDTO(Student student) {
-        return new StudentDTO(
-                student.getStudentId(),
-                student.getName(),
-                student.getSchool(),
-                student.getAge(),
-                student.getGrade(),
-                student.getSetting(),
-                student.getDisability(),
-                student.getImagesrc(),
-                student.getCommunicationDetails(),
-                student.getChallengesDetails()
-        );
-    }
-
     private StudentIdAvatar getStudentIdAvatar(Student student) {
         return new StudentIdAvatar(
                 student.getStudentId(),
