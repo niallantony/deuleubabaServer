@@ -12,8 +12,7 @@ import com.niallantony.deulaubaba.dto.StudentDTO;
 import com.niallantony.deulaubaba.dto.UserDTO;
 import com.niallantony.deulaubaba.dto.UserRequest;
 import com.niallantony.deulaubaba.exceptions.ResourceNotFoundException;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+import com.niallantony.deulaubaba.mapper.UserMapper;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
@@ -21,48 +20,46 @@ import org.springframework.web.multipart.MultipartFile;
 import java.io.IOException;
 
 @Service
-public class UserServices {
-    private static final Logger log = LoggerFactory.getLogger(UserServices.class);
+public class UserService {
     private final StudentRepository studentRepository;
     private final RoleRepository roleRepository;
     private final UserRepository userRepository;
     private final ObjectMapper jacksonObjectMapper;
     private final FileStorageService fileStorageService;
-    private final StudentServices studentServices;
+    private final StudentService studentService;
+    private final UserMapper userMapper;
 
 
     @Autowired
-    public UserServices(StudentRepository studentRepository, RoleRepository roleRepository, UserRepository userRepository, ObjectMapper jacksonObjectMapper, FileStorageService fileStorageService, StudentServices studentServices) {
+    public UserService(
+            StudentRepository studentRepository,
+            RoleRepository roleRepository,
+            UserRepository userRepository,
+            ObjectMapper jacksonObjectMapper,
+            FileStorageService fileStorageService,
+            StudentService studentService,
+            UserMapper userMapper
+    ) {
         this.studentRepository = studentRepository;
         this.roleRepository = roleRepository;
         this.userRepository = userRepository;
         this.jacksonObjectMapper = jacksonObjectMapper;
         this.fileStorageService = fileStorageService;
-        this.studentServices = studentServices;
+        this.studentService = studentService;
+        this.userMapper = userMapper;
     }
 
     public UserDTO getUser(String id) {
         User user = userRepository.findByUserId(id)
                 .orElseThrow(() -> new ResourceNotFoundException("User Not Found"));
-        return new UserDTO(
-                user.getName(),
-                user.getEmail(),
-                user.getUserType(),
-                user.getImagesrc(),
-                user.getRole()
-        );
+        return userMapper.toDTO(user);
 
     }
 
     public User createUser(String userId, String data) throws ResourceNotFoundException, JsonProcessingException {
-        log.info(data);
         UserRequest userRequest = jacksonObjectMapper.readValue(data, UserRequest.class);
-
-
         User user = newUser(userId, userRequest);
         userRepository.save(user);
-
-
         return user;
     }
 
@@ -85,7 +82,7 @@ public class UserServices {
         user.getStudents().add(student);
         student.getUsers().add(user);
         userRepository.save(user);
-        return studentServices.getStudentDTO(student);
+        return studentService.getStudentDTO(student);
     }
 
     private User newUser (String userId, UserRequest userRequest) {
