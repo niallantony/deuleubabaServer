@@ -1,6 +1,5 @@
 package com.niallantony.deulaubaba.web;
 
-import com.niallantony.deulaubaba.domain.User;
 import com.niallantony.deulaubaba.dto.StudentDTO;
 import com.niallantony.deulaubaba.dto.UserDTO;
 import com.niallantony.deulaubaba.security.CurrentUser;
