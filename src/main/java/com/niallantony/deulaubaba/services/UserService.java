@@ -54,7 +54,7 @@ public class UserService {
 
     public UserDTO createUser(String userId,  String data, MultipartFile image) throws ResourceNotFoundException, IOException {
         UserRequest userRequest = jacksonObjectMapper.readValue(data, UserRequest.class);
-        User user = userMapper.toUser(userRequest, userId);
+        User user = userMapper.toNewUser(userRequest, userId);
         if (image != null && !image.isEmpty()) {
             String filename = fileStorageService.storeImage(image);
             user.setImagesrc(filename);

@@ -18,14 +18,12 @@ public abstract class UserMapper {
     @Autowired
     protected RoleRepository roleRepository;
 
-    @Mapping(target="user.userId", ignore = true)
-    @Mapping(target="user.students", ignore = true)
     public abstract UserDTO toDTO(User user);
 
     @Mapping(target = "students", ignore = true)
     @Mapping(target = "imagesrc", ignore = true)
     @Mapping(target = "role", ignore = true)
-    public abstract User toUser(UserRequest userRequest, String userId);
+    public abstract User toNewUser(UserRequest userRequest, String userId);
 
     @AfterMapping
     protected void setUserRole(@MappingTarget User user) {
