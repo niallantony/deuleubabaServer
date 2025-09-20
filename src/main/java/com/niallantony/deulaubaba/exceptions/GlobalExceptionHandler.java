@@ -19,4 +19,9 @@ public class GlobalExceptionHandler {
     public ResponseEntity<?> handleUserNotAuthorizedException(UserNotAuthorizedException e) {
         return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(Map.of("message", e.getMessage()));
     }
+
+    @ExceptionHandler(InvalidUserDataException.class)
+    public ResponseEntity<?> handleInvalidUserDataException(InvalidUserDataException e) {
+        return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(Map.of("message", e.getMessage()));
+    }
 }

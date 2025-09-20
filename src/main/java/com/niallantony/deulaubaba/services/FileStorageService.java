@@ -2,6 +2,7 @@ package com.niallantony.deulaubaba.services;
 
 import com.niallantony.deulaubaba.domain.HasImageSrc;
 import com.niallantony.deulaubaba.domain.Student;
+import com.niallantony.deulaubaba.exceptions.FileStorageException;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
@@ -15,12 +16,16 @@ import java.util.UUID;
 @Slf4j
 @Service
 public class FileStorageService {
-    public String storeImage(MultipartFile image) throws IOException {
-        String filename = UUID.randomUUID() + "-" + image.getOriginalFilename();
-        Path path = Paths.get("uploads", filename);
-        Files.createDirectories(path.getParent());
-        image.transferTo(path);
-        return filename;
+    public String storeImage(MultipartFile image) throws FileStorageException {
+        try {
+            String filename = UUID.randomUUID() + "-" + image.getOriginalFilename();
+            Path path = Paths.get("uploads", filename);
+            Files.createDirectories(path.getParent());
+            image.transferTo(path);
+            return filename;
+        } catch (IOException e) {
+            throw new FileStorageException("Could not store image" + image.getOriginalFilename(), e);
+        }
     }
 
     public void deleteImage(HasImageSrc data) {

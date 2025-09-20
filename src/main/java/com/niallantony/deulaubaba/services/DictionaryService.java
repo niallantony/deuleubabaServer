@@ -8,6 +8,7 @@ import com.niallantony.deulaubaba.domain.Student;
 import com.niallantony.deulaubaba.data.CommunicationCategoryRepository;
 import com.niallantony.deulaubaba.data.DictionaryRepository;
 import com.niallantony.deulaubaba.dto.*;
+import com.niallantony.deulaubaba.exceptions.FileStorageException;
 import com.niallantony.deulaubaba.exceptions.ResourceNotFoundException;
 import com.niallantony.deulaubaba.exceptions.UserNotAuthorizedException;
 import org.slf4j.Logger;
@@ -102,7 +103,7 @@ public class DictionaryService {
                 String filename = fileStorageService.storeImage(image);
                 fileStorageService.deleteImage(entry);
                 entry.setImgSrc(filename);
-            } catch (IOException e) {
+            } catch (FileStorageException e) {
                 log.warn("Image failed to save into dictionary", e);
             }
         }
