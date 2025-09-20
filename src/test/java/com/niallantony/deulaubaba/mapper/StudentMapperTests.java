@@ -9,7 +9,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 public class StudentMapperTests {
 
     @Test
-    void mapsToDTO() {
+    void givenStudent_whenMap_thenCorrectDTO() {
         StudentMapper studentMapper = new StudentMapperImpl();
         Student student = new Student();
         student.setStudentId("abc");
