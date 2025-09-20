@@ -7,7 +7,6 @@ import com.niallantony.deulaubaba.domain.ExpressionType;
 import com.niallantony.deulaubaba.domain.Student;
 import com.niallantony.deulaubaba.data.CommunicationCategoryRepository;
 import com.niallantony.deulaubaba.data.DictionaryRepository;
-import com.niallantony.deulaubaba.data.StudentRepository;
 import com.niallantony.deulaubaba.dto.*;
 import com.niallantony.deulaubaba.exceptions.ResourceNotFoundException;
 import com.niallantony.deulaubaba.exceptions.UserNotAuthorizedException;
@@ -26,7 +25,6 @@ import java.util.stream.Collectors;
 public class DictionaryService {
     private static final Logger log = LoggerFactory.getLogger(DictionaryService.class);
     private final DictionaryRepository dictionaryRepository;
-    private final StudentRepository studentRepository;
     private final CommunicationCategoryRepository communicationCategoryRepository;
     private final ObjectMapper jacksonObjectMapper;
     private final FileStorageService fileStorageService;
@@ -34,13 +32,11 @@ public class DictionaryService {
 
     public DictionaryService(
             DictionaryRepository dictionaryRepository,
-            StudentRepository studentRepository,
             CommunicationCategoryRepository communicationCategoryRepository,
             ObjectMapper jacksonObjectMapper,
             FileStorageService fileStorageService,
             StudentService studentService) {
         this.dictionaryRepository = dictionaryRepository;
-        this.studentRepository = studentRepository;
         this.communicationCategoryRepository = communicationCategoryRepository;
         this.jacksonObjectMapper = jacksonObjectMapper;
         this.fileStorageService = fileStorageService;
@@ -48,19 +44,13 @@ public class DictionaryService {
     }
 
     public DictionaryListingsResponse getDictionaryListings(String studentId, String userId) {
-       Student student = studentRepository.findById(studentId)
-               .orElseThrow(() -> new ResourceNotFoundException("Student Not Found"));
-       if (!studentService.studentBelongsToUser(studentId, userId)) {
-           throw new UserNotAuthorizedException("User Not Authorized");
-       }
+       Student student = studentService.getAuthorisedStudent(studentId, userId);
        DictionaryListingsResponse response = new DictionaryListingsResponse();
        List<DictionaryEntry> listings = dictionaryRepository.findAllByStudent(student);
        if (listings.isEmpty()) {
            return response;
        }
-       Set<ExpressionType> types = listings.stream()
-               .map(DictionaryEntry::getType)
-               .collect(Collectors.toSet());
+       Set<ExpressionType> types = getExpressionTypes(listings);
        List<DictionaryEntryResponse> listingsDTO = listings.stream()
                .map(listing -> new DictionaryEntryResponse(
                        listing.getId(),
@@ -78,14 +68,16 @@ public class DictionaryService {
        return response;
     }
 
+    private Set<ExpressionType> getExpressionTypes(List<DictionaryEntry> dictionaryEntries) {
+        return dictionaryEntries.stream()
+                .map(DictionaryEntry::getType)
+                .collect(Collectors.toSet());
+    }
+
     @Transactional
     public DictionaryEntry addDictionaryEntry(String data, MultipartFile imageFile, String userId) throws IOException {
         DictionaryPostRequest dictionaryPostRequest = jacksonObjectMapper.readValue(data, DictionaryPostRequest.class);
-        Student student = studentRepository.findById(dictionaryPostRequest.getStudentId())
-                .orElseThrow(() -> new ResourceNotFoundException("Student Not Found"));
-        if (!studentService.studentBelongsToUser(student.getStudentId(), userId)) {
-            throw new UserNotAuthorizedException("User Not Authorized");
-        }
+        Student student = studentService.getAuthorisedStudent(dictionaryPostRequest.getStudentId(), userId);
         DictionaryEntry entry = new DictionaryEntry();
         if (imageFile != null) {
             String filename = fileStorageService.storeImage(imageFile);

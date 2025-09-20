@@ -165,7 +165,7 @@ public class StudentService {
         return studentMapper.toDTO(student);
     }
 
-    private Student getAuthorisedStudent(String studentId, String userId)
+    public Student getAuthorisedStudent(String studentId, String userId)
             throws UserNotAuthorizedException, ResourceNotFoundException {
         Student student = studentRepository.findById(studentId)
                 .orElseThrow(() -> new ResourceNotFoundException("Student not found " + studentId));
