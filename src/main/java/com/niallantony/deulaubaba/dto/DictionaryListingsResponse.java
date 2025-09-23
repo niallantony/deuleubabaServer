@@ -12,7 +12,7 @@ import java.util.Set;
 @AllArgsConstructor
 @NoArgsConstructor
 public class DictionaryListingsResponse {
-    private List<DictionaryEntryResponse> listings;
+    private List<DictionaryEntryDTO> listings;
     private Set<ExpressionType> expressiontypes;
     private String message;
 }

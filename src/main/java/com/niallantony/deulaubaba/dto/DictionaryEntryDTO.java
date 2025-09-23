@@ -9,7 +9,7 @@ import java.util.Set;
 
 @Data
 @AllArgsConstructor
-public class DictionaryEntryResponse {
+public class DictionaryEntryDTO {
     private Long id;
     private ExpressionType type;
     private String title;

@@ -4,6 +4,7 @@ import com.fasterxml.jackson.annotation.JsonManagedReference;
 import jakarta.persistence.*;
 import lombok.*;
 
+import java.util.HashSet;
 import java.util.Set;
 
 @Getter
@@ -34,15 +35,15 @@ public class DictionaryEntry implements HasImageSrc{
             inverseJoinColumns = @JoinColumn(name = "category_id", referencedColumnName = "id")
     )
     @JsonManagedReference
-    private Set<CommunicationCategory> category;
+    private Set<CommunicationCategory> category = new HashSet<>();
 
-    private String imgSrc;
+    private String imgsrc;
 
     private String description;
 
     @Override
     public String getImagesrc() {
-        return imgSrc;
+        return imgsrc;
     }
 
 }
