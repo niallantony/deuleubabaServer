@@ -135,7 +135,7 @@ public class StudentService {
     public StudentDTO updateStudentDetails(String studentId, String request, MultipartFile image, String userId) throws UserNotAuthorizedException, ResourceNotFoundException, IOException {
         StudentRequest studentRequest = jacksonObjectMapper.readValue(request, StudentRequest.class);
         Student student = getAuthorisedStudent(studentId, userId);
-        fileStorageService.deleteImage(student);
+        String oldImg = student.getImagesrc();
 
         String filename = fileStorageService.storeImage(image);
 
@@ -143,6 +143,7 @@ public class StudentService {
         applyDetailUpdates(student, studentRequest);
 
         studentRepository.save(student);
+        fileStorageService.deleteImage(oldImg);
 
         return studentMapper.toDTO(student);
     }

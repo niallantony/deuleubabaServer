@@ -1,7 +1,5 @@
 package com.niallantony.deulaubaba.services;
 
-import com.niallantony.deulaubaba.domain.HasImageSrc;
-import com.niallantony.deulaubaba.domain.Student;
 import com.niallantony.deulaubaba.exceptions.FileStorageException;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -28,8 +26,7 @@ public class FileStorageService {
         }
     }
 
-    public void deleteImage(HasImageSrc data) {
-        String oldAvatar = data.getImagesrc();
+    public void deleteImage(String oldAvatar) {
         if (oldAvatar != null && !oldAvatar.isEmpty()) {
             Path oldPath = Paths.get("uploads", oldAvatar);
             try {
