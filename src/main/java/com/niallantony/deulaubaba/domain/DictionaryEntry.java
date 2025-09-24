@@ -12,7 +12,7 @@ import java.util.Set;
 @NoArgsConstructor
 @AllArgsConstructor
 @Entity
-public class DictionaryEntry implements HasImageSrc{
+public class DictionaryEntry{
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
@@ -40,10 +40,4 @@ public class DictionaryEntry implements HasImageSrc{
     private String imgsrc;
 
     private String description;
-
-    @Override
-    public String getImagesrc() {
-        return imgsrc;
-    }
-
 }

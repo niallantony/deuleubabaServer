@@ -18,7 +18,7 @@ import java.util.Set;
 @Entity
 @NoArgsConstructor
 @Table(name="app_user", uniqueConstraints = @UniqueConstraint(columnNames = { "username", "email"}))
-public class User implements HasImageSrc{
+public class User {
 
     @EqualsAndHashCode.Include
     @Id

@@ -12,7 +12,7 @@ import java.util.Set;
 @Setter
 @NoArgsConstructor
 @Entity
-public class Student implements HasImageSrc {
+public class Student  {
     @EqualsAndHashCode.Include
     @Id
     @Column(name="student_id")
