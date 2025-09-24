@@ -11,6 +11,7 @@ import com.niallantony.deulaubaba.dto.*;
 import com.niallantony.deulaubaba.exceptions.FileStorageException;
 import com.niallantony.deulaubaba.exceptions.ResourceNotFoundException;
 import com.niallantony.deulaubaba.exceptions.UserNotAuthorizedException;
+import com.niallantony.deulaubaba.mapper.DictionaryMapper;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
@@ -30,18 +31,22 @@ public class DictionaryService {
     private final ObjectMapper jacksonObjectMapper;
     private final FileStorageService fileStorageService;
     private final StudentService studentService;
+    private final DictionaryMapper dictionaryMapper;
 
     public DictionaryService(
             DictionaryRepository dictionaryRepository,
             CommunicationCategoryRepository communicationCategoryRepository,
             ObjectMapper jacksonObjectMapper,
             FileStorageService fileStorageService,
-            StudentService studentService) {
+            StudentService studentService,
+            DictionaryMapper dictionaryMapper
+    ) {
         this.dictionaryRepository = dictionaryRepository;
         this.communicationCategoryRepository = communicationCategoryRepository;
         this.jacksonObjectMapper = jacksonObjectMapper;
         this.fileStorageService = fileStorageService;
         this.studentService = studentService;
+        this.dictionaryMapper = dictionaryMapper;
     }
 
     public DictionaryListingsResponse getDictionaryListings(String studentId, String userId) {
@@ -52,18 +57,9 @@ public class DictionaryService {
            return response;
        }
        Set<ExpressionType> types = getExpressionTypes(listings);
-       List<DictionaryEntryResponse> listingsDTO = listings.stream()
-               .map(listing -> new DictionaryEntryResponse(
-                       listing.getId(),
-                       listing.getType(),
-                       listing.getTitle(),
-                       listing.getCategory().stream()
-                               .map(CommunicationCategory::getLabel)
-                               .collect(Collectors.toSet()),
-                       listing.getImgSrc(),
-                       listing.getDescription()
-
-               )).toList();
+       List<DictionaryEntryDTO> listingsDTO = listings.stream()
+                                                      .map(dictionaryMapper::entityToDto)
+                                                      .toList();
        response.setListings(listingsDTO);
        response.setExpressiontypes(types);
        return response;
@@ -82,7 +78,7 @@ public class DictionaryService {
         DictionaryEntry entry = new DictionaryEntry();
         if (imageFile != null) {
             String filename = fileStorageService.storeImage(imageFile);
-            entry.setImgSrc(filename);
+            entry.setImgsrc(filename);
         }
         entry.setStudent(student);
         assignChanges(entry, dictionaryPostRequest);
@@ -92,6 +88,7 @@ public class DictionaryService {
 
     @Transactional
     public DictionaryEntry updateDictionaryEntry(String data, MultipartFile image, String userId) throws IOException {
+        String oldFilename = null;
         DictionaryPutRequest dictionaryPutRequest = jacksonObjectMapper.readValue(data, DictionaryPutRequest.class);
         if (!studentService.studentBelongsToUser(dictionaryPutRequest.getStudentId(), userId)) {
             throw new UserNotAuthorizedException("User Not Authorized");
@@ -101,14 +98,17 @@ public class DictionaryService {
         if (image != null) {
             try {
                 String filename = fileStorageService.storeImage(image);
-                fileStorageService.deleteImage(entry);
-                entry.setImgSrc(filename);
+                oldFilename = entry.getImgsrc();
+                entry.setImgsrc(filename);
             } catch (FileStorageException e) {
                 log.warn("Image failed to save into dictionary", e);
             }
         }
         assignChanges(entry, dictionaryPutRequest);
         dictionaryRepository.save(entry);
+        if (oldFilename != null) {
+            fileStorageService.deleteImage(oldFilename);
+        }
         return entry;
     }
 
@@ -122,8 +122,8 @@ public class DictionaryService {
         if (!studentService.studentBelongsToUser(entry.getStudent().getStudentId(), userId)) {
             throw new UserNotAuthorizedException("User Not Authorized");
         }
-        if (entry.getImgSrc() != null) {
-            fileStorageService.deleteImage(entry);
+        if (entry.getImgsrc() != null) {
+            fileStorageService.deleteImage(entry.getImgsrc());
         }
         dictionaryRepository.deleteById(longId);
     }
