@@ -17,8 +17,12 @@ import com.niallantony.deulaubaba.mapper.StudentMapper;
 import com.niallantony.deulaubaba.mapper.UserMapper;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.CsvSource;
+import org.mockito.InjectMocks;
+import org.mockito.Mock;
+import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.util.Optional;
@@ -26,36 +30,23 @@ import java.util.Optional;
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.Mockito.*;
 
+@ExtendWith(MockitoExtension.class)
 public class UserServiceTest {
+    @Mock
+    private UserRepository userRepository;
+    @Mock
+    private StudentRepository studentRepository;
+    @Mock
+    private ObjectMapper objectMapper;
+    @Mock
+    private FileStorageService fileStorageService;
+    @Mock
+    private UserMapper userMapper;
+    @Mock
+    private StudentMapper studentMapper;
 
+    @InjectMocks
     UserService userService;
-    UserRepository userRepository;
-    StudentRepository studentRepository;
-    ObjectMapper objectMapper;
-    FileStorageService fileStorageService;
-    UserMapper userMapper;
-    StudentMapper studentMapper;
-
-
-    @BeforeEach
-    public void setUp() {
-        studentRepository = mock(StudentRepository.class);
-        userRepository = mock(UserRepository.class);
-        objectMapper = new ObjectMapper();
-        fileStorageService = mock(FileStorageService.class);
-        userMapper = mock(UserMapper.class);
-        studentMapper = mock(StudentMapper.class);
-
-        userService = new UserService(
-                studentRepository,
-                userRepository,
-                objectMapper,
-                fileStorageService,
-                userMapper,
-                studentMapper
-        );
-    }
-
 
     @Test
     public void getUser_whenGivenValidId_thenReturnUserDTO() {
