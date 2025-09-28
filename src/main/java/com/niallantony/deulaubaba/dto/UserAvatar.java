@@ -6,7 +6,7 @@ import lombok.Data;
 @Data
 @AllArgsConstructor
 public class UserAvatar {
-    private String id;
-    private String src;
-    private String type;
+    private String username;
+    private String imagesrc;
+    private String userType;
 }
