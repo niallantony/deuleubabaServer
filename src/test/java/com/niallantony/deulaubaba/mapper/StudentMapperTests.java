@@ -2,6 +2,7 @@ package com.niallantony.deulaubaba.mapper;
 
 import com.niallantony.deulaubaba.domain.Student;
 import com.niallantony.deulaubaba.dto.StudentDTO;
+import com.niallantony.deulaubaba.dto.StudentRequest;
 import org.junit.jupiter.api.Test;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
@@ -33,6 +34,27 @@ public class StudentMapperTests {
         assertEquals(dto.getImagesrc(),"./example.png");
         assertEquals(dto.getChallengesDetails(),"Example Challenges Details");
         assertEquals(dto.getCommunicationDetails(),"Example Communication Details");
+    }
+
+    @Test
+    void studentMapper_whenGivenStudentRequest_returnsStudent() {
+        StudentMapper studentMapper = new StudentMapperImpl();
+        StudentRequest request = new StudentRequest();
+
+        request.setName("John");
+        request.setAge(23);
+        request.setGrade(3);
+        request.setSetting("General");
+        request.setDisability("None");
+        request.setImgsrc("./example.png");
+
+        Student student = studentMapper.toStudent(request);
+        assertEquals("John", student.getName());
+        assertEquals(23, student.getAge());
+        assertEquals(3, student.getGrade());
+        assertEquals("General", student.getSetting());
+        assertEquals("None", student.getDisability());
+        assertEquals("./example.png", student.getImagesrc());
     }
 
 }
