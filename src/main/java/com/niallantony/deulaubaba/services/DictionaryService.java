@@ -96,7 +96,7 @@ public class DictionaryService {
     }
 
     @Transactional
-    public DictionaryEntry updateDictionaryEntry(String data, MultipartFile image, String userId) throws IOException {
+    public DictionaryEntry updateDictionaryEntry(String data, MultipartFile image, String userId) {
         String oldFilename = null;
         DictionaryPutRequest dictionaryPutRequest = jsonUtils.parse(
                 data,
@@ -126,7 +126,7 @@ public class DictionaryService {
     }
 
     @Transactional
-    public void deleteDictionaryEntry(String id, String userId) throws ResourceNotFoundException {
+    public void deleteDictionaryEntry(String id, String userId) {
         Long longId = Long.parseLong(id);
         if (!dictionaryRepository.existsById(longId)) {
             throw new ResourceNotFoundException("Dictionary Not Found");
