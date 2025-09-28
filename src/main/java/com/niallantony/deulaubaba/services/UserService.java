@@ -14,6 +14,7 @@ import com.niallantony.deulaubaba.exceptions.InvalidUserDataException;
 import com.niallantony.deulaubaba.exceptions.ResourceNotFoundException;
 import com.niallantony.deulaubaba.mapper.StudentMapper;
 import com.niallantony.deulaubaba.mapper.UserMapper;
+import com.niallantony.deulaubaba.utils.JsonUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -28,7 +29,7 @@ public class UserService {
     private static final Logger log = LoggerFactory.getLogger(UserService.class);
     private final StudentRepository studentRepository;
     private final UserRepository userRepository;
-    private final ObjectMapper jacksonObjectMapper;
+    private final JsonUtils jsonUtils;
     private final FileStorageService fileStorageService;
     private final UserMapper userMapper;
     private final StudentMapper studentMapper;
@@ -38,15 +39,15 @@ public class UserService {
     public UserService(
             StudentRepository studentRepository,
             UserRepository userRepository,
-            ObjectMapper jacksonObjectMapper,
             FileStorageService fileStorageService,
             UserMapper userMapper,
-            StudentMapper studentMapper
+            StudentMapper studentMapper,
+            JsonUtils jsonUtils
     ) {
         this.studentRepository = studentRepository;
         this.userRepository = userRepository;
-        this.jacksonObjectMapper = jacksonObjectMapper;
         this.fileStorageService = fileStorageService;
+        this.jsonUtils = jsonUtils;
         this.userMapper = userMapper;
         this.studentMapper = studentMapper;
     }
@@ -58,12 +59,11 @@ public class UserService {
 
 
     public UserDTO createUser(String userId,  String data, MultipartFile image) {
-        UserRequest userRequest;
-        try {
-             userRequest = jacksonObjectMapper.readValue(data, UserRequest.class);
-        } catch (JsonProcessingException e) {
-            throw new InvalidUserDataException("Invalid user data", e);
-        }
+        UserRequest userRequest = jsonUtils.parse(
+                data,
+                UserRequest.class,
+                () -> new InvalidUserDataException("Given User Data not Valid")
+        );
         validateUserRequest(userRequest);
         User user = userMapper.toNewUser(userRequest, userId);
         if (image != null && !image.isEmpty()) {
@@ -83,10 +83,7 @@ public class UserService {
                 request.getUsername() == null || request.getUsername().isBlank() ||
                 request.getEmail() == null || request.getEmail().isBlank() ||
                 request.getUserType() == null || request.getUserType().isBlank()) {
-            throw new InvalidUserDataException(
-                    "Missing required user fields",
-                    new IllegalArgumentException("Some fields are missing")
-            );
+            throw new InvalidUserDataException( "Missing required user fields" );
         }
     }
 

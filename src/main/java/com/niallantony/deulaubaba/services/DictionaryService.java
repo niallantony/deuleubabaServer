@@ -1,6 +1,5 @@
 package com.niallantony.deulaubaba.services;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
 import com.niallantony.deulaubaba.domain.CommunicationCategory;
 import com.niallantony.deulaubaba.domain.DictionaryEntry;
 import com.niallantony.deulaubaba.domain.ExpressionType;
@@ -9,9 +8,11 @@ import com.niallantony.deulaubaba.data.CommunicationCategoryRepository;
 import com.niallantony.deulaubaba.data.DictionaryRepository;
 import com.niallantony.deulaubaba.dto.*;
 import com.niallantony.deulaubaba.exceptions.FileStorageException;
+import com.niallantony.deulaubaba.exceptions.InvalidDictionaryDataException;
 import com.niallantony.deulaubaba.exceptions.ResourceNotFoundException;
 import com.niallantony.deulaubaba.exceptions.UserNotAuthorizedException;
 import com.niallantony.deulaubaba.mapper.DictionaryMapper;
+import com.niallantony.deulaubaba.utils.JsonUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
@@ -28,7 +29,7 @@ public class DictionaryService {
     private static final Logger log = LoggerFactory.getLogger(DictionaryService.class);
     private final DictionaryRepository dictionaryRepository;
     private final CommunicationCategoryRepository communicationCategoryRepository;
-    private final ObjectMapper jacksonObjectMapper;
+    private final JsonUtils jsonUtils;
     private final FileStorageService fileStorageService;
     private final StudentService studentService;
     private final DictionaryMapper dictionaryMapper;
@@ -36,14 +37,14 @@ public class DictionaryService {
     public DictionaryService(
             DictionaryRepository dictionaryRepository,
             CommunicationCategoryRepository communicationCategoryRepository,
-            ObjectMapper jacksonObjectMapper,
             FileStorageService fileStorageService,
             StudentService studentService,
-            DictionaryMapper dictionaryMapper
+            DictionaryMapper dictionaryMapper,
+            JsonUtils jsonUtils
     ) {
         this.dictionaryRepository = dictionaryRepository;
         this.communicationCategoryRepository = communicationCategoryRepository;
-        this.jacksonObjectMapper = jacksonObjectMapper;
+        this.jsonUtils = jsonUtils;
         this.fileStorageService = fileStorageService;
         this.studentService = studentService;
         this.dictionaryMapper = dictionaryMapper;
@@ -72,15 +73,23 @@ public class DictionaryService {
     }
 
     @Transactional
-    public DictionaryEntry addDictionaryEntry(String data, MultipartFile imageFile, String userId) throws IOException {
-        DictionaryPostRequest dictionaryPostRequest = jacksonObjectMapper.readValue(data, DictionaryPostRequest.class);
+    public DictionaryEntry addDictionaryEntry(String data, MultipartFile imageFile, String userId) {
+        DictionaryPostRequest dictionaryPostRequest = jsonUtils.parse(
+                data,
+                DictionaryPostRequest.class,
+                () -> new InvalidDictionaryDataException("Entry data not valid: POST")
+        );
         Student student = studentService.getAuthorisedStudent(dictionaryPostRequest.getStudentId(), userId);
         DictionaryEntry entry = new DictionaryEntry();
-        if (imageFile != null) {
-            String filename = fileStorageService.storeImage(imageFile);
-            entry.setImgsrc(filename);
-        }
         entry.setStudent(student);
+        if (imageFile != null) {
+            try {
+                String filename = fileStorageService.storeImage(imageFile);
+                entry.setImgsrc(filename);
+            } catch (FileStorageException e) {
+                log.warn("File not saved: ", e);
+            }
+        }
         assignChanges(entry, dictionaryPostRequest);
         dictionaryRepository.save(entry);
         return entry;
@@ -89,7 +98,11 @@ public class DictionaryService {
     @Transactional
     public DictionaryEntry updateDictionaryEntry(String data, MultipartFile image, String userId) throws IOException {
         String oldFilename = null;
-        DictionaryPutRequest dictionaryPutRequest = jacksonObjectMapper.readValue(data, DictionaryPutRequest.class);
+        DictionaryPutRequest dictionaryPutRequest = jsonUtils.parse(
+                data,
+                DictionaryPutRequest.class,
+                () -> new InvalidDictionaryDataException("Entry data not valid: PUT")
+        );
         if (!studentService.studentBelongsToUser(dictionaryPutRequest.getStudentId(), userId)) {
             throw new UserNotAuthorizedException("User Not Authorized");
         }
