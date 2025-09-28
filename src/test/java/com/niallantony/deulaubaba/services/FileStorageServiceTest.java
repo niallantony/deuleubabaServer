@@ -25,7 +25,7 @@ class FileStorageServiceTest {
         service = new FileStorageService(tempDir.resolve(FILES_FOLDER).toString());
     }
     @Test
-    void storeImage_success() throws Exception {
+    void storeImage_whenGivenFilename_storesFile() throws Exception {
         MultipartFile file = mock(MultipartFile.class);
         when(file.getOriginalFilename()).thenReturn("test.png");
 
@@ -38,7 +38,7 @@ class FileStorageServiceTest {
     }
 
     @Test
-    void storeImage_failureWrapsInFileStorageException() throws Exception {
+    void storeImage_whenFileStorageError_throwsException() throws Exception {
         MultipartFile file = mock(MultipartFile.class);
         when(file.getOriginalFilename()).thenReturn("bad.png");
         doThrow(new IOException("disk full")).when(file).transferTo(any(Path.class));
@@ -50,13 +50,13 @@ class FileStorageServiceTest {
     }
 
     @Test
-    void deleteImage_nullOrEmpty_doesNothing() {
+    void deleteImage_whenGivenNullOrEmpty_doesNothing() {
         service.deleteImage(null);
         service.deleteImage("");
     }
 
     @Test
-    void deleteImage_existingFile_deletesIt() throws IOException {
+    void deleteImage_givenExistingFile_deletesIt() throws IOException {
 
         Path imageDir = tempDir.resolve(FILES_FOLDER);
         Files.createDirectories(imageDir);
@@ -70,7 +70,7 @@ class FileStorageServiceTest {
     }
 
     @Test
-    void deleteImage_nonExistentFile_doesNothing() {
+    void deleteImage_givenNonExistentFile_doesNothing() {
         service.deleteImage("does-not-exist.png");
     }
 }
