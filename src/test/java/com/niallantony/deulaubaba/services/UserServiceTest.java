@@ -15,11 +15,9 @@ import com.niallantony.deulaubaba.exceptions.InvalidUserDataException;
 import com.niallantony.deulaubaba.exceptions.ResourceNotFoundException;
 import com.niallantony.deulaubaba.mapper.StudentMapper;
 import com.niallantony.deulaubaba.mapper.UserMapper;
-import org.junit.jupiter.api.BeforeEach;
+import com.niallantony.deulaubaba.utils.JsonUtils;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
-import org.junit.jupiter.params.ParameterizedTest;
-import org.junit.jupiter.params.provider.CsvSource;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
@@ -44,10 +42,19 @@ public class UserServiceTest {
     private UserMapper userMapper;
     @Mock
     private StudentMapper studentMapper;
+    @Mock
+    private JsonUtils jsonUtils;
+
 
     @InjectMocks
     UserService userService;
 
+    private UserRequest mockUserRequest = new UserRequest(
+            "Username",
+            "Name",
+            "User Type",
+            "Email"
+    );
     @Test
     public void getUser_whenGivenValidId_thenReturnUserDTO() {
         User mockUser = new User();
@@ -81,14 +88,8 @@ public class UserServiceTest {
     public void createUser_whenGivenValidDataWithNoImage_thenReturnUserDTO() {
         User mockUser = new User();
         UserDTO mockDTO = new UserDTO();
-        String data = """
-                {
-                    "name": "Name",
-                    "userType": "User Type",
-                    "username": "Username",
-                    "email": "Email"
-                }
-                """;
+        String data = "data";
+        when(jsonUtils.parse(eq(data), eq(UserRequest.class), any())).thenReturn(mockUserRequest);
 
         when(userMapper.toNewUser(argThat(req ->
                         req.getName().equals("Name") &&
@@ -112,16 +113,9 @@ public class UserServiceTest {
         MultipartFile mockFile = mock(MultipartFile.class);
         User mockUser = new User();
         UserDTO mockDTO = new UserDTO();
-        String data = """
-                {
-                    "name": "Name",
-                    "userType": "User Type",
-                    "username": "Username",
-                    "email": "Email"
-                }
-                """;
-
-        when(userMapper.toNewUser(any(UserRequest.class), eq("ABC"))).thenReturn(mockUser);
+        String data = "data";
+        when(jsonUtils.parse(eq(data), eq(UserRequest.class), any())).thenReturn(mockUserRequest);
+        when(userMapper.toNewUser(mockUserRequest, "ABC")).thenReturn(mockUser);
         when(userMapper.toDTO(mockUser)).thenReturn(mockDTO);
         when(fileStorageService.storeImage(mockFile)).thenReturn("./mock-file.png");
 
@@ -141,19 +135,14 @@ public class UserServiceTest {
         verifyNoMoreInteractions(userRepository, userMapper, fileStorageService);
     }
 
-    @ParameterizedTest(name = "Invalid input {0} should throw {1}")
-    @CsvSource({
-            // missing required fields
-            "'{\"name\": \"Name\", \"username\": \"Username\", \"email\": \"Email\"}', 'Missing required user fields'",
-            // extra irrelevant field
-            "'{\"name\": \"Name\", \"username\": \"Username\", \"userType\": \"User Type\", \"password\": \"Password\", \"email\": \"Email\"}', 'Invalid user data'"
-    })
-    public void createUser_whenGivenInvalidData_thenThrowsInvalidUserDataException(String data, String message) {
+    @Test
+    public void createUser_whenGivenInvalidData_thenThrowsInvalidUserDataException() {
+        String data = "data";
+        when(jsonUtils.parse(eq(data), any(),any())).thenThrow(InvalidUserDataException.class);
         InvalidUserDataException exception = assertThrows(
                 InvalidUserDataException.class,
                 () -> userService.createUser("ABC", data, null)
         );
-        assertEquals(exception.getMessage(), message);
     }
 
 
@@ -162,16 +151,9 @@ public class UserServiceTest {
         MultipartFile mockFile = mock(MultipartFile.class);
         User mockUser = new User();
         UserDTO mockDTO = new UserDTO();
-        String data = """
-                {
-                    "name": "Name",
-                    "userType": "User Type",
-                    "username": "Username",
-                    "email": "Email"
-                }
-                """;
-
-        when(userMapper.toNewUser(any(UserRequest.class), eq("ABC"))).thenReturn(mockUser);
+        String data = "data";
+        when(jsonUtils.parse(eq(data), eq(UserRequest.class), any())).thenReturn(mockUserRequest);
+        when(userMapper.toNewUser(mockUserRequest, "ABC")).thenReturn(mockUser);
         when(userMapper.toDTO(mockUser)).thenReturn(mockDTO);
         when(fileStorageService.storeImage(mockFile)).thenThrow(FileStorageException.class);
         UserDTO result = userService.createUser("ABC", data, mockFile);
