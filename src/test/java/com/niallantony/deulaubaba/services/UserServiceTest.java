@@ -49,7 +49,7 @@ public class UserServiceTest {
     @InjectMocks
     UserService userService;
 
-    private UserRequest mockUserRequest = new UserRequest(
+    private final UserRequest mockUserRequest = new UserRequest(
             "Username",
             "Name",
             "User Type",
