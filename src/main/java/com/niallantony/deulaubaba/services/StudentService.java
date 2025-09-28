@@ -1,23 +1,23 @@
 package com.niallantony.deulaubaba.services;
 
 import com.aventrix.jnanoid.jnanoid.NanoIdUtils;
-import com.fasterxml.jackson.core.JsonProcessingException;
-import com.fasterxml.jackson.databind.ObjectMapper;
 import com.niallantony.deulaubaba.domain.Student;
 import com.niallantony.deulaubaba.domain.User;
 import com.niallantony.deulaubaba.data.StudentRepository;
 import com.niallantony.deulaubaba.data.UserRepository;
 import com.niallantony.deulaubaba.dto.*;
+import com.niallantony.deulaubaba.exceptions.FileStorageException;
+import com.niallantony.deulaubaba.exceptions.InvalidStudentDataException;
 import com.niallantony.deulaubaba.exceptions.ResourceNotFoundException;
 import com.niallantony.deulaubaba.exceptions.UserNotAuthorizedException;
 import com.niallantony.deulaubaba.mapper.StudentMapper;
+import com.niallantony.deulaubaba.utils.JsonUtils;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
 
-import java.io.IOException;
 import java.util.List;
 import java.util.Random;
 import java.util.Set;
@@ -28,37 +28,37 @@ public class StudentService {
     private final StudentRepository studentRepository;
     private final UserRepository userRepository;
     private final FileStorageService fileStorageService;
-    private final ObjectMapper jacksonObjectMapper;
     private final StudentMapper studentMapper;
+    private final JsonUtils jsonUtils;
 
     @Autowired
     public StudentService(
             StudentRepository studentRepository,
             UserRepository userRepository,
-            ObjectMapper jacksonObjectMapper,
             FileStorageService fileStorageService,
-            StudentMapper studentMapper
+            StudentMapper studentMapper,
+            JsonUtils jsonUtils
     ) {
         this.studentRepository = studentRepository;
         this.userRepository = userRepository;
-        this.jacksonObjectMapper = jacksonObjectMapper;
         this.fileStorageService = fileStorageService;
         this.studentMapper = studentMapper;
+        this.jsonUtils = jsonUtils;
     }
 
-    public StudentIdAvatar getStudentPreviewById(String id) throws ResourceNotFoundException {
+    public StudentIdAvatar getStudentPreviewById(String id)  {
         Student student = studentRepository.findById(id.toLowerCase())
                 .orElseThrow(() -> new ResourceNotFoundException("Student not found" + id));
         return getStudentIdAvatar(student);
     }
 
-    public StudentDTO getStudentById(String id) throws ResourceNotFoundException {
+    public StudentDTO getStudentById(String id)  {
         Student student = studentRepository.findById(id.toLowerCase())
                 .orElseThrow(() -> new ResourceNotFoundException("Student not found" + id));
         return studentMapper.toDTO(student);
     }
 
-    public List<UserAvatar> getStudentTeam(String id) throws ResourceNotFoundException {
+    public List<UserAvatar> getStudentTeam(String id)  {
 
        Student student = studentRepository.findById(id)
                .orElseThrow(() -> new ResourceNotFoundException("Student not found" + id));
@@ -71,7 +71,7 @@ public class StudentService {
                )).toList();
     }
 
-    public List<StudentIdAvatar> getStudents(String id) throws ResourceNotFoundException {
+    public List<StudentIdAvatar> getStudents(String id)  {
         List<StudentIdAvatar> students = studentRepository.findAllOfUserId(id);
         if (students.isEmpty()) {
             throw new ResourceNotFoundException("Students not found" + id);
@@ -79,19 +79,13 @@ public class StudentService {
         return students;
     }
 
-    public Student extractStudent(StudentRequest studentRequest, String userId) {
+    private Student extractStudent(StudentRequest studentRequest, String userId) {
 
         char[] alphabet = {'1', '2', '3', '4', '5', '6', '7', '8', '9', 'a', 'b', 'c', 'd', 'e', 'f'};
         Random random = new Random();
         User user = userRepository.findByUserId(userId).orElseThrow(() -> new UserNotAuthorizedException("Unauthorized Access"));
 
-        Student student = new Student();
-        student.setName(studentRequest.getName());
-        student.setSchool(studentRequest.getSchool());
-        student.setAge(studentRequest.getAge());
-        student.setGrade(studentRequest.getGrade());
-        student.setDisability(studentRequest.getDisability());
-        student.setSetting(studentRequest.getSetting());
+        Student student = studentMapper.toStudent(studentRequest);
         student.setStudentId(NanoIdUtils.randomNanoId(random, alphabet, 6));
         student.getUsers().add(user);
 
@@ -99,8 +93,12 @@ public class StudentService {
     }
 
     @Transactional
-    public StudentDTO createStudent(String request, String userId) throws UserNotAuthorizedException, JsonProcessingException {
-        StudentRequest studentRequest = jacksonObjectMapper.readValue(request, StudentRequest.class);
+    public StudentDTO createStudent(String request, String userId) {
+        StudentRequest studentRequest = jsonUtils.parse(
+                request,
+                StudentRequest.class,
+                () -> new InvalidStudentDataException("Invalid request")
+        );
         Student student = extractStudent(studentRequest, userId);
         studentRepository.save(student);
         linkStudentToUser(student, userId);
@@ -108,12 +106,19 @@ public class StudentService {
     }
 
     @Transactional
-    public StudentDTO createStudent(String request, MultipartFile image, String userId) throws UserNotAuthorizedException, IOException {
-        StudentRequest studentRequest = jacksonObjectMapper.readValue(request, StudentRequest.class);
-        String filename = fileStorageService.storeImage(image);
-
+    public StudentDTO createStudent(String request, MultipartFile image, String userId)  {
+        StudentRequest studentRequest = jsonUtils.parse(
+                request,
+                StudentRequest.class,
+                () -> new InvalidStudentDataException("Invalid request")
+        );
         Student student = extractStudent(studentRequest, userId);
-        student.setImagesrc(filename);
+        try {
+            String filename = fileStorageService.storeImage(image);
+            student.setImagesrc(filename);
+        } catch (FileStorageException e) {
+            log.warn("Image not saved to storage", e);
+        }
         studentRepository.save(student);
         linkStudentToUser(student, userId);
 
@@ -121,8 +126,12 @@ public class StudentService {
     }
 
     @Transactional
-    public StudentDTO updateStudentDetails(String studentId, String request, String userId) throws UserNotAuthorizedException, ResourceNotFoundException, JsonProcessingException {
-        StudentRequest studentRequest = jacksonObjectMapper.readValue(request, StudentRequest.class);
+    public StudentDTO updateStudentDetails(String studentId, String request, String userId)  {
+        StudentRequest studentRequest = jsonUtils.parse(
+                request,
+                StudentRequest.class,
+                () -> new InvalidStudentDataException("Invalid request")
+        );
         Student student = getAuthorisedStudent(studentId, userId);
 
        applyDetailUpdates(student, studentRequest);
@@ -131,26 +140,43 @@ public class StudentService {
        return studentMapper.toDTO(student);
     }
 
+    // TODO: Image storage failure should be told to user
+    // TODO: Image deletion is not ATOM
     @Transactional
-    public StudentDTO updateStudentDetails(String studentId, String request, MultipartFile image, String userId) throws UserNotAuthorizedException, ResourceNotFoundException, IOException {
-        StudentRequest studentRequest = jacksonObjectMapper.readValue(request, StudentRequest.class);
+    public StudentDTO updateStudentDetails(String studentId, String request, MultipartFile image, String userId)  {
+        StudentRequest studentRequest = jsonUtils.parse(
+                request,
+                StudentRequest.class,
+                () -> new InvalidStudentDataException("Invalid request")
+        );
         Student student = getAuthorisedStudent(studentId, userId);
         String oldImg = student.getImagesrc();
 
-        String filename = fileStorageService.storeImage(image);
-
-        student.setImagesrc(filename);
+        boolean newImageStored = false;
+        try {
+            String filename = fileStorageService.storeImage(image);
+            student.setImagesrc(filename);
+            newImageStored = true;
+        } catch (FileStorageException e) {
+            log.warn("Image not saved to storage", e);
+        }
         applyDetailUpdates(student, studentRequest);
 
         studentRepository.save(student);
-        fileStorageService.deleteImage(oldImg);
+        if (newImageStored) {
+            fileStorageService.deleteImage(oldImg);
+        }
 
         return studentMapper.toDTO(student);
     }
 
     @Transactional
-    public StudentDTO updateStudentCommunication(String studentId, String request, String userId) throws UserNotAuthorizedException, ResourceNotFoundException, IOException {
-        StudentCommunicationRequest studentCommunicationRequest = jacksonObjectMapper.readValue(request, StudentCommunicationRequest.class);
+    public StudentDTO updateStudentCommunication(String studentId, String request, String userId)  {
+        StudentCommunicationRequest studentCommunicationRequest = jsonUtils.parse(
+                request,
+                StudentCommunicationRequest.class,
+                () -> new InvalidStudentDataException("Invalid request")
+        );
         Student student = getAuthorisedStudent(studentId, userId);
         student.setCommunicationDetails(studentCommunicationRequest.getCommunicationDetails());
         studentRepository.save(student);
@@ -158,16 +184,19 @@ public class StudentService {
     }
 
     @Transactional
-    public StudentDTO updateStudentChallenge(String studentId, String request, String userId) throws UserNotAuthorizedException, ResourceNotFoundException, IOException {
-        StudentChallengeRequest studentChallengeRequest = jacksonObjectMapper.readValue(request, StudentChallengeRequest.class);
+    public StudentDTO updateStudentChallenge(String studentId, String request, String userId)  {
+        StudentChallengeRequest studentChallengeRequest = jsonUtils.parse(
+                request,
+                StudentChallengeRequest.class,
+                () -> new InvalidStudentDataException("Invalid request")
+        );
         Student student = getAuthorisedStudent(studentId, userId);
         student.setChallengesDetails(studentChallengeRequest.getChallengesDetails());
         studentRepository.save(student);
         return studentMapper.toDTO(student);
     }
 
-    public Student getAuthorisedStudent(String studentId, String userId)
-            throws UserNotAuthorizedException, ResourceNotFoundException {
+    public Student getAuthorisedStudent(String studentId, String userId) {
         Student student = studentRepository.findById(studentId)
                 .orElseThrow(() -> new ResourceNotFoundException("Student not found " + studentId));
         User user = userRepository.findByUserId(userId)
@@ -199,7 +228,7 @@ public class StudentService {
         Student student = studentRepository.findById(studentId)
                 .orElseThrow(() -> new ResourceNotFoundException("Student not found " + studentId));
         User user = userRepository.findByUserId(userId)
-                .orElseThrow(() -> new ResourceNotFoundException("User not found " + userId));
+                .orElseThrow(() -> new UserNotAuthorizedException("User not found " + userId));
         return student.getUsers().contains(user);
     }
 
