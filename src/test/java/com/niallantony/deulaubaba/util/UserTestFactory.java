@@ -25,4 +25,10 @@ public class UserTestFactory {
         u.setUserType("user type");
         return u;
     }
+
+    public static UserRequest createBadUserRequest() {
+        UserRequest u = new UserRequest();
+        u.setUsername("username");
+        return u;
+    }
 }
