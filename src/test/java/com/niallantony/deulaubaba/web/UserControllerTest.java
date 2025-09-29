@@ -2,14 +2,18 @@ package com.niallantony.deulaubaba.web;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.niallantony.deulaubaba.data.RoleRepository;
+import com.niallantony.deulaubaba.data.StudentRepository;
 import com.niallantony.deulaubaba.data.UserRepository;
+import com.niallantony.deulaubaba.domain.Student;
 import com.niallantony.deulaubaba.domain.User;
 import com.niallantony.deulaubaba.dto.UserRequest;
 import com.niallantony.deulaubaba.services.FileStorageService;
+import com.niallantony.deulaubaba.util.StudentTestFactory;
 import com.niallantony.deulaubaba.util.UserTestFactory;
 import org.junit.ClassRule;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
@@ -19,11 +23,13 @@ import org.springframework.test.context.DynamicPropertyRegistry;
 import org.springframework.test.context.DynamicPropertySource;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
+import org.springframework.transaction.annotation.Transactional;
 import org.testcontainers.containers.PostgreSQLContainer;
 import org.testcontainers.junit.jupiter.Testcontainers;
 
 import java.nio.charset.StandardCharsets;
 import java.util.List;
+import java.util.Set;
 
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.jwt;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
@@ -43,6 +49,9 @@ class UserControllerTest {
     RoleRepository roleRepository;
 
     @Autowired
+    StudentRepository studentRepository;
+
+    @Autowired
     ObjectMapper objectMapper;
 
     @MockitoBean
@@ -57,6 +66,12 @@ class UserControllerTest {
     @BeforeAll
     public static void beforeAll() {
         postgreSQLContainer.start();
+    }
+
+    @BeforeEach
+    public void beforeEach() {
+        userRepository.deleteAll();
+        studentRepository.deleteAll();
     }
 
     @DynamicPropertySource
@@ -142,6 +157,75 @@ class UserControllerTest {
         assertEquals(1, users.size());
         assertEquals(request.getUsername(), users.getFirst().getUsername());
         verify(fileStorageService).storeImage(image);
+    }
+
+    @Test
+    public void postUser_withInvalidData_returns400(@Autowired MockMvc mvc) throws Exception {
+        UserRequest request = UserTestFactory.createBadUserRequest();
+        String body = objectMapper.writeValueAsString(request);
+        MockMultipartFile data = new MockMultipartFile("data", "user.json", "application/json", body.getBytes());
+        mvc.perform(multipart("/me")
+                .file(data)
+                .with(jwt())
+                .contentType("multipart/form-data"))
+            .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.message").value("Missing required user fields"));
+        List<User> users = userRepository.findAll();
+        assertEquals(0, users.size());
+    }
+
+    @Test
+    @Transactional
+    public void linkStudent_withValidData_returns200andStudentDTO(@Autowired MockMvc mvc) throws Exception {
+        Student student = StudentTestFactory.createStudent();
+        User mockUser = UserTestFactory.createBasicUser(
+                roleRepository.findByName("ROLE_USER").orElseThrow()
+        );
+        userRepository.save(mockUser);
+        studentRepository.save(student);
+        mvc.perform(post("/me/link-student")
+                .with(jwt())
+                .param("code","ABC"))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.name").value(student.getName()));
+        User user = userRepository.findByUserId(mockUser.getUserId()).orElseThrow();
+        Set<Student> students = user.getStudents();
+        assertEquals(1, students.size());
+        assertEquals(student.getName(), students.iterator().next().getName());
+        assertEquals(student.getStudentId(), students.iterator().next().getStudentId());
+    }
+
+    @Test
+    @Transactional
+    public void linkStudent_withBadStudentCode_returns404(@Autowired MockMvc mvc) throws Exception {
+        Student student = StudentTestFactory.createStudent();
+        User mockUser = UserTestFactory.createBasicUser(
+                roleRepository.findByName("ROLE_USER").orElseThrow()
+        );
+        userRepository.save(mockUser);
+        studentRepository.save(student);
+        mvc.perform(post("/me/link-student")
+                   .with(jwt())
+                   .param("code","DEF"))
+           .andExpect(status().isNotFound())
+           .andExpect(jsonPath("$.message").value("Student Not Found"));
+        User user = userRepository.findByUserId(mockUser.getUserId()).orElseThrow();
+        Set<Student> students = user.getStudents();
+        assertEquals(0, students.size());
+    }
+
+    @Test
+    @Transactional
+    public void linkStudent_withBadUserId_returns404(@Autowired MockMvc mvc) throws Exception {
+        Student student = StudentTestFactory.createStudent();
+        studentRepository.save(student);
+        mvc.perform(post("/me/link-student")
+                   .with(jwt())
+                   .param("code","ABC"))
+           .andExpect(status().isNotFound())
+           .andExpect(jsonPath("$.message").value("User Not Found"));
+        Student db_student = studentRepository.findById("ABC").orElseThrow();
+        assertEquals(0, db_student.getUsers().size());
     }
 
 }
