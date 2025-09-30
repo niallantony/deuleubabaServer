@@ -48,20 +48,20 @@ public class StudentService {
 
     public StudentIdAvatar getStudentPreviewById(String id)  {
         Student student = studentRepository.findById(id.toLowerCase())
-                .orElseThrow(() -> new ResourceNotFoundException("Student not found" + id));
+                .orElseThrow(() -> new ResourceNotFoundException("Student not found " + id));
         return getStudentIdAvatar(student);
     }
 
     public StudentDTO getStudentById(String id)  {
         Student student = studentRepository.findById(id.toLowerCase())
-                .orElseThrow(() -> new ResourceNotFoundException("Student not found" + id));
+                .orElseThrow(() -> new ResourceNotFoundException("Student not found " + id));
         return studentMapper.toDTO(student);
     }
 
     public List<UserAvatar> getStudentTeam(String id)  {
 
        Student student = studentRepository.findById(id)
-               .orElseThrow(() -> new ResourceNotFoundException("Student not found" + id));
+               .orElseThrow(() -> new ResourceNotFoundException("Student not found " + id));
        Set<User> users = student.getUsers();
         return users.stream()
                .map(user -> new UserAvatar(
@@ -74,7 +74,7 @@ public class StudentService {
     public List<StudentIdAvatar> getStudents(String id)  {
         List<StudentIdAvatar> students = studentRepository.findAllOfUserId(id);
         if (students.isEmpty()) {
-            throw new ResourceNotFoundException("Students not found" + id);
+            throw new ResourceNotFoundException("Students not found " + id);
         }
         return students;
     }
