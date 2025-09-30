@@ -60,7 +60,7 @@ public class StudentService {
 
     public List<UserAvatar> getStudentTeam(String id)  {
 
-       Student student = studentRepository.findById(id)
+       Student student = studentRepository.findById(id.toLowerCase())
                .orElseThrow(() -> new ResourceNotFoundException("Student not found " + id));
        Set<User> users = student.getUsers();
         return users.stream()
@@ -225,7 +225,7 @@ public class StudentService {
     }
 
     public boolean studentBelongsToUser(String studentId, String userId) {
-        Student student = studentRepository.findById(studentId)
+        Student student = studentRepository.findById(studentId.toLowerCase())
                 .orElseThrow(() -> new ResourceNotFoundException("Student not found " + studentId));
         User user = userRepository.findByUserId(userId)
                 .orElseThrow(() -> new UserNotAuthorizedException("User not found " + userId));
