@@ -90,7 +90,7 @@ public class UserService {
     @Transactional
     public StudentDTO linkStudent(String userId, String studentCode) {
         User user = getUserOrThrow(userId);
-        Student student = studentRepository.findById(studentCode)
+        Student student = studentRepository.findById(studentCode.toLowerCase())
                 .orElseThrow(() -> new ResourceNotFoundException("Student Not Found"));
         user.getStudents().add(student);
         student.getUsers().add(user);
