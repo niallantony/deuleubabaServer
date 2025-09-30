@@ -8,13 +8,9 @@ import com.niallantony.deulaubaba.domain.Student;
 import com.niallantony.deulaubaba.domain.User;
 import com.niallantony.deulaubaba.dto.UserRequest;
 import com.niallantony.deulaubaba.services.FileStorageService;
-import com.niallantony.deulaubaba.util.StudentTestFactory;
 import com.niallantony.deulaubaba.util.UserTestFactory;
 import org.junit.ClassRule;
-import org.junit.jupiter.api.AfterAll;
-import org.junit.jupiter.api.BeforeAll;
-import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.*;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.boot.test.context.SpringBootTest;
@@ -22,6 +18,7 @@ import org.springframework.mock.web.MockMultipartFile;
 import org.springframework.test.context.DynamicPropertyRegistry;
 import org.springframework.test.context.DynamicPropertySource;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
+import org.springframework.test.context.jdbc.Sql;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.transaction.annotation.Transactional;
 import org.testcontainers.containers.PostgreSQLContainer;
@@ -68,8 +65,8 @@ class UserControllerTest {
         postgreSQLContainer.start();
     }
 
-    @BeforeEach
-    public void beforeEach() {
+    @AfterEach
+    public void afterEach() {
         userRepository.deleteAll();
         studentRepository.deleteAll();
     }
@@ -87,18 +84,15 @@ class UserControllerTest {
     }
 
     @Test
+    @Sql("/fixtures/user.sql")
     public void getProfile_ofAuthorisedUser_returnsUserDTO(@Autowired MockMvc mvc) throws Exception {
-        User mockUser = UserTestFactory.createBasicUser(
-                roleRepository.findByName("ROLE_USER").orElseThrow()
-        );
-        userRepository.save(mockUser);
         mvc.perform(get("/me").with(jwt()))
             .andExpect(status().isOk())
-            .andExpect(jsonPath("$.name").value(mockUser.getName()))
-            .andExpect(jsonPath("$.email").value(mockUser.getEmail()))
-            .andExpect(jsonPath("$.userType").value(mockUser.getUserType()))
-            .andExpect(jsonPath("$.username").value(mockUser.getUsername()))
-            .andExpect(jsonPath("$.role.name").value(mockUser.getRole().getName()));
+            .andExpect(jsonPath("$.name").value("name"))
+            .andExpect(jsonPath("$.email").value("email@email.com"))
+            .andExpect(jsonPath("$.userType").value("teacher"))
+            .andExpect(jsonPath("$.username").value("user1"))
+            .andExpect(jsonPath("$.role.name").value("ROLE_USER"));
     }
 
     @Test
@@ -176,55 +170,50 @@ class UserControllerTest {
 
     @Test
     @Transactional
+    @Sql({
+            "/fixtures/student.sql",
+            "/fixtures/user.sql"
+    })
     public void linkStudent_withValidData_returns200andStudentDTO(@Autowired MockMvc mvc) throws Exception {
-        Student student = StudentTestFactory.createStudent();
-        User mockUser = UserTestFactory.createBasicUser(
-                roleRepository.findByName("ROLE_USER").orElseThrow()
-        );
-        userRepository.save(mockUser);
-        studentRepository.save(student);
         mvc.perform(post("/me/link-student")
                 .with(jwt())
                 .param("code","ABC"))
             .andExpect(status().isOk())
-            .andExpect(jsonPath("$.name").value(student.getName()));
-        User user = userRepository.findByUserId(mockUser.getUserId()).orElseThrow();
+            .andExpect(jsonPath("$.name").value("John"));
+        User user = userRepository.findByUserId("user").orElseThrow();
         Set<Student> students = user.getStudents();
         assertEquals(1, students.size());
-        assertEquals(student.getName(), students.iterator().next().getName());
-        assertEquals(student.getStudentId(), students.iterator().next().getStudentId());
+        assertEquals("John", students.iterator().next().getName());
+        assertEquals("abc", students.iterator().next().getStudentId());
     }
 
     @Test
     @Transactional
+    @Sql({
+            "/fixtures/student.sql",
+            "/fixtures/user.sql"
+    })
     public void linkStudent_withBadStudentCode_returns404(@Autowired MockMvc mvc) throws Exception {
-        Student student = StudentTestFactory.createStudent();
-        User mockUser = UserTestFactory.createBasicUser(
-                roleRepository.findByName("ROLE_USER").orElseThrow()
-        );
-        userRepository.save(mockUser);
-        studentRepository.save(student);
         mvc.perform(post("/me/link-student")
                    .with(jwt())
                    .param("code","DEF"))
            .andExpect(status().isNotFound())
            .andExpect(jsonPath("$.message").value("Student Not Found"));
-        User user = userRepository.findByUserId(mockUser.getUserId()).orElseThrow();
+        User user = userRepository.findByUserId("user").orElseThrow();
         Set<Student> students = user.getStudents();
         assertEquals(0, students.size());
     }
 
     @Test
     @Transactional
+    @Sql("/fixtures/student.sql")
     public void linkStudent_withBadUserId_returns404(@Autowired MockMvc mvc) throws Exception {
-        Student student = StudentTestFactory.createStudent();
-        studentRepository.save(student);
         mvc.perform(post("/me/link-student")
                    .with(jwt())
                    .param("code","ABC"))
            .andExpect(status().isNotFound())
            .andExpect(jsonPath("$.message").value("User Not Found"));
-        Student db_student = studentRepository.findById("ABC").orElseThrow();
+        Student db_student = studentRepository.findById("abc").orElseThrow();
         assertEquals(0, db_student.getUsers().size());
     }
 
