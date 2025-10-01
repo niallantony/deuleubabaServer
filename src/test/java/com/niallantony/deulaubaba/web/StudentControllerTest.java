@@ -62,8 +62,6 @@ class StudentControllerTest {
             .withDatabaseName("integration-tests-db")
             .withUsername("sa")
             .withPassword("sa");
-    @Autowired
-    private StudentService studentService;
 
     @BeforeAll
     public static void beforeAll() {

@@ -1,7 +1,6 @@
 package com.niallantony.deulaubaba.services;
 
 
-import com.fasterxml.jackson.databind.ObjectMapper;
 import com.niallantony.deulaubaba.data.StudentRepository;
 import com.niallantony.deulaubaba.data.UserRepository;
 import com.niallantony.deulaubaba.domain.Role;
