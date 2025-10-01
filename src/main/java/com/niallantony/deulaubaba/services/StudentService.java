@@ -114,21 +114,6 @@ public class StudentService {
         return studentMapper.toDTO(student);
     }
 
-    @Transactional
-    public StudentDTO updateStudentDetails(String studentId, String request, String userId)  {
-        StudentRequest studentRequest = jsonUtils.parse(
-                request,
-                StudentRequest.class,
-                () -> new InvalidStudentDataException("Invalid request")
-        );
-        Student student = getAuthorisedStudent(studentId, userId);
-
-       applyDetailUpdates(student, studentRequest);
-
-       studentRepository.save(student);
-       return studentMapper.toDTO(student);
-    }
-
     // TODO: Image storage failure should be told to user
     // TODO: Image deletion is not ATOM
     @Transactional
@@ -139,23 +124,27 @@ public class StudentService {
                 () -> new InvalidStudentDataException("Invalid request")
         );
         Student student = getAuthorisedStudent(studentId, userId);
-        String oldImg = student.getImagesrc();
-
+        String oldImg = null;
         boolean newImageStored = false;
-        try {
-            String filename = fileStorageService.storeImage(image);
-            student.setImagesrc(filename);
-            newImageStored = true;
-        } catch (FileStorageException e) {
-            log.warn("Image not saved to storage", e);
+        if (image != null && !image.isEmpty()) {
+            oldImg = student.getImagesrc();
+            try {
+                String filename = fileStorageService.storeImage(image);
+                student.setImagesrc(filename);
+                newImageStored = true;
+            } catch (FileStorageException e) {
+                log.warn("Image not saved to storage", e);
+            }
         }
         applyDetailUpdates(student, studentRequest);
-
         studentRepository.save(student);
-        if (newImageStored) {
-            fileStorageService.deleteImage(oldImg);
+        if (newImageStored && oldImg != null) {
+            try {
+                fileStorageService.deleteImage(oldImg);
+            } catch (FileStorageException e) {
+                log.warn("Couldn't delete old image from storage", e);
+            }
         }
-
         return studentMapper.toDTO(student);
     }
 
@@ -191,12 +180,13 @@ public class StudentService {
         User user = userRepository.findByUserId(userId)
                 .orElseThrow(() -> new UserNotAuthorizedException("User not found " + userId));
         if (!student.getUsers().contains(user)) {
-            throw new UserNotAuthorizedException("Unauthorized Access");
+            throw new UserNotAuthorizedException("Unauthorized access");
         }
         return student;
     }
     
     private void applyDetailUpdates(Student student, StudentRequest studentRequest) {
+        validateStudentRequest(studentRequest);
         student.setName(studentRequest.getName());
         student.setSchool(studentRequest.getSchool());
         student.setAge(studentRequest.getAge());
