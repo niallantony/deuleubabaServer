@@ -216,7 +216,7 @@ public class StudentServiceTests {
     @Test
     public void updateStudentDetails_whenGivenGoodRequest_updatesStudent() {
         String json = "json-placeholder";
-        StudentRequest request = new StudentRequest();
+        StudentRequest request = StudentTestFactory.createStudentRequest("user");
         request.setName("John");
         User user = new User();
         Student student = getMockStudent();
@@ -226,7 +226,7 @@ public class StudentServiceTests {
         when(studentRepository.findById("123")).thenReturn(Optional.of(student));
         when(studentMapper.toDTO(student)).thenReturn(new StudentDTO());
 
-        studentService.updateStudentDetails("123", json, "abc");
+        studentService.updateStudentDetails("123", json, null, "abc");
         assertTrue(student.getUsers().contains(user));
         assertEquals("John", student.getName());
     }
@@ -241,7 +241,7 @@ public class StudentServiceTests {
         ResourceNotFoundException exception =
                 assertThrows(
                         ResourceNotFoundException.class,
-                        () -> studentService.updateStudentDetails("123", json, "abc")
+                        () -> studentService.updateStudentDetails("123", json, null, "abc")
                 );
         assertEquals("Student not found 123", exception.getMessage());
     }
@@ -260,7 +260,7 @@ public class StudentServiceTests {
         UserNotAuthorizedException exception =
                 assertThrows(
                         UserNotAuthorizedException.class,
-                        () -> studentService.updateStudentDetails("123", json, "abc")
+                        () -> studentService.updateStudentDetails("123", json, null, "abc")
                 );
         assertEquals("User not found abc", exception.getMessage());
     }
@@ -268,7 +268,7 @@ public class StudentServiceTests {
     @Test
     public void updateStudentDetails_whenGivenUnauthorisedUserId_throwsException() {
         String json = "json-placeholder";
-        StudentRequest request = new StudentRequest();
+        StudentRequest request = StudentTestFactory.createStudentRequest("user");
         request.setName("John");
         User user = new User();
         Student student = getMockStudent();
@@ -278,21 +278,22 @@ public class StudentServiceTests {
         UserNotAuthorizedException exception =
                 assertThrows(
                         UserNotAuthorizedException.class,
-                        () -> studentService.updateStudentDetails("123", json, "abc")
+                        () -> studentService.updateStudentDetails("123", json, null, "abc")
                 );
-        assertEquals("Unauthorized Access", exception.getMessage());
+        assertEquals("Unauthorized access", exception.getMessage());
     }
 
     @Test
     public void updateStudentDetails_whenGivenImage_updatesAndDeletesCorrectly() {
         String json = "json-placeholder";
-        StudentRequest request = new StudentRequest();
+        StudentRequest request = StudentTestFactory.createStudentRequest("user");
         request.setName("John");
         User user = new User();
         Student student = getMockStudent();
         student.getUsers().add(user);
         student.setImagesrc("old_url");
         MultipartFile image = mock(MultipartFile.class);
+
         when(jsonUtils.parse(eq(json), any(), any())).thenReturn(request);
         when(userRepository.findByUserId("abc")).thenReturn(Optional.of(user));
         when(studentRepository.findById("123")).thenReturn(Optional.of(student));
@@ -309,13 +310,14 @@ public class StudentServiceTests {
     @Test
     public void updateStudentDetails_whenImageFileDoesntSave_preservesOldImage() {
         String json = "json-placeholder";
-        StudentRequest request = new StudentRequest();
+        StudentRequest request = StudentTestFactory.createStudentRequest("user");
         request.setName("John");
         User user = new User();
         Student student = getMockStudent();
         student.getUsers().add(user);
         student.setImagesrc("old_url");
         MultipartFile image = mock(MultipartFile.class);
+
         when(jsonUtils.parse(eq(json), any(), any())).thenReturn(request);
         when(userRepository.findByUserId("abc")).thenReturn(Optional.of(user));
         when(studentRepository.findById("123")).thenReturn(Optional.of(student));
@@ -333,7 +335,7 @@ public class StudentServiceTests {
     public void updateStudentDetails_whenGivenBadRequest_throwsException() {
         String json = "json-placeholder";
         when(jsonUtils.parse(eq(json), any(), any())).thenThrow(InvalidStudentDataException.class);
-        assertThrows(InvalidStudentDataException.class, () -> studentService.updateStudentDetails("123", json, "abc"));
+        assertThrows(InvalidStudentDataException.class, () -> studentService.updateStudentDetails("123", json, null, "abc"));
     }
 
     @Test
@@ -343,6 +345,7 @@ public class StudentServiceTests {
         User user = new User();
         Student student = getMockStudent();
         student.getUsers().add(user);
+
         when(jsonUtils.parse(eq(json), any(), any())).thenReturn(request);
         when(studentRepository.findById("123")).thenReturn(Optional.of(student));
         when(userRepository.findByUserId("abc")).thenReturn(Optional.of(user));
@@ -371,9 +374,11 @@ public class StudentServiceTests {
         StudentCommunicationRequest request = new StudentCommunicationRequest("New Request");
         String json = "json-placeholder";
         Student student = new Student();
+
         when(jsonUtils.parse(eq(json), any(), any())).thenReturn(request);
         when(studentRepository.findById("123")).thenReturn(Optional.of(student));
         when(userRepository.findByUserId("abc")).thenReturn(Optional.empty());
+
         UserNotAuthorizedException exception = assertThrows(
                 UserNotAuthorizedException.class,
                 () -> studentService.updateStudentCommunication("123", json, "abc")
@@ -394,7 +399,7 @@ public class StudentServiceTests {
                 UserNotAuthorizedException.class,
                 () -> studentService.updateStudentCommunication("123", json, "abc")
         );
-        assertEquals("Unauthorized Access", exception.getMessage());
+        assertEquals("Unauthorized access", exception.getMessage());
 
     }
 
@@ -472,7 +477,7 @@ public class StudentServiceTests {
                 UserNotAuthorizedException.class,
                 () -> studentService.updateStudentChallenge("123", json, "abc")
         );
-        assertEquals("Unauthorized Access", exception.getMessage());
+        assertEquals("Unauthorized access", exception.getMessage());
     }
 
     @Test
@@ -519,7 +524,7 @@ public class StudentServiceTests {
                 UserNotAuthorizedException.class,
                 () -> studentService.getAuthorisedStudent("123", "abc")
         );
-        assertEquals("Unauthorized Access", exception.getMessage());
+        assertEquals("Unauthorized access", exception.getMessage());
     }
 
     @Test
