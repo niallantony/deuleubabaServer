@@ -74,7 +74,7 @@ public class StudentService {
     public List<StudentIdAvatar> getStudents(String id)  {
         List<StudentIdAvatar> students = studentRepository.findAllOfUserId(id);
         if (students.isEmpty()) {
-            throw new ResourceNotFoundException("Students not found " + id);
+            throw new ResourceNotFoundException("Students not found");
         }
         return students;
     }
@@ -83,7 +83,7 @@ public class StudentService {
 
         char[] alphabet = {'1', '2', '3', '4', '5', '6', '7', '8', '9', 'a', 'b', 'c', 'd', 'e', 'f'};
         Random random = new Random();
-        User user = userRepository.findByUserId(userId).orElseThrow(() -> new UserNotAuthorizedException("Unauthorized Access"));
+        User user = userRepository.findByUserId(userId).orElseThrow(() -> new UserNotAuthorizedException("Unauthorized access"));
 
         Student student = studentMapper.toStudent(studentRequest);
         student.setStudentId(NanoIdUtils.randomNanoId(random, alphabet, 6));
@@ -99,7 +99,9 @@ public class StudentService {
                 StudentRequest.class,
                 () -> new InvalidStudentDataException("Invalid request")
         );
+        validateStudentRequest(studentRequest);
         Student student = extractStudent(studentRequest, userId);
+
         studentRepository.save(student);
         linkStudentToUser(student, userId);
         return studentMapper.toDTO(student);
@@ -112,6 +114,7 @@ public class StudentService {
                 StudentRequest.class,
                 () -> new InvalidStudentDataException("Invalid request")
         );
+        validateStudentRequest(studentRequest);
         Student student = extractStudent(studentRequest, userId);
         try {
             String filename = fileStorageService.storeImage(image);
@@ -238,6 +241,20 @@ public class StudentService {
         user.getStudents().add(student);
         student.getUsers().add(user);
         userRepository.save(user);
+    }
+
+    private void validateStudentRequest(StudentRequest studentRequest) {
+        if (
+                studentRequest.getName() == null
+                || studentRequest.getSchool() == null
+                || studentRequest.getAge() == null
+                || studentRequest.getGrade() == null
+                || studentRequest.getDisability() == null
+                || studentRequest.getSetting() == null
+        ) {
+            throw new InvalidStudentDataException("Invalid student data");
+        }
+
     }
 
 }
