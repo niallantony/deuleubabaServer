@@ -226,7 +226,7 @@ public class StudentServiceTests {
         when(studentRepository.findById("123")).thenReturn(Optional.of(student));
         when(studentMapper.toDTO(student)).thenReturn(new StudentDTO());
 
-        StudentDTO result = studentService.updateStudentDetails("123", json, "abc");
+        studentService.updateStudentDetails("123", json, "abc");
         assertTrue(student.getUsers().contains(user));
         assertEquals("John", student.getName());
     }
@@ -299,7 +299,7 @@ public class StudentServiceTests {
         when(studentMapper.toDTO(student)).thenReturn(new StudentDTO());
         when(fileStorageService.storeImage(image)).thenReturn("new_url");
 
-        StudentDTO result = studentService.updateStudentDetails("123", json, image, "abc");
+        studentService.updateStudentDetails("123", json, image, "abc");
         assertTrue(student.getUsers().contains(user));
         assertEquals("John", student.getName());
         assertEquals("new_url",student.getImagesrc());
@@ -322,7 +322,7 @@ public class StudentServiceTests {
         when(studentMapper.toDTO(student)).thenReturn(new StudentDTO());
         when(fileStorageService.storeImage(image)).thenThrow(FileStorageException.class);
 
-        StudentDTO result = studentService.updateStudentDetails("123", json, image, "abc");
+        studentService.updateStudentDetails("123", json, image, "abc");
         verify(fileStorageService).storeImage(image);
         assertEquals("John", student.getName());
         assertEquals("old_url",student.getImagesrc());
@@ -348,7 +348,7 @@ public class StudentServiceTests {
         when(userRepository.findByUserId("abc")).thenReturn(Optional.of(user));
         when(studentMapper.toDTO(student)).thenReturn(new StudentDTO());
 
-        StudentDTO result = studentService.updateStudentCommunication("123", json, "abc");
+        studentService.updateStudentCommunication("123", json, "abc");
         verify(studentRepository).save(student);
         assertEquals("New Request", student.getCommunicationDetails());
     }
@@ -417,7 +417,7 @@ public class StudentServiceTests {
         when(userRepository.findByUserId("abc")).thenReturn(Optional.of(user));
         when(studentMapper.toDTO(student)).thenReturn(new StudentDTO());
 
-        StudentDTO result = studentService.updateStudentChallenge("123", json, "abc");
+        studentService.updateStudentChallenge("123", json, "abc");
         verify(studentRepository).save(student);
         assertEquals("New Request", student.getChallengesDetails());
 

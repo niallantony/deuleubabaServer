@@ -35,8 +35,6 @@ public class UserServiceTest {
     @Mock
     private StudentRepository studentRepository;
     @Mock
-    private ObjectMapper objectMapper;
-    @Mock
     private FileStorageService fileStorageService;
     @Mock
     private UserMapper userMapper;
@@ -143,7 +141,7 @@ public class UserServiceTest {
     public void createUser_whenGivenInvalidData_thenThrowsInvalidUserDataException() {
         String data = "data";
         when(jsonUtils.parse(eq(data), any(),any())).thenThrow(InvalidUserDataException.class);
-        InvalidUserDataException exception = assertThrows(
+        assertThrows(
                 InvalidUserDataException.class,
                 () -> userService.createUser("ABC", data, null)
         );

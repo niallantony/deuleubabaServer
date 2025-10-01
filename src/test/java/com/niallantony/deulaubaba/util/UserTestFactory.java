@@ -7,7 +7,7 @@ public class UserTestFactory {
 
     public static UserRequest createUserRequest() {
         UserRequest u = new UserRequest();
-        u.setUsername("username");
+        u.setUsername("user1");
         u.setName("name");
         u.setEmail("email@gmail.com");
         u.setUserType("user type");
