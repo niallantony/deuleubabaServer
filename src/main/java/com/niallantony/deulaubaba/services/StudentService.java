@@ -79,32 +79,15 @@ public class StudentService {
         return students;
     }
 
-    private Student extractStudent(StudentRequest studentRequest, String userId) {
+    private Student extractStudent(StudentRequest studentRequest, User user) {
 
         char[] alphabet = {'1', '2', '3', '4', '5', '6', '7', '8', '9', 'a', 'b', 'c', 'd', 'e', 'f'};
         Random random = new Random();
-        User user = userRepository.findByUserId(userId).orElseThrow(() -> new UserNotAuthorizedException("Unauthorized access"));
-
         Student student = studentMapper.toStudent(studentRequest);
         student.setStudentId(NanoIdUtils.randomNanoId(random, alphabet, 6));
         student.getUsers().add(user);
 
         return student;
-    }
-
-    @Transactional
-    public StudentDTO createStudent(String request, String userId) {
-        StudentRequest studentRequest = jsonUtils.parse(
-                request,
-                StudentRequest.class,
-                () -> new InvalidStudentDataException("Invalid request")
-        );
-        validateStudentRequest(studentRequest);
-        Student student = extractStudent(studentRequest, userId);
-
-        studentRepository.save(student);
-        linkStudentToUser(student, userId);
-        return studentMapper.toDTO(student);
     }
 
     @Transactional
@@ -114,13 +97,16 @@ public class StudentService {
                 StudentRequest.class,
                 () -> new InvalidStudentDataException("Invalid request")
         );
+        User user = userRepository.findByUserId(userId).orElseThrow(() -> new UserNotAuthorizedException("Unauthorized access"));
         validateStudentRequest(studentRequest);
-        Student student = extractStudent(studentRequest, userId);
-        try {
-            String filename = fileStorageService.storeImage(image);
-            student.setImagesrc(filename);
-        } catch (FileStorageException e) {
-            log.warn("Image not saved to storage", e);
+        Student student = extractStudent(studentRequest, user);
+        if (image != null && !image.isEmpty()) {
+            try {
+                String filename = fileStorageService.storeImage(image);
+                student.setImagesrc(filename);
+            } catch (FileStorageException e) {
+                log.warn("Image not saved to storage", e);
+            }
         }
         studentRepository.save(student);
         linkStudentToUser(student, userId);

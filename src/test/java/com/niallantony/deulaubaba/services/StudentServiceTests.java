@@ -10,6 +10,7 @@ import com.niallantony.deulaubaba.exceptions.InvalidStudentDataException;
 import com.niallantony.deulaubaba.exceptions.ResourceNotFoundException;
 import com.niallantony.deulaubaba.exceptions.UserNotAuthorizedException;
 import com.niallantony.deulaubaba.mapper.StudentMapper;
+import com.niallantony.deulaubaba.util.StudentTestFactory;
 import com.niallantony.deulaubaba.utils.JsonUtils;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -143,7 +144,7 @@ public class StudentServiceTests {
     @Test
     public void createStudent_whenGivenGoodRequest_returnsStudent() {
         String json = "json-placeholder";
-        StudentRequest request = new StudentRequest();
+        StudentRequest request = StudentTestFactory.createStudentRequest("user");
         User user = new User();
         Student student = getMockStudent();
         when(jsonUtils.parse(eq(json), any(), any())).thenReturn(request);
@@ -151,7 +152,7 @@ public class StudentServiceTests {
         when(studentMapper.toStudent(request)).thenReturn(student);
         when(studentMapper.toDTO(student)).thenReturn(new StudentDTO());
 
-        StudentDTO result = studentService.createStudent(json, "abc");
+        StudentDTO result = studentService.createStudent(json,null,  "abc");
         assertTrue(student.getUsers().contains(user));
         assertEquals(6, student.getStudentId().length());
         assertNotNull(result);
@@ -163,20 +164,20 @@ public class StudentServiceTests {
         StudentRequest request = new StudentRequest();
         when(jsonUtils.parse(eq(json), any(), any())).thenReturn(request);
         when(userRepository.findByUserId("abc")).thenReturn(Optional.empty());
-        assertThrows(UserNotAuthorizedException.class, () -> studentService.createStudent(json, "abc"));
+        assertThrows(UserNotAuthorizedException.class, () -> studentService.createStudent(json, null, "abc"));
     }
 
     @Test
     public void createStudent_whenRequestNotValid_throwsException() {
         String json = "json-placeholder";
         when(jsonUtils.parse(eq(json), any(), any())).thenThrow(InvalidStudentDataException.class);
-        assertThrows(InvalidStudentDataException.class, () -> studentService.createStudent(json, "abc"));
+        assertThrows(InvalidStudentDataException.class, () -> studentService.createStudent(json, null, "abc"));
     }
 
     @Test
     public void createStudent_whenGivenImage_savesImage(){
         String json = "json-placeholder";
-        StudentRequest request = new StudentRequest();
+        StudentRequest request = StudentTestFactory.createStudentRequest("user");
         User user = new User();
         Student student = getMockStudent();
         MultipartFile image = mock(MultipartFile.class);
@@ -196,7 +197,7 @@ public class StudentServiceTests {
     @Test
     public void createStudent_whenImageDoesntSave_stillSaves() {
         String json = "json-placeholder";
-        StudentRequest request = new StudentRequest();
+        StudentRequest request = StudentTestFactory.createStudentRequest("user");
         User user = new User();
         Student student = getMockStudent();
         MultipartFile image = mock(MultipartFile.class);

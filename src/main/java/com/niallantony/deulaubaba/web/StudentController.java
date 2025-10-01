@@ -63,6 +63,9 @@ public class StudentController {
 
     @GetMapping(path = "/all")
     public ResponseEntity<List<StudentIdAvatar>> getStudents(@CurrentUser String userId) {
+        if (!userRepository.existsById(userId)) {
+            throw new UserNotAuthorizedException("Unauthorized access");
+        }
         return ResponseEntity.ok(studentService.getStudents(userId));
     }
 
@@ -71,11 +74,8 @@ public class StudentController {
     public ResponseEntity<StudentDTO> createStudent(
             @RequestPart("data") String request,
             @CurrentUser String userId,
-            @RequestPart(value = "image", required = false) MultipartFile image) throws IOException {
-        if (image != null) {
-            return ResponseEntity.ok(studentService.createStudent(request, image, userId));
-        }
-        return ResponseEntity.ok(studentService.createStudent(request, userId));
+            @RequestPart(value = "image", required = false) MultipartFile image)  {
+        return ResponseEntity.ok(studentService.createStudent(request, image, userId));
     }
 
     @PutMapping(path = "/{studentId}")
@@ -84,7 +84,7 @@ public class StudentController {
             @PathVariable String studentId,
             @CurrentUser String userId,
             @RequestPart("data") String request,
-            @RequestPart(value = "image", required = false) MultipartFile image) throws IOException {
+            @RequestPart(value = "image", required = false) MultipartFile image)  {
         if (image != null) {
             return ResponseEntity.ok(studentService.updateStudentDetails(studentId, request, image, userId));
         }
