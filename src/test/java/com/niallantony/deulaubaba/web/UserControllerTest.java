@@ -14,6 +14,7 @@ import org.junit.jupiter.api.*;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.http.MediaType;
 import org.springframework.mock.web.MockMultipartFile;
 import org.springframework.test.context.DynamicPropertyRegistry;
 import org.springframework.test.context.DynamicPropertySource;
@@ -166,6 +167,42 @@ class UserControllerTest {
                 .andExpect(jsonPath("$.message").value("Missing required user fields"));
         List<User> users = userRepository.findAll();
         assertEquals(0, users.size());
+    }
+
+    @Test
+    @Sql("/fixtures/user.sql")
+    public void postUser_withUnavailableUsername_returns400(@Autowired MockMvc mvc) throws Exception {
+        UserRequest request = UserTestFactory.createUserRequest();
+        String body = objectMapper.writeValueAsString(request);
+        MockMultipartFile data = new MockMultipartFile("data", "user.json", "application/json", body.getBytes());
+        mvc.perform(multipart("/me")
+                .file(data)
+                .with(jwt())
+                .contentType(MediaType.MULTIPART_FORM_DATA))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.message").value("Username is already taken"))
+                .andDo((r) -> System.out.println(r.getResponse().getContentAsString()));
+        List<User> users = userRepository.findAll();
+        assertEquals(1, users.size());
+    }
+
+    @Test
+    @Sql("/fixtures/user.sql")
+    public void postUser_withUnavailableEmail_returns400(@Autowired MockMvc mvc) throws Exception {
+        UserRequest request = UserTestFactory.createUserRequest();
+        request.setEmail("email@email.com");
+        request.setUsername("differentUsername");
+        String body = objectMapper.writeValueAsString(request);
+        MockMultipartFile data = new MockMultipartFile("data", "user.json", "application/json", body.getBytes());
+        mvc.perform(multipart("/me")
+                   .file(data)
+                   .with(jwt())
+                   .contentType(MediaType.MULTIPART_FORM_DATA))
+           .andExpect(status().isBadRequest())
+           .andExpect(jsonPath("$.message").value("Email is already taken"))
+           .andDo((r) -> System.out.println(r.getResponse().getContentAsString()));
+        List<User> users = userRepository.findAll();
+        assertEquals(1, users.size());
     }
 
     @Test
