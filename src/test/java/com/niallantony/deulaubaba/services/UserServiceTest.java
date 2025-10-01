@@ -104,6 +104,8 @@ public class UserServiceTest {
         assertSame(mockDTO, result);
         verify(userMapper).toDTO(mockUser);
         verify(userMapper).toNewUser(any(UserRequest.class), any(String.class));
+        verify(userRepository).existsByUsername(mockUserRequest.getUsername());
+        verify(userRepository).existsByEmail(mockUserRequest.getEmail());
         verify(userRepository).save(mockUser);
         verifyNoMoreInteractions(userRepository, userMapper);
     }
@@ -130,6 +132,8 @@ public class UserServiceTest {
                         req.getEmail().equals("Email") &&
                         req.getUsername().equals("Username")
         ), any(String.class));
+        verify(userRepository).existsByUsername(mockUserRequest.getUsername());
+        verify(userRepository).existsByEmail(mockUserRequest.getEmail());
         verify(userRepository).save(mockUser);
         verify(fileStorageService).storeImage(mockFile);
         verifyNoMoreInteractions(userRepository, userMapper, fileStorageService);
@@ -167,6 +171,8 @@ public class UserServiceTest {
                         req.getEmail().equals("Email") &&
                         req.getUsername().equals("Username")
         ), any(String.class));
+        verify(userRepository).existsByUsername(mockUserRequest.getUsername());
+        verify(userRepository).existsByEmail(mockUserRequest.getEmail());
         verify(userRepository).save(mockUser);
         verify(fileStorageService).storeImage(mockFile);
         verifyNoMoreInteractions(userRepository, userMapper, fileStorageService);
