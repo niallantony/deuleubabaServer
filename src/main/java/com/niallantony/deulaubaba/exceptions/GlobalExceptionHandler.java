@@ -24,4 +24,9 @@ public class GlobalExceptionHandler {
     public ResponseEntity<?> handleInvalidUserDataException(InvalidUserDataException e) {
         return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(Map.of("message", e.getMessage()));
     }
+
+    @ExceptionHandler(InvalidStudentDataException.class)
+    public ResponseEntity<?> handleInvalidStudentDataException(InvalidStudentDataException e) {
+        return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(Map.of("message", e.getMessage()));
+    }
 }
