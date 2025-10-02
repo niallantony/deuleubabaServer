@@ -19,7 +19,6 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
 
-import java.io.IOException;
 import java.util.List;
 import java.util.Set;
 import java.util.stream.Collectors;
@@ -80,6 +79,7 @@ public class DictionaryService {
                 DictionaryPostRequest.class,
                 () -> new InvalidDictionaryDataException("Entry data not valid: POST")
         );
+        validateDictionaryRequest(dictionaryPostRequest);
         Student student = studentService.getAuthorisedStudent(dictionaryPostRequest.getStudentId(), userId);
         DictionaryEntry entry = new DictionaryEntry();
         entry.setStudent(student);
@@ -153,4 +153,13 @@ public class DictionaryService {
         entry.setCategory(category);
     }
 
+    private void validateDictionaryRequest(DictionaryPostRequest dictionaryPostRequest) {
+       if (
+               dictionaryPostRequest.getTitle() == null
+               || dictionaryPostRequest.getCategory().isEmpty()
+               || dictionaryPostRequest.getType() == null
+       ) {
+           throw new InvalidDictionaryDataException("Entry data not valid");
+       }
+    }
 }
