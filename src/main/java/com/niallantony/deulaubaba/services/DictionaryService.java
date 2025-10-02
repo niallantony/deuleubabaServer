@@ -50,6 +50,7 @@ public class DictionaryService {
         this.dictionaryMapper = dictionaryMapper;
     }
 
+    @Transactional
     public DictionaryListingsResponse getDictionaryListings(String studentId, String userId) {
        Student student = studentService.getAuthorisedStudent(studentId, userId);
        DictionaryListingsResponse response = new DictionaryListingsResponse();

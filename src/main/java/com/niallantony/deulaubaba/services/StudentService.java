@@ -174,6 +174,7 @@ public class StudentService {
         return studentMapper.toDTO(student);
     }
 
+    @Transactional
     public Student getAuthorisedStudent(String studentId, String userId) {
         Student student = studentRepository.findById(studentId)
                 .orElseThrow(() -> new ResourceNotFoundException("Student not found " + studentId));
