@@ -6,6 +6,7 @@ import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
+import java.util.HashSet;
 import java.util.Set;
 
 @Data
@@ -15,7 +16,8 @@ public class DictionaryPostRequest implements DictionaryRequest {
     private String studentId;
     private ExpressionType type;
     private String title;
-    private Set<CommunicationCategoryLabel> category;
+    private Set<CommunicationCategoryLabel> category = new HashSet<>();
+    // TODO: Don't need possibly - Refactor front end
     private String imgsrc;
     private String description;
 }
