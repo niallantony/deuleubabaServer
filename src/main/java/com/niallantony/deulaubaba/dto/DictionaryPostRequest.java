@@ -17,7 +17,5 @@ public class DictionaryPostRequest implements DictionaryRequest {
     private ExpressionType type;
     private String title;
     private Set<CommunicationCategoryLabel> category = new HashSet<>();
-    // TODO: Don't need possibly - Refactor front end
-    private String imgsrc;
     private String description;
 }
