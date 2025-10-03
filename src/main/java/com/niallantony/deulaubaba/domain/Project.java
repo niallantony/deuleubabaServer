@@ -21,7 +21,7 @@ public class Project {
     @Column(nullable = false)
     private String objective;
 
-    @Column(nullable = false)
+    @Column(name = "started_on", nullable = false)
     private LocalDate startedOn;
 
     @ManyToMany(fetch = FetchType.EAGER)
