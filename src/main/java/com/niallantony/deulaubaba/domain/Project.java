@@ -3,23 +3,26 @@ package com.niallantony.deulaubaba.domain;
 import com.fasterxml.jackson.annotation.JsonManagedReference;
 import jakarta.persistence.*;
 import lombok.Data;
+import lombok.EqualsAndHashCode;
 
-import java.util.Date;
+import java.time.LocalDate;
 import java.util.HashSet;
 import java.util.Set;
 
 @Data
 @Entity
+@EqualsAndHashCode(onlyExplicitlyIncluded = true)
 public class Project {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
+    @EqualsAndHashCode.Include
     private Long id;
 
     @Column(nullable = false)
     private String objective;
 
     @Column(nullable = false)
-    private Date startDate;
+    private LocalDate startedOn;
 
     @ManyToMany(fetch = FetchType.EAGER)
     @JoinTable(
@@ -35,11 +38,12 @@ public class Project {
     private String imgsrc;
 
     @Column(nullable = false)
-    private Boolean completed;
+    private Boolean completed = false;
 
-    private Date completedOn;
+    private LocalDate completedOn;
 
     @Column(nullable = false)
+    @Enumerated(EnumType.STRING)
     private ProjectType type;
 
     @ManyToOne(fetch = FetchType.EAGER)

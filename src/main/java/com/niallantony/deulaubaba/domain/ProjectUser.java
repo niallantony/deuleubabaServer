@@ -2,16 +2,19 @@ package com.niallantony.deulaubaba.domain;
 
 import jakarta.persistence.*;
 import lombok.Data;
+import lombok.EqualsAndHashCode;
 import lombok.NoArgsConstructor;
 
-import java.util.Date;
+import java.time.LocalDate;
 
 @Data
 @NoArgsConstructor
 @Entity
+@EqualsAndHashCode(onlyExplicitlyIncluded = true)
 public class ProjectUser {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
+    @EqualsAndHashCode.Include
     private Long id;
 
     @ManyToOne(fetch = FetchType.LAZY, optional = false)
@@ -22,7 +25,7 @@ public class ProjectUser {
     @JoinColumn(name = "user_id")
     private User user;
 
-    private Date completed_on;
+    private LocalDate completedOn;
 
     private Boolean isCompleted = false;
 }
