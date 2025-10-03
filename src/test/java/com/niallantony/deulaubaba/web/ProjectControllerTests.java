@@ -27,6 +27,7 @@ import java.util.List;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.jwt;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 
@@ -77,11 +78,63 @@ public class ProjectControllerTests {
     @Transactional
     public void getProject_withValidId_returnsProject(@Autowired MockMvc mvc) throws Exception {
         mvc.perform(get("/project")
-                .with(jwt())
-                .param("id", String.valueOf(1)))
-                .andExpect(status().isOk())
-                .andDo((r) -> System.out.println(r.getResponse().getContentAsString()));
-
+                   .with(jwt())
+                   .param("id", String.valueOf(1)))
+           .andExpect(status().isOk())
+           .andExpect(jsonPath("$.id").value(1))
+           .andExpect(jsonPath("$.categories[0].label").value("REJECTION"))
+           .andExpect(jsonPath("$.userStatuses[0].user.username").value("user1"))
+           .andExpect(jsonPath("$.userStatuses[0].completed").value(false))
+           .andDo((r) -> System.out.println(r.getResponse().getContentAsString()));
     }
+
+    @Test
+    @SqlMergeMode(SqlMergeMode.MergeMode.MERGE)
+    @Sql({
+            "/fixtures/student_and_user.sql",
+    })
+    @Transactional
+    public void getProject_withInvalidId_returns404(@Autowired MockMvc mvc) throws Exception {
+        mvc.perform(get("/project")
+                   .with(jwt())
+                   .param("id", String.valueOf(1)))
+           .andExpect(status().isNotFound())
+           .andExpect(jsonPath("$.message").value("Project not found"))
+           .andDo((r) -> System.out.println(r.getResponse().getContentAsString()));
+    }
+
+    @Test
+    @SqlMergeMode(SqlMergeMode.MergeMode.MERGE)
+    @Sql({
+            "/fixtures/student_and_user.sql",
+            "/fixtures/unrelatedproject.sql"
+    })
+    @Transactional
+    public void getProject_withUnauthorizedUser_returns401(@Autowired MockMvc mvc) throws Exception {
+        mvc.perform(get("/project")
+                   .with(jwt())
+                   .param("id", String.valueOf(1)))
+           .andExpect(status().isUnauthorized())
+           .andExpect(jsonPath("$.message").value("Unauthorized access"))
+           .andDo((r) -> System.out.println(r.getResponse().getContentAsString()));
+    }
+
+    @Test
+    @SqlMergeMode(SqlMergeMode.MergeMode.MERGE)
+    @Sql({
+            "/fixtures/student_and_user.sql",
+            "/fixtures/project.sql",
+            "/fixtures/anotherproject.sql"
+    })
+    @Transactional
+    public void getAllProjectsOfUser_withValidId_returnsProject(@Autowired MockMvc mvc) throws Exception {
+        mvc.perform(get("/project/all")
+                   .with(jwt()))
+           .andExpect(status().isOk())
+                .andExpect(jsonPath("$.length()").value(2))
+           .andDo((r) -> System.out.println(r.getResponse().getContentAsString()));
+    }
+
+
 
 }
