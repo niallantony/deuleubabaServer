@@ -1,6 +1,11 @@
 DELETE FROM user_students;
+DELETE FROM project_user;
+DELETE FROM project_communication_category;
 DELETE FROM entry_communication_category;
+DELETE FROM project;
 DELETE FROM dictionary_entry;
 DELETE FROM student;
 DELETE FROM app_user;
 ALTER SEQUENCE dictionary_entry_id_seq RESTART;
+ALTER SEQUENCE project_id_seq RESTART;
+ALTER SEQUENCE project_user_id_seq RESTART;
