@@ -77,7 +77,7 @@ public class DictionaryService {
         DictionaryPostRequest dictionaryPostRequest = jsonUtils.parse(
                 data,
                 DictionaryPostRequest.class,
-                () -> new InvalidDictionaryDataException("Entry data not valid: POST")
+                () -> new InvalidDictionaryDataException("Entry data not valid")
         );
         validateDictionaryRequest(dictionaryPostRequest);
         Student student = studentService.getAuthorisedStudent(dictionaryPostRequest.getStudentId(), userId);
@@ -102,13 +102,17 @@ public class DictionaryService {
         DictionaryPutRequest dictionaryPutRequest = jsonUtils.parse(
                 data,
                 DictionaryPutRequest.class,
-                () -> new InvalidDictionaryDataException("Entry data not valid: PUT")
+                () -> new InvalidDictionaryDataException("Entry data not valid")
         );
+        if (dictionaryPutRequest.getId() == null) {
+            throw new InvalidDictionaryDataException("Entry data not valid");
+        }
+        validateDictionaryRequest(dictionaryPutRequest);
         if (!studentService.studentBelongsToUser(dictionaryPutRequest.getStudentId(), userId)) {
-            throw new UserNotAuthorizedException("User Not Authorized");
+            throw new UserNotAuthorizedException("Unauthorized access");
         }
         DictionaryEntry entry = dictionaryRepository.findById(dictionaryPutRequest.getId())
-                .orElseThrow(() -> new ResourceNotFoundException("Entry Not Found"));
+                .orElseThrow(() -> new ResourceNotFoundException("Entry not found"));
         if (image != null) {
             try {
                 String filename = fileStorageService.storeImage(image);
@@ -130,14 +134,19 @@ public class DictionaryService {
     public void deleteDictionaryEntry(String id, String userId) {
         Long longId = Long.parseLong(id);
         if (!dictionaryRepository.existsById(longId)) {
-            throw new ResourceNotFoundException("Dictionary Not Found");
+            throw new ResourceNotFoundException("Dictionary not found");
         }
         DictionaryEntry entry = dictionaryRepository.getReferenceById(longId);
         if (!studentService.studentBelongsToUser(entry.getStudent().getStudentId(), userId)) {
-            throw new UserNotAuthorizedException("User Not Authorized");
+            throw new UserNotAuthorizedException("Unauthorized access");
         }
         if (entry.getImgsrc() != null) {
-            fileStorageService.deleteImage(entry.getImgsrc());
+            try {
+                fileStorageService.deleteImage(entry.getImgsrc());
+            } catch (FileStorageException e) {
+                log.warn("Image wasn't deleted");
+                log.warn(entry.getImgsrc());
+            }
         }
         dictionaryRepository.deleteById(longId);
     }
@@ -153,11 +162,12 @@ public class DictionaryService {
         entry.setCategory(category);
     }
 
-    private void validateDictionaryRequest(DictionaryPostRequest dictionaryPostRequest) {
+    private void validateDictionaryRequest(DictionaryRequest dictionaryRequest) {
        if (
-               dictionaryPostRequest.getTitle() == null
-               || dictionaryPostRequest.getCategory().isEmpty()
-               || dictionaryPostRequest.getType() == null
+               dictionaryRequest.getTitle() == null
+               || dictionaryRequest.getStudentId() == null
+               || dictionaryRequest.getCategory().isEmpty()
+               || dictionaryRequest.getType() == null
        ) {
            throw new InvalidDictionaryDataException("Entry data not valid");
        }
