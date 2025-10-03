@@ -12,6 +12,7 @@ import com.niallantony.deulaubaba.exceptions.InvalidDictionaryDataException;
 import com.niallantony.deulaubaba.exceptions.ResourceNotFoundException;
 import com.niallantony.deulaubaba.exceptions.UserNotAuthorizedException;
 import com.niallantony.deulaubaba.mapper.DictionaryMapper;
+import com.niallantony.deulaubaba.util.DictionaryTestFactory;
 import com.niallantony.deulaubaba.utils.JsonUtils;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -53,37 +54,12 @@ public class DictionaryServiceTests {
             "Description"
     );
 
-    private DictionaryPostRequest getPostRequest() {
-        Set<CommunicationCategoryLabel> categoryLabels = new HashSet<>();
-        categoryLabels.add(CommunicationCategoryLabel.SHOWME);
-        return new DictionaryPostRequest(
-                "abc",
-                ExpressionType.BODY,
-                "title",
-                categoryLabels,
-                "description"
-        );
-    }
-    // TODO: Refactor with testfactories
-    private DictionaryPutRequest getPutRequest() {
-        Set<CommunicationCategoryLabel> categoryLabels = new HashSet<>();
-        categoryLabels.add(CommunicationCategoryLabel.SHOWME);
-        return new DictionaryPutRequest(
-                123L,
-                "abc",
-                ExpressionType.BODY,
-                "title",
-                categoryLabels,
-                "new description"
-        );
-    }
-
     private void commonPostStubs(DictionaryPostRequest request, String json, Student student) {
             when(jsonUtils.parse(eq(json), eq(DictionaryPostRequest.class), any()))
                     .thenReturn(request);
             when(studentService.getAuthorisedStudent("abc", "userId"))
                     .thenReturn(student);
-            when(categoryRepository.findByLabel(CommunicationCategoryLabel.SHOWME))
+            when(categoryRepository.findByLabel(CommunicationCategoryLabel.PAIN))
                     .thenReturn(Optional.of(new CommunicationCategory()));
             when(dictionaryRepository.save(any())).thenReturn(new DictionaryEntry());
     }
@@ -93,9 +69,11 @@ public class DictionaryServiceTests {
                 .thenReturn(request);
         when(studentService.studentBelongsToUser("abc", "userId"))
                 .thenReturn(true);
+        when(categoryRepository.findByLabel(CommunicationCategoryLabel.PAIN))
+                .thenReturn(Optional.of(new CommunicationCategory()));
         when(categoryRepository.findByLabel(CommunicationCategoryLabel.SHOWME))
                 .thenReturn(Optional.of(new CommunicationCategory()));
-        when(dictionaryRepository.findById(123L)).thenReturn(Optional.of(mockEntry));
+        when(dictionaryRepository.findById(1L)).thenReturn(Optional.of(mockEntry));
     }
 
     @Test
@@ -150,7 +128,7 @@ public class DictionaryServiceTests {
 
     @Test
     void addDictionaryEntry_whenNoImage_savesEntry()  {
-        DictionaryPostRequest request = getPostRequest();
+        DictionaryPostRequest request = DictionaryTestFactory.createDictionaryPostRequest();
         String json = "json-placeholder";
 
         Student student = new Student();
@@ -165,7 +143,7 @@ public class DictionaryServiceTests {
     }
     @Test
     void addDictionaryEntry_whenImage_savesEntry() {
-        DictionaryPostRequest request = getPostRequest();
+        DictionaryPostRequest request = DictionaryTestFactory.createDictionaryPostRequest();
         String json = "json-placeholder";
         MultipartFile image = mock(MultipartFile.class);
         Student student = new Student();
@@ -183,7 +161,7 @@ public class DictionaryServiceTests {
 
     @Test
     void addDictionaryEntry_whenImageFails_stillSavesEntry() {
-        DictionaryPostRequest request = getPostRequest();
+        DictionaryPostRequest request = DictionaryTestFactory.createDictionaryPostRequest();
         String json = "json-placeholder";
         MultipartFile image = mock(MultipartFile.class);
         Student student = new Student();
@@ -200,19 +178,19 @@ public class DictionaryServiceTests {
 
     @Test
     void updateDictionaryEntry_whenGivenValidDataWithoutImage_savesEntry() {
-        DictionaryPutRequest request = getPutRequest();
+        DictionaryPutRequest request = DictionaryTestFactory.createDictionaryPutRequest();
         String json = "json-placeholder";
         commonPutStubs(request, json);
 
         DictionaryEntry result = dictionaryService.updateDictionaryEntry(json, null, "userId");
         verify(dictionaryRepository).save(result);
         verifyNoInteractions(fileStorageService);
-        assertEquals("new description", result.getDescription());
+        assertEquals("New Description", result.getDescription());
     }
 
     @Test
     void updateDictionaryEntry_whenGivenValidDataWithImage_savesEntry() {
-        DictionaryPutRequest request = getPutRequest();
+        DictionaryPutRequest request = DictionaryTestFactory.createDictionaryPutRequest();
         String json = "json-placeholder";
         MultipartFile image = mock(MultipartFile.class);
         commonPutStubs(request, json);
@@ -221,7 +199,7 @@ public class DictionaryServiceTests {
         DictionaryEntry result = dictionaryService.updateDictionaryEntry(json, image, "userId");
         verify(dictionaryRepository).save(result);
         verify(fileStorageService).storeImage(image);
-        assertEquals("new description", result.getDescription());
+        assertEquals("New Description", result.getDescription());
         verify(fileStorageService).deleteImage("./example.png");
         assertEquals("new_url", result.getImgsrc());
     }
@@ -235,19 +213,19 @@ public class DictionaryServiceTests {
 
     @Test
     void updateDictionaryEntry_whenEntryDoesntExist_throwsError() {
-        DictionaryPutRequest request = getPutRequest();
+        DictionaryPutRequest request = DictionaryTestFactory.createDictionaryPutRequest();
         String json = "json-placeholder";
         when(jsonUtils.parse(eq(json), eq(DictionaryPutRequest.class), any()))
                 .thenReturn(request);
         when(studentService.studentBelongsToUser("abc", "userId"))
                 .thenReturn(true);
-        when(dictionaryRepository.findById(123L)).thenThrow(ResourceNotFoundException.class);
+        when(dictionaryRepository.findById(1L)).thenThrow(ResourceNotFoundException.class);
         assertThrows(ResourceNotFoundException.class, () -> dictionaryService.updateDictionaryEntry(json, null, "userId"));
     }
 
     @Test
     void updateDictionaryEntry_whenUserNotAuthorized_throwsError() {
-        DictionaryPutRequest request = getPutRequest();
+        DictionaryPutRequest request = DictionaryTestFactory.createDictionaryPutRequest();
         String json = "json-placeholder";
         when(jsonUtils.parse(eq(json), eq(DictionaryPutRequest.class), any()))
                 .thenReturn(request);
@@ -258,7 +236,7 @@ public class DictionaryServiceTests {
 
     @Test
     void updateDictionaryEntry_whenImageDoesntSave_stillSavesEntry() {
-        DictionaryPutRequest request = getPutRequest();
+        DictionaryPutRequest request = DictionaryTestFactory.createDictionaryPutRequest();
         String json = "json-placeholder";
         MultipartFile image = mock(MultipartFile.class);
         commonPutStubs(request, json);
@@ -267,7 +245,7 @@ public class DictionaryServiceTests {
         DictionaryEntry result = dictionaryService.updateDictionaryEntry(json, image, "userId");
         verify(dictionaryRepository).save(result);
         verify(fileStorageService).storeImage(image);
-        assertEquals("new description", result.getDescription());
+        assertEquals("New Description", result.getDescription());
         verifyNoMoreInteractions(fileStorageService);
         assertEquals("./example.png", result.getImgsrc());
     }
