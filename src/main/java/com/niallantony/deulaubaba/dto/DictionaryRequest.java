@@ -10,6 +10,5 @@ public interface DictionaryRequest {
     ExpressionType getType();
     String getTitle();
     Set<CommunicationCategoryLabel> getCategory();
-    String getImgsrc();
     String getDescription();
 }
