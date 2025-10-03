@@ -1,14 +1,11 @@
 package com.niallantony.deulaubaba.services;
 
-import com.github.dockerjava.api.exception.UnauthorizedException;
 import com.niallantony.deulaubaba.data.ProjectRepository;
 import com.niallantony.deulaubaba.data.UserRepository;
 import com.niallantony.deulaubaba.domain.Project;
-import com.niallantony.deulaubaba.domain.ProjectUser;
 import com.niallantony.deulaubaba.domain.User;
 import com.niallantony.deulaubaba.dto.ProjectDTO;
 import com.niallantony.deulaubaba.dto.ProjectPreviewDTO;
-import com.niallantony.deulaubaba.dto.ProjectUserStatus;
 import com.niallantony.deulaubaba.exceptions.ResourceNotFoundException;
 import com.niallantony.deulaubaba.exceptions.UserNotAuthorizedException;
 import com.niallantony.deulaubaba.mapper.ProjectMapper;

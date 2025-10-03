@@ -3,7 +3,6 @@ package com.niallantony.deulaubaba.services;
 import com.niallantony.deulaubaba.data.ProjectRepository;
 import com.niallantony.deulaubaba.data.UserRepository;
 import com.niallantony.deulaubaba.domain.Project;
-import com.niallantony.deulaubaba.domain.ProjectUser;
 import com.niallantony.deulaubaba.domain.User;
 import com.niallantony.deulaubaba.dto.ProjectDTO;
 import com.niallantony.deulaubaba.dto.ProjectPreviewDTO;
@@ -12,9 +11,7 @@ import com.niallantony.deulaubaba.exceptions.UserNotAuthorizedException;
 import com.niallantony.deulaubaba.mapper.ProjectMapper;
 import org.springframework.stereotype.Service;
 
-import java.util.HashSet;
 import java.util.Set;
-import java.util.stream.Collectors;
 
 @Service
 public class ProjectService {

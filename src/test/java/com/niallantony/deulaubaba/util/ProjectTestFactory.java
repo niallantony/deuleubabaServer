@@ -4,7 +4,6 @@ package com.niallantony.deulaubaba.util;
 import com.niallantony.deulaubaba.domain.Project;
 import com.niallantony.deulaubaba.domain.ProjectUser;
 import com.niallantony.deulaubaba.domain.User;
-import com.niallantony.deulaubaba.dto.ProjectDTO;
 
 public class ProjectTestFactory {
     public static Project getEmptyProjectWithUser(String id) {
