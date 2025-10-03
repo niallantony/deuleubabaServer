@@ -61,11 +61,10 @@ public class DictionaryServiceTests {
                 ExpressionType.BODY,
                 "title",
                 categoryLabels,
-                "./example.png",
                 "description"
         );
     }
-
+    // TODO: Refactor with testfactories
     private DictionaryPutRequest getPutRequest() {
         Set<CommunicationCategoryLabel> categoryLabels = new HashSet<>();
         categoryLabels.add(CommunicationCategoryLabel.SHOWME);
@@ -75,7 +74,6 @@ public class DictionaryServiceTests {
                 ExpressionType.BODY,
                 "title",
                 categoryLabels,
-                "./new_example.png",
                 "new description"
         );
     }
