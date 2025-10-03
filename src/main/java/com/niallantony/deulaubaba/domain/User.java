@@ -1,5 +1,6 @@
 package com.niallantony.deulaubaba.domain;
 
+import com.fasterxml.jackson.annotation.JsonBackReference;
 import com.fasterxml.jackson.annotation.JsonManagedReference;
 import jakarta.persistence.*;
 import jakarta.validation.constraints.Email;
@@ -56,4 +57,7 @@ public class User {
     )
     @JsonManagedReference
     private Set<Student> students = new HashSet<>();
+
+    @OneToMany(mappedBy = "user", fetch = FetchType.LAZY)
+    private Set<ProjectUser> projects = new HashSet<>();
 }

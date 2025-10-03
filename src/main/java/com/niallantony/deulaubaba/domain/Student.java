@@ -51,4 +51,8 @@ public class Student  {
     @OneToMany(mappedBy = "student")
     @JsonBackReference
     private Set<DictionaryEntry> dictionaries = new HashSet<>();
+
+    @OneToMany(mappedBy = "student")
+    @JsonBackReference
+    private Set<Project> projects = new HashSet<>();
 }
