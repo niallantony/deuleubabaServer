@@ -2,6 +2,7 @@ package com.niallantony.deulaubaba.web;
 
 import com.niallantony.deulaubaba.data.UserRepository;
 import com.niallantony.deulaubaba.dto.*;
+import com.niallantony.deulaubaba.exceptions.UserNotAuthorizedException;
 import com.niallantony.deulaubaba.security.CurrentUser;
 import com.niallantony.deulaubaba.services.StudentService;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -10,7 +11,6 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
-import java.io.IOException;
 import java.util.List;
 
 @RestController
@@ -30,9 +30,8 @@ public class StudentController {
             @RequestParam String id,
             @CurrentUser String userId
     ) {
-        userRepository.findByUserId(userId);
-        if (userId == null) {
-            return new ResponseEntity<>(HttpStatus.UNAUTHORIZED);
+        if (!userRepository.existsById(userId)) {
+            throw new UserNotAuthorizedException("Unauthorized access");
         }
         return ResponseEntity.ok(studentService.getStudentPreviewById(id));
     }
@@ -45,7 +44,7 @@ public class StudentController {
         if (studentService.studentBelongsToUser(id, userId)) {
             return ResponseEntity.ok(studentService.getStudentById(id));
         }
-        return new ResponseEntity<>(HttpStatus.UNAUTHORIZED);
+        throw new UserNotAuthorizedException("Unauthorized access");
     }
 
     @GetMapping(path = "/team")
@@ -56,11 +55,14 @@ public class StudentController {
         if (studentService.studentBelongsToUser(id, userId)) {
             return ResponseEntity.ok(studentService.getStudentTeam(id));
         }
-        return new ResponseEntity<>(HttpStatus.UNAUTHORIZED);
+        throw new UserNotAuthorizedException("Unauthorized access");
     }
 
     @GetMapping(path = "/all")
     public ResponseEntity<List<StudentIdAvatar>> getStudents(@CurrentUser String userId) {
+        if (!userRepository.existsById(userId)) {
+            throw new UserNotAuthorizedException("Unauthorized access");
+        }
         return ResponseEntity.ok(studentService.getStudents(userId));
     }
 
@@ -69,24 +71,18 @@ public class StudentController {
     public ResponseEntity<StudentDTO> createStudent(
             @RequestPart("data") String request,
             @CurrentUser String userId,
-            @RequestPart(value = "image", required = false) MultipartFile image) throws IOException {
-        if (image != null) {
-            return ResponseEntity.ok(studentService.createStudent(request, image, userId));
-        }
-        return ResponseEntity.ok(studentService.createStudent(request, userId));
+            @RequestPart(value = "image", required = false) MultipartFile image)  {
+        return ResponseEntity.ok(studentService.createStudent(request, image, userId));
     }
 
     @PutMapping(path = "/{studentId}")
     @ResponseStatus(HttpStatus.CREATED)
-    public ResponseEntity<?> updateStudent(
+    public ResponseEntity<StudentDTO> updateStudent(
             @PathVariable String studentId,
             @CurrentUser String userId,
             @RequestPart("data") String request,
-            @RequestPart(value = "image", required = false) MultipartFile image) throws IOException {
-        if (image != null) {
-            return ResponseEntity.ok(studentService.updateStudentDetails(studentId, request, image, userId));
-        }
-        return ResponseEntity.ok(studentService.updateStudentDetails(studentId, request, userId));
+            @RequestPart(value = "image", required = false) MultipartFile image)  {
+        return ResponseEntity.ok(studentService.updateStudentDetails(studentId, request, image, userId));
     }
 
     @PutMapping(path = "/{studentId}/communication")
@@ -95,7 +91,7 @@ public class StudentController {
             @PathVariable String studentId,
             @CurrentUser String userId,
             @RequestBody String request
-            ) throws IOException {
+            )  {
         return ResponseEntity.ok(studentService.updateStudentCommunication(studentId, request, userId));
     }
 
@@ -105,7 +101,7 @@ public class StudentController {
             @PathVariable String studentId,
             @CurrentUser String userId,
             @RequestBody String request
-    ) throws IOException {
+    )  {
         return ResponseEntity.ok(studentService.updateStudentChallenge(studentId, request, userId));
     }
 }

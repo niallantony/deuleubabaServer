@@ -11,7 +11,6 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
-import java.io.IOException;
 
 @RestController
 @Slf4j
@@ -42,7 +41,7 @@ public class DictionaryController {
             @RequestPart("data") String dictionaryEntry,
             @RequestPart(value = "image", required = false)MultipartFile imageFile,
             @CurrentUser String userId
-    ) throws IOException {
+    )  {
         DictionaryEntry entry = dictionaryService.addDictionaryEntry(dictionaryEntry, imageFile, userId);
         return ResponseEntity.status(HttpStatus.CREATED).body(entry);
     }
@@ -52,7 +51,7 @@ public class DictionaryController {
             @RequestPart("data") String request,
             @RequestPart(value = "image", required = false) MultipartFile image,
             @CurrentUser String userId
-    ) throws IOException {
+    )  {
         DictionaryEntry entry = dictionaryService.updateDictionaryEntry(request, image, userId);
         return ResponseEntity.ok(entry);
     }

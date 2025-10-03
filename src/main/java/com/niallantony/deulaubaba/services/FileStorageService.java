@@ -39,7 +39,7 @@ public class FileStorageService {
             try {
                 Files.deleteIfExists(oldPath);
             } catch (IOException e) {
-                log.warn("Failed to delete old avatar: {}", oldPath, e);
+                throw new FileStorageException("Could not delete image" + oldAvatar, e);
             }
         }
     }

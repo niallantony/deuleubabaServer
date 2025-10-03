@@ -1,7 +1,5 @@
 package com.niallantony.deulaubaba.services;
 
-import com.fasterxml.jackson.core.JsonProcessingException;
-import com.fasterxml.jackson.databind.ObjectMapper;
 import com.niallantony.deulaubaba.domain.Student;
 import com.niallantony.deulaubaba.domain.User;
 import com.niallantony.deulaubaba.data.StudentRepository;
@@ -9,9 +7,7 @@ import com.niallantony.deulaubaba.data.UserRepository;
 import com.niallantony.deulaubaba.dto.StudentDTO;
 import com.niallantony.deulaubaba.dto.UserDTO;
 import com.niallantony.deulaubaba.dto.UserRequest;
-import com.niallantony.deulaubaba.exceptions.FileStorageException;
-import com.niallantony.deulaubaba.exceptions.InvalidUserDataException;
-import com.niallantony.deulaubaba.exceptions.ResourceNotFoundException;
+import com.niallantony.deulaubaba.exceptions.*;
 import com.niallantony.deulaubaba.mapper.StudentMapper;
 import com.niallantony.deulaubaba.mapper.UserMapper;
 import com.niallantony.deulaubaba.utils.JsonUtils;
@@ -21,8 +17,6 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
-
-import java.io.IOException;
 
 @Service
 public class UserService {
@@ -64,6 +58,12 @@ public class UserService {
                 UserRequest.class,
                 () -> new InvalidUserDataException("Given User Data not Valid")
         );
+        if (userRepository.existsByUsername(userRequest.getUsername())) {
+            throw new UsernameNotAvailableException("Username is already taken");
+        }
+        if (userRepository.existsByEmail(userRequest.getEmail())) {
+            throw new EmailNotAvailableException("Email is already taken");
+        }
         validateUserRequest(userRequest);
         User user = userMapper.toNewUser(userRequest, userId);
         if (image != null && !image.isEmpty()) {
@@ -90,7 +90,7 @@ public class UserService {
     @Transactional
     public StudentDTO linkStudent(String userId, String studentCode) {
         User user = getUserOrThrow(userId);
-        Student student = studentRepository.findById(studentCode)
+        Student student = studentRepository.findById(studentCode.toLowerCase())
                 .orElseThrow(() -> new ResourceNotFoundException("Student Not Found"));
         user.getStudents().add(student);
         student.getUsers().add(user);

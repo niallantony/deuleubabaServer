@@ -34,7 +34,7 @@ public class UserController {
             @RequestPart("data") String request,
             @RequestPart(value = "image", required = false) MultipartFile image,
             @CurrentUser String userId
-    ) throws IOException {
+    )  {
             return ResponseEntity.ok(userService.createUser(userId, request, image));
     }
 

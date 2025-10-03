@@ -24,4 +24,24 @@ public class GlobalExceptionHandler {
     public ResponseEntity<?> handleInvalidUserDataException(InvalidUserDataException e) {
         return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(Map.of("message", e.getMessage()));
     }
+
+    @ExceptionHandler(InvalidStudentDataException.class)
+    public ResponseEntity<?> handleInvalidStudentDataException(InvalidStudentDataException e) {
+        return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(Map.of("message", e.getMessage()));
+    }
+
+    @ExceptionHandler(InvalidDictionaryDataException.class)
+    public ResponseEntity<?> handleInvalidDictionaryDataException(InvalidDictionaryDataException e) {
+        return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(Map.of("message", e.getMessage()));
+    }
+
+    @ExceptionHandler(UsernameNotAvailableException.class)
+    public ResponseEntity<?> handleUsernameNotAvailableException(UsernameNotAvailableException e) {
+        return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(Map.of("message", e.getMessage()));
+    }
+
+    @ExceptionHandler(EmailNotAvailableException.class)
+    public ResponseEntity<?> handleEmailNotAvailableException(EmailNotAvailableException e) {
+        return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(Map.of("message", e.getMessage()));
+    }
 }

@@ -1,7 +1,6 @@
 package com.niallantony.deulaubaba.services;
 
 
-import com.fasterxml.jackson.databind.ObjectMapper;
 import com.niallantony.deulaubaba.data.StudentRepository;
 import com.niallantony.deulaubaba.data.UserRepository;
 import com.niallantony.deulaubaba.domain.Role;
@@ -34,8 +33,6 @@ public class UserServiceTest {
     private UserRepository userRepository;
     @Mock
     private StudentRepository studentRepository;
-    @Mock
-    private ObjectMapper objectMapper;
     @Mock
     private FileStorageService fileStorageService;
     @Mock
@@ -104,6 +101,8 @@ public class UserServiceTest {
         assertSame(mockDTO, result);
         verify(userMapper).toDTO(mockUser);
         verify(userMapper).toNewUser(any(UserRequest.class), any(String.class));
+        verify(userRepository).existsByUsername(mockUserRequest.getUsername());
+        verify(userRepository).existsByEmail(mockUserRequest.getEmail());
         verify(userRepository).save(mockUser);
         verifyNoMoreInteractions(userRepository, userMapper);
     }
@@ -130,6 +129,8 @@ public class UserServiceTest {
                         req.getEmail().equals("Email") &&
                         req.getUsername().equals("Username")
         ), any(String.class));
+        verify(userRepository).existsByUsername(mockUserRequest.getUsername());
+        verify(userRepository).existsByEmail(mockUserRequest.getEmail());
         verify(userRepository).save(mockUser);
         verify(fileStorageService).storeImage(mockFile);
         verifyNoMoreInteractions(userRepository, userMapper, fileStorageService);
@@ -139,7 +140,7 @@ public class UserServiceTest {
     public void createUser_whenGivenInvalidData_thenThrowsInvalidUserDataException() {
         String data = "data";
         when(jsonUtils.parse(eq(data), any(),any())).thenThrow(InvalidUserDataException.class);
-        InvalidUserDataException exception = assertThrows(
+        assertThrows(
                 InvalidUserDataException.class,
                 () -> userService.createUser("ABC", data, null)
         );
@@ -167,6 +168,8 @@ public class UserServiceTest {
                         req.getEmail().equals("Email") &&
                         req.getUsername().equals("Username")
         ), any(String.class));
+        verify(userRepository).existsByUsername(mockUserRequest.getUsername());
+        verify(userRepository).existsByEmail(mockUserRequest.getEmail());
         verify(userRepository).save(mockUser);
         verify(fileStorageService).storeImage(mockFile);
         verifyNoMoreInteractions(userRepository, userMapper, fileStorageService);
