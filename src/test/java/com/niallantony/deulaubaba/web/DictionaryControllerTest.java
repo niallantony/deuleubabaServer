@@ -8,6 +8,7 @@ import com.niallantony.deulaubaba.data.UserRepository;
 import com.niallantony.deulaubaba.domain.CommunicationCategory;
 import com.niallantony.deulaubaba.domain.DictionaryEntry;
 import com.niallantony.deulaubaba.dto.DictionaryPostRequest;
+import com.niallantony.deulaubaba.dto.DictionaryPutRequest;
 import com.niallantony.deulaubaba.exceptions.FileStorageException;
 import com.niallantony.deulaubaba.services.FileStorageService;
 import com.niallantony.deulaubaba.util.DictionaryTestFactory;
@@ -16,6 +17,7 @@ import org.junit.jupiter.api.*;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.http.HttpMethod;
 import org.springframework.mock.web.MockMultipartFile;
 import org.springframework.test.context.DynamicPropertyRegistry;
 import org.springframework.test.context.DynamicPropertySource;
@@ -27,16 +29,13 @@ import org.springframework.transaction.annotation.Transactional;
 import org.testcontainers.containers.PostgreSQLContainer;
 import org.testcontainers.junit.jupiter.Testcontainers;
 
-import java.util.Dictionary;
 import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.Mockito.verify;
-import static org.mockito.Mockito.when;
+import static org.mockito.Mockito.*;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.jwt;
-import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
-import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.multipart;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
@@ -285,4 +284,241 @@ public class DictionaryControllerTest {
         List<DictionaryEntry> dictionaries = dictionaryRepository.findAll().stream().toList();
         assertEquals(0, dictionaries.size());
     }
+
+    @Test
+    @SqlMergeMode(SqlMergeMode.MergeMode.MERGE)
+    @Sql({
+            "/fixtures/student_and_user.sql",
+            "/fixtures/dictionary.sql"
+    })
+    @Sql(scripts = "/fixtures/teardown.sql", executionPhase = Sql.ExecutionPhase.AFTER_TEST_METHOD)
+    public void updateDictionary_withValidData_updatesDictionaryEntry(@Autowired MockMvc mvc) throws Exception {
+        DictionaryPutRequest request = DictionaryTestFactory.createDictionaryPutRequest();
+        String json = objectMapper.writeValueAsString(request);
+        MockMultipartFile data = new MockMultipartFile("data", "test.json", "application/json", json.getBytes());
+        mvc.perform(multipart( HttpMethod.PUT, "/dictionary")
+                .file(data)
+                .with(jwt()))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.id").value(request.getId()))
+                .andDo((r) -> System.out.println(r.getResponse().getContentAsString()));
+
+        DictionaryEntry entry = dictionaryRepository.findById(request.getId()).orElse(null);
+        assertNotNull(entry);
+        assertEquals(entry.getTitle(), request.getTitle());
+
+    }
+
+    @Test
+    @SqlMergeMode(SqlMergeMode.MergeMode.MERGE)
+    @Sql({
+            "/fixtures/student_and_user.sql",
+            "/fixtures/dictionary.sql"
+    })
+    @Sql(scripts = "/fixtures/teardown.sql", executionPhase = Sql.ExecutionPhase.AFTER_TEST_METHOD)
+    public void updateDictionary_withInvalidData_returns400(@Autowired MockMvc mvc) throws Exception {
+        DictionaryPutRequest request = DictionaryTestFactory.createBadPutReqeust();
+        String json = objectMapper.writeValueAsString(request);
+        MockMultipartFile data = new MockMultipartFile("data", "test.json", "application/json", json.getBytes());
+        mvc.perform(multipart( HttpMethod.PUT, "/dictionary")
+                   .file(data)
+                   .with(jwt()))
+           .andExpect(status().isBadRequest())
+           .andExpect(jsonPath("$.message").value("Entry data not valid"))
+           .andDo((r) -> System.out.println(r.getResponse().getContentAsString()));
+
+        DictionaryEntry entry = dictionaryRepository.findById(1L).orElse(null);
+        assertNotNull(entry);
+        assertEquals("Title", entry.getTitle());
+    }
+
+    @Test
+    @SqlMergeMode(SqlMergeMode.MergeMode.MERGE)
+    @Sql({
+            "/fixtures/student_and_user.sql",
+            "/fixtures/dictionary.sql"
+    })
+    @Sql(scripts = "/fixtures/teardown.sql", executionPhase = Sql.ExecutionPhase.AFTER_TEST_METHOD)
+    public void updateDictionary_withMalformedRequest_returns400(@Autowired MockMvc mvc) throws Exception {
+        String json = "Bad Request";
+        MockMultipartFile data = new MockMultipartFile("data", "test.json", "application/json", json.getBytes());
+        mvc.perform(multipart( HttpMethod.PUT, "/dictionary")
+                   .file(data)
+                   .with(jwt()))
+           .andExpect(status().isBadRequest())
+           .andExpect(jsonPath("$.message").value("Entry data not valid"))
+           .andDo((r) -> System.out.println(r.getResponse().getContentAsString()));
+
+        DictionaryEntry entry = dictionaryRepository.findById(1L).orElse(null);
+        assertNotNull(entry);
+        assertEquals("Title", entry.getTitle());
+    }
+
+    @Test
+    @SqlMergeMode(SqlMergeMode.MergeMode.MERGE)
+    @Sql({
+            "/fixtures/student_and_user.sql",
+    })
+    @Sql(scripts = "/fixtures/teardown.sql", executionPhase = Sql.ExecutionPhase.AFTER_TEST_METHOD)
+    public void updateDictionary_withMissingEntry_returns404(@Autowired MockMvc mvc) throws Exception {
+        DictionaryPutRequest request = DictionaryTestFactory.createDictionaryPutRequest();
+        String json = objectMapper.writeValueAsString(request);
+        MockMultipartFile data = new MockMultipartFile("data", "test.json", "application/json", json.getBytes());
+        mvc.perform(multipart( HttpMethod.PUT, "/dictionary")
+                   .file(data)
+                   .with(jwt()))
+           .andExpect(status().isNotFound())
+           .andExpect(jsonPath("$.message").value("Entry not found"))
+           .andDo((r) -> System.out.println(r.getResponse().getContentAsString()));
+
+        List<DictionaryEntry> dictionaries = dictionaryRepository.findAll().stream().toList();
+        assertEquals(0, dictionaries.size());
+    }
+
+    @Test
+    @SqlMergeMode(SqlMergeMode.MergeMode.MERGE)
+    @Sql({
+            "/fixtures/student.sql",
+            "/fixtures/user.sql",
+            "/fixtures/dictionary.sql",
+    })
+    @Sql(scripts = "/fixtures/teardown.sql", executionPhase = Sql.ExecutionPhase.AFTER_TEST_METHOD)
+    public void updateDictionary_withUnauthorizedUser_returns401(@Autowired MockMvc mvc) throws Exception {
+        DictionaryPutRequest request = DictionaryTestFactory.createDictionaryPutRequest();
+        String json = objectMapper.writeValueAsString(request);
+        MockMultipartFile data = new MockMultipartFile("data", "test.json", "application/json", json.getBytes());
+        mvc.perform(multipart( HttpMethod.PUT, "/dictionary")
+                   .file(data)
+                   .with(jwt()))
+           .andExpect(status().isUnauthorized())
+           .andExpect(jsonPath("$.message").value("Unauthorized access"))
+           .andDo((r) -> System.out.println(r.getResponse().getContentAsString()));
+    }
+
+    @Test
+    @SqlMergeMode(SqlMergeMode.MergeMode.MERGE)
+    @Sql({
+            "/fixtures/student_and_user.sql",
+            "/fixtures/dictionary.sql"
+    })
+    @Sql(scripts = "/fixtures/teardown.sql", executionPhase = Sql.ExecutionPhase.AFTER_TEST_METHOD)
+    public void updateDictionary_withValidDataAndImage_updatesDictionaryEntry(@Autowired MockMvc mvc) throws Exception {
+        when(fileStorageService.storeImage(any())).thenReturn("new_image.jpg");
+        DictionaryPutRequest request = DictionaryTestFactory.createDictionaryPutRequest();
+        String json = objectMapper.writeValueAsString(request);
+        MockMultipartFile data = new MockMultipartFile("data", "test.json", "application/json", json.getBytes());
+        MockMultipartFile image = new MockMultipartFile("image", "new_image.jpg", "application/json", "image".getBytes());
+        mvc.perform(multipart( HttpMethod.PUT, "/dictionary")
+                   .file(data)
+                   .file(image)
+                   .with(jwt()))
+           .andExpect(status().isOk())
+           .andExpect(jsonPath("$.id").value(request.getId()))
+           .andDo((r) -> System.out.println(r.getResponse().getContentAsString()));
+
+        DictionaryEntry entry = dictionaryRepository.findById(request.getId()).orElse(null);
+        verify(fileStorageService).deleteImage("example.jpg");
+        assertNotNull(entry);
+        assertEquals("new_image.jpg", entry.getImgsrc());
+    }
+
+    @Test
+    @SqlMergeMode(SqlMergeMode.MergeMode.MERGE)
+    @Sql({
+            "/fixtures/student_and_user.sql",
+            "/fixtures/dictionary.sql"
+    })
+    @Sql(scripts = "/fixtures/teardown.sql", executionPhase = Sql.ExecutionPhase.AFTER_TEST_METHOD)
+    public void updateDictionary_withValidDataAndImageError_updatesDictionaryEntry(@Autowired MockMvc mvc) throws Exception {
+        when(fileStorageService.storeImage(any())).thenThrow(FileStorageException.class);
+        DictionaryPutRequest request = DictionaryTestFactory.createDictionaryPutRequest();
+        String json = objectMapper.writeValueAsString(request);
+        MockMultipartFile data = new MockMultipartFile("data", "test.json", "application/json", json.getBytes());
+        MockMultipartFile image = new MockMultipartFile("image", "new_image.jpg", "application/json", "image".getBytes());
+        mvc.perform(multipart( HttpMethod.PUT, "/dictionary")
+                   .file(data)
+                   .file(image)
+                   .with(jwt()))
+           .andExpect(status().isOk())
+           .andExpect(jsonPath("$.id").value(request.getId()))
+           .andDo((r) -> System.out.println(r.getResponse().getContentAsString()));
+
+        DictionaryEntry entry = dictionaryRepository.findById(request.getId()).orElse(null);
+        verify(fileStorageService, never()).deleteImage("example.jpg");
+        assertNotNull(entry);
+        assertEquals("example.jpg", entry.getImgsrc());
+    }
+
+    @Test
+    @SqlMergeMode(SqlMergeMode.MergeMode.MERGE)
+    @Sql({
+            "/fixtures/student_and_user.sql",
+            "/fixtures/dictionary.sql"
+    })
+    @Sql(scripts = "/fixtures/teardown.sql", executionPhase = Sql.ExecutionPhase.AFTER_TEST_METHOD)
+    public void deleteDictionary_withValidId_deletesDictionaryEntry(@Autowired MockMvc mvc) throws Exception {
+        mvc.perform(delete("/dictionary/1")
+                .with(jwt()))
+                .andExpect(status().isNoContent())
+                .andDo((r) -> System.out.println(r.getResponse().getContentAsString()));
+        List<DictionaryEntry> entries = dictionaryRepository.findAll().stream().toList();
+        assertEquals(0, entries.size());
+        verify(fileStorageService, times(1)).deleteImage("example.jpg");
+    }
+
+    @Test
+    @SqlMergeMode(SqlMergeMode.MergeMode.MERGE)
+    @Sql({
+            "/fixtures/student_and_user.sql",
+            "/fixtures/dictionary.sql"
+    })
+    @Sql(scripts = "/fixtures/teardown.sql", executionPhase = Sql.ExecutionPhase.AFTER_TEST_METHOD)
+    public void deleteDictionary_withInvalidId_deletesDictionaryEntry(@Autowired MockMvc mvc) throws Exception {
+        mvc.perform(delete("/dictionary/2")
+                   .with(jwt()))
+           .andExpect(status().isNotFound())
+                .andExpect(jsonPath("$.message").value("Dictionary not found"))
+           .andDo((r) -> System.out.println(r.getResponse().getContentAsString()));
+        List<DictionaryEntry> entries = dictionaryRepository.findAll().stream().toList();
+        assertEquals(1, entries.size());
+        verify(fileStorageService, never()).deleteImage("example.jpg");
+    }
+
+    @Test
+    @SqlMergeMode(SqlMergeMode.MergeMode.MERGE)
+    @Sql({
+            "/fixtures/user.sql",
+            "/fixtures/student.sql",
+            "/fixtures/dictionary.sql",
+    })
+    @Sql(scripts = "/fixtures/teardown.sql", executionPhase = Sql.ExecutionPhase.AFTER_TEST_METHOD)
+    public void deleteDictionary_withUnauthorizedUser_deletesDictionaryEntry(@Autowired MockMvc mvc) throws Exception {
+        mvc.perform(delete("/dictionary/1")
+                   .with(jwt()))
+           .andExpect(status().isUnauthorized())
+           .andExpect(jsonPath("$.message").value("Unauthorized access"))
+           .andDo((r) -> System.out.println(r.getResponse().getContentAsString()));
+        List<DictionaryEntry> entries = dictionaryRepository.findAll().stream().toList();
+        assertEquals(1, entries.size());
+        verify(fileStorageService, never()).deleteImage("example.jpg");
+    }
+
+    @Test
+    @SqlMergeMode(SqlMergeMode.MergeMode.MERGE)
+    @Sql({
+            "/fixtures/student_and_user.sql",
+            "/fixtures/dictionary.sql"
+    })
+    @Sql(scripts = "/fixtures/teardown.sql", executionPhase = Sql.ExecutionPhase.AFTER_TEST_METHOD)
+    public void deleteDictionary_whenDeleteFileThrows_stillDeletesDictionaryEntry(@Autowired MockMvc mvc) throws Exception {
+        doThrow(FileStorageException.class).when(fileStorageService).deleteImage("example.jpg");
+        mvc.perform(delete("/dictionary/1")
+                   .with(jwt()))
+           .andExpect(status().isNoContent())
+           .andDo((r) -> System.out.println(r.getResponse().getContentAsString()));
+        List<DictionaryEntry> entries = dictionaryRepository.findAll().stream().toList();
+        assertEquals(0, entries.size());
+        verify(fileStorageService, times(1)).deleteImage("example.jpg");
+    }
 }
+
