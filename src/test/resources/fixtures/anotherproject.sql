@@ -1,5 +1,0 @@
-INSERT INTO project (completed, completed_on, description, imgsrc, objective, type, student_id, started_on)
-VALUES (false, '2010-12-30', 'another description', 'example.jpg', 'objective', 'COMMUNICATION', 'abc', '2010-01-01');
-INSERT INTO project_communication_category (project_id, category_id) VALUES (1,3);
-INSERT INTO project_user (is_completed, completed_on, project_id, user_id)
-VALUES (true, '2010-12-30', 2, 'user')

@@ -120,18 +120,32 @@ public class ProjectControllerTests {
     @SqlMergeMode(SqlMergeMode.MergeMode.MERGE)
     @Sql({
             "/fixtures/student_and_user.sql",
-            "/fixtures/project.sql",
-            "/fixtures/anotherproject.sql"
+            "/fixtures/one_of_each_project.sql"
     })
     @Transactional
     public void getAllProjectsOfUser_withValidId_returnsProject(@Autowired MockMvc mvc) throws Exception {
         mvc.perform(get("/project/all")
                    .with(jwt()))
            .andExpect(status().isOk())
-                .andExpect(jsonPath("$.length()").value(2))
+           .andExpect(jsonPath("$.completed.length()").value(1))
+           .andExpect(jsonPath("$.pending.length()").value(1))
+           .andExpect(jsonPath("$.current.length()").value(1))
            .andDo((r) -> System.out.println(r.getResponse().getContentAsString()));
     }
 
+    @Test
+    @SqlMergeMode(SqlMergeMode.MergeMode.MERGE)
+    @Sql({
+            "/fixtures/student_and_user.sql",
+    })
+    @Transactional
+    public void getAllProjectsOfUser_forUserWithNoProjects_returns204(@Autowired MockMvc mvc) throws Exception {
+        mvc.perform(get("/project/all")
+                   .with(jwt()))
+           .andExpect(status().isNoContent())
+                .andExpect(jsonPath("$.message").value("No projects found"))
+           .andDo((r) -> System.out.println(r.getResponse().getContentAsString()));
+    }
 
 
 }

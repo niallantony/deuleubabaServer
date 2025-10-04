@@ -44,4 +44,9 @@ public class GlobalExceptionHandler {
     public ResponseEntity<?> handleEmailNotAvailableException(EmailNotAvailableException e) {
         return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(Map.of("message", e.getMessage()));
     }
+
+    @ExceptionHandler(NoProjectsFoundException.class)
+    public ResponseEntity<?> handleNoProjectsFoundException(NoProjectsFoundException e) {
+        return ResponseEntity.status(HttpStatus.NO_CONTENT).body(Map.of("message", e.getMessage()));
+    }
 }

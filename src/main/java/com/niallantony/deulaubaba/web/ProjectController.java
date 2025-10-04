@@ -1,5 +1,6 @@
 package com.niallantony.deulaubaba.web;
 
+import com.niallantony.deulaubaba.dto.ProjectCollectionsDTO;
 import com.niallantony.deulaubaba.dto.ProjectDTO;
 import com.niallantony.deulaubaba.dto.ProjectPreviewDTO;
 import com.niallantony.deulaubaba.security.CurrentUser;
@@ -31,7 +32,7 @@ public class ProjectController {
     }
 
     @GetMapping(path = "/all")
-    public ResponseEntity<Set<ProjectPreviewDTO>> getProjectsForUser(
+    public ResponseEntity<ProjectCollectionsDTO> getProjectsForUser(
             @CurrentUser String id
     ) {
         return ResponseEntity.ok(projectService.getProjectsOfUser(id));
