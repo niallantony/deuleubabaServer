@@ -1,8 +1,11 @@
 package com.niallantony.deulaubaba.mapper;
 
+import com.niallantony.deulaubaba.domain.CommunicationCategory;
+import com.niallantony.deulaubaba.domain.CommunicationCategoryLabel;
 import com.niallantony.deulaubaba.domain.Project;
 import com.niallantony.deulaubaba.domain.ProjectUser;
 import com.niallantony.deulaubaba.dto.project.ProjectDTO;
+import com.niallantony.deulaubaba.dto.project.ProjectPostDTO;
 import com.niallantony.deulaubaba.dto.project.ProjectUserStatus;
 import com.niallantony.deulaubaba.dto.user.UserAvatar;
 import org.mapstruct.Mapper;
@@ -14,9 +17,12 @@ import java.util.stream.Collectors;
 @Mapper(componentModel = "spring")
 public interface ProjectMapper {
     @Mapping(source = "users", target = "userStatuses")
-    ProjectDTO toDTO(Project project);
+    ProjectDTO entityToDto(Project project);
 
-    Project fromDTO(ProjectDTO projectDTO);
+    @Mapping(target = "categories", ignore = true)
+    Project requestToEntity(ProjectPostDTO project);
+
+
 
 
     default Set<ProjectUserStatus> projectUserToProjectUserStatus(Set<ProjectUser> projectUsers) {
