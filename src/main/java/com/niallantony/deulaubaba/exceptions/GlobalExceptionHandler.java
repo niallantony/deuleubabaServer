@@ -35,6 +35,11 @@ public class GlobalExceptionHandler {
         return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(Map.of("message", e.getMessage()));
     }
 
+    @ExceptionHandler(InvalidProjectDataException.class)
+    public ResponseEntity<?> handleInvalidProjectDataException(InvalidProjectDataException e) {
+        return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(Map.of("message", e.getMessage()));
+    }
+
     @ExceptionHandler(UsernameNotAvailableException.class)
     public ResponseEntity<?> handleUsernameNotAvailableException(UsernameNotAvailableException e) {
         return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(Map.of("message", e.getMessage()));
