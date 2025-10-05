@@ -1,17 +1,19 @@
 package com.niallantony.deulaubaba.services;
 
 import com.niallantony.deulaubaba.data.ProjectRepository;
+import com.niallantony.deulaubaba.data.StudentRepository;
 import com.niallantony.deulaubaba.data.UserRepository;
 import com.niallantony.deulaubaba.domain.Project;
+import com.niallantony.deulaubaba.domain.Student;
 import com.niallantony.deulaubaba.domain.User;
 import com.niallantony.deulaubaba.dto.ProjectCollectionsDTO;
 import com.niallantony.deulaubaba.dto.ProjectDTO;
 import com.niallantony.deulaubaba.dto.ProjectPreviewDTO;
+import com.niallantony.deulaubaba.exceptions.NoProjectsFoundException;
 import com.niallantony.deulaubaba.exceptions.ResourceNotFoundException;
 import com.niallantony.deulaubaba.exceptions.UserNotAuthorizedException;
 import com.niallantony.deulaubaba.mapper.ProjectMapper;
 import com.niallantony.deulaubaba.util.ProjectTestFactory;
-import net.bytebuddy.asm.Advice;
 import org.jetbrains.annotations.NotNull;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -37,6 +39,9 @@ public class ProjectServiceTest {
 
     @Mock
     private UserRepository userRepository;
+
+    @Mock
+    private StudentRepository studentRepository;
     @InjectMocks
     private ProjectService projectService;
 
@@ -80,6 +85,67 @@ public class ProjectServiceTest {
         assertEquals(1, response.getCompleted().size());
         assertEquals(1, response.getPending().size());
         assertEquals(1, response.getCurrent().size());
+    }
+
+    @Test
+    public void getAllProjectsOfUser_whenProjectsEmpty_throwsNoProjectFoundException() {
+        User user = new User();
+        Set<ProjectPreviewDTO> projects = new HashSet<>();
+        when(userRepository.findByUserId("abc")).thenReturn(Optional.of(user));
+        when(projectRepository.findAllProjectsByUserId(user)).thenReturn(projects);
+        assertThrows(NoProjectsFoundException.class, () -> projectService.getProjectsOfUser("abc"));
+    }
+
+    @Test
+    public void getAllProjectsOfUser_whenUserDoesNotExist_throwsResourceNotFoundException() {
+        when(userRepository.findByUserId("abc")).thenReturn(Optional.empty());
+        assertThrows(ResourceNotFoundException.class, () -> projectService.getProjectsOfUser("abc"));
+    }
+
+    @Test
+    public void getAllProjectsOfStudent_whenGivenValidId_returnsAllProjects() {
+        Set<ProjectPreviewDTO> projects = getProjectPreviewDTOS();
+        User user = new User();
+        Student student = new Student();
+        student.getUsers().add(user);
+        when(userRepository.findByUserId("abc")).thenReturn(Optional.of(user));
+        when(studentRepository.findById("123")).thenReturn(Optional.of(student));
+        when(projectRepository.findAllProjectsByStudentId(user, student)).thenReturn(projects);
+
+        ProjectCollectionsDTO response = projectService.getProjectsOfStudent("abc", "123");
+        verify(projectRepository, times(1)).findAllProjectsByStudentId(user,student);
+        assertEquals(1, response.getCompleted().size());
+        assertEquals(1, response.getPending().size());
+        assertEquals(1, response.getCurrent().size());
+    }
+
+    @Test
+    public void getAllProjectsOfStudent_whenStudentDoesNotExist_throwsResourceNotFoundException() {
+        User user = new User();
+        when(userRepository.findByUserId("abc")).thenReturn(Optional.of(user));
+        when(studentRepository.findById("123")).thenReturn(Optional.empty());
+        assertThrows(ResourceNotFoundException.class, () -> projectService.getProjectsOfStudent("abc", "123"));
+    }
+
+    @Test void getAllProjectsOfStudent_whenStudentNotAssignedToUser_throwsUserNotAuthorizedException() {
+        User user = new User();
+        Student student = new Student();
+        when(userRepository.findByUserId("abc")).thenReturn(Optional.of(user));
+        when(studentRepository.findById("123")).thenReturn(Optional.of(student));
+        assertThrows(UserNotAuthorizedException.class, () -> projectService.getProjectsOfStudent("abc", "123"));
+    }
+
+    @Test void getAllProjectsOfStudent_whenStudentHasNoProjects_throwsNoProjectFoundException() {
+        Set<ProjectPreviewDTO> projects = new HashSet<>();
+        User user = new User();
+        Student student = new Student();
+        student.getUsers().add(user);
+        when(userRepository.findByUserId("abc")).thenReturn(Optional.of(user));
+        when(studentRepository.findById("123")).thenReturn(Optional.of(student));
+        when(projectRepository.findAllProjectsByStudentId(user, student)).thenReturn(projects);
+        assertThrows(NoProjectsFoundException.class, () -> projectService.getProjectsOfStudent("abc", "123"));
+        verify(projectRepository, times(1)).findAllProjectsByStudentId(user,student);
+
     }
 
     private static @NotNull Set<ProjectPreviewDTO> getProjectPreviewDTOS() {

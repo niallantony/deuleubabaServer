@@ -1,8 +1,10 @@
 package com.niallantony.deulaubaba.services;
 
 import com.niallantony.deulaubaba.data.ProjectRepository;
+import com.niallantony.deulaubaba.data.StudentRepository;
 import com.niallantony.deulaubaba.data.UserRepository;
 import com.niallantony.deulaubaba.domain.Project;
+import com.niallantony.deulaubaba.domain.Student;
 import com.niallantony.deulaubaba.domain.User;
 import com.niallantony.deulaubaba.dto.ProjectCollectionsDTO;
 import com.niallantony.deulaubaba.dto.ProjectDTO;
@@ -22,15 +24,18 @@ public class ProjectService {
     private final ProjectRepository projectRepository;
     private final ProjectMapper projectMapper;
     private final UserRepository userRepository;
+    private final StudentRepository studentRepository;
 
     public ProjectService(
             ProjectRepository projectRepository,
             ProjectMapper projectMapper,
-            UserRepository userRepository
+            UserRepository userRepository,
+            StudentRepository studentRepository
     ) {
         this.projectRepository = projectRepository;
         this.projectMapper = projectMapper;
         this.userRepository = userRepository;
+        this.studentRepository = studentRepository;
     }
 
     public ProjectDTO getProject(String project_id, String user_id) {
@@ -45,13 +50,36 @@ public class ProjectService {
     }
 
     public ProjectCollectionsDTO getProjectsOfUser(String user_id) {
-        User user = userRepository.findByUserId(user_id)
-                .orElseThrow(() -> new ResourceNotFoundException("User not found"));
+        User user = getUserOrThrow(user_id);
         Set<ProjectPreviewDTO> projects = projectRepository.findAllProjectsByUserId(user);
         if (projects.isEmpty()) {
             throw new NoProjectsFoundException("No projects found");
         }
         return createCollections(projects);
+    }
+
+    public ProjectCollectionsDTO getProjectsOfStudent(String user_id, String student_id) {
+        User user = getUserOrThrow(user_id);
+        Student student = getStudentOrThrow(student_id);
+        if (!student.getUsers().contains(user)) {
+            throw new UserNotAuthorizedException("Unauthorized access");
+        }
+        Set<ProjectPreviewDTO> project = projectRepository.findAllProjectsByStudentId(user, student);
+        if (project.isEmpty()) {
+            throw new NoProjectsFoundException("No projects found");
+        }
+        return createCollections(project);
+    }
+
+    private Student getStudentOrThrow(String student_id) {
+        return studentRepository.findById(student_id)
+                .orElseThrow(() -> new ResourceNotFoundException("Student not found"));
+    }
+
+    private User getUserOrThrow(String user_id) {
+        return userRepository.findByUserId(user_id)
+                             .orElseThrow(() -> new ResourceNotFoundException("User not found"));
+
     }
 
     private ProjectCollectionsDTO createCollections(Set<ProjectPreviewDTO> projects) {

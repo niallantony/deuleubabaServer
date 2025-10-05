@@ -114,8 +114,6 @@ public class StudentService {
         return studentMapper.toDTO(student);
     }
 
-    // TODO: Image storage failure should be told to user
-    // TODO: Image deletion is not ATOM
     @Transactional
     public StudentDTO updateStudentDetails(String studentId, String request, MultipartFile image, String userId)  {
         StudentRequest studentRequest = jsonUtils.parse(

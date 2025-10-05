@@ -1,7 +1,7 @@
-DELETE FROM user_students;
 DELETE FROM project_user;
 DELETE FROM project_communication_category;
 DELETE FROM entry_communication_category;
+DELETE FROM user_students;
 DELETE FROM project;
 DELETE FROM dictionary_entry;
 DELETE FROM student;

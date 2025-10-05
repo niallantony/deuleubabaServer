@@ -72,7 +72,6 @@ public class ProjectControllerTests {
             "/fixtures/student_and_user.sql",
             "/fixtures/project.sql"
     })
-    @Transactional
     public void getProject_withValidId_returnsProject(@Autowired MockMvc mvc) throws Exception {
         mvc.perform(get("/project")
                    .with(jwt())
@@ -90,7 +89,6 @@ public class ProjectControllerTests {
     @Sql({
             "/fixtures/student_and_user.sql",
     })
-    @Transactional
     public void getProject_withInvalidId_returns404(@Autowired MockMvc mvc) throws Exception {
         mvc.perform(get("/project")
                    .with(jwt())
@@ -106,7 +104,6 @@ public class ProjectControllerTests {
             "/fixtures/student_and_user.sql",
             "/fixtures/unrelatedproject.sql"
     })
-    @Transactional
     public void getProject_withUnauthorizedUser_returns401(@Autowired MockMvc mvc) throws Exception {
         mvc.perform(get("/project")
                    .with(jwt())
@@ -122,7 +119,6 @@ public class ProjectControllerTests {
             "/fixtures/student_and_user.sql",
             "/fixtures/one_of_each_project.sql"
     })
-    @Transactional
     public void getAllProjectsOfUser_withValidId_returnsProject(@Autowired MockMvc mvc) throws Exception {
         mvc.perform(get("/project/all")
                    .with(jwt()))
@@ -138,7 +134,6 @@ public class ProjectControllerTests {
     @Sql({
             "/fixtures/student_and_user.sql",
     })
-    @Transactional
     public void getAllProjectsOfUser_forUserWithNoProjects_returns204(@Autowired MockMvc mvc) throws Exception {
         mvc.perform(get("/project/all")
                    .with(jwt()))
@@ -147,5 +142,62 @@ public class ProjectControllerTests {
            .andDo((r) -> System.out.println(r.getResponse().getContentAsString()));
     }
 
+    @Test
+    @SqlMergeMode(SqlMergeMode.MergeMode.MERGE)
+    @Sql({
+            "/fixtures/student_and_user.sql",
+            "/fixtures/one_of_each_project.sql"
+    })
+    public void getAllProjectsOfStudent_withValidId_returnsCollectedProjects(@Autowired MockMvc mvc) throws Exception {
+        mvc.perform(get("/project/all/abc")
+                   .with(jwt()))
+           .andExpect(status().isOk())
+           .andExpect(jsonPath("$.completed.length()").value(1))
+           .andExpect(jsonPath("$.pending.length()").value(1))
+           .andExpect(jsonPath("$.current.length()").value(1))
+           .andDo((r) -> System.out.println(r.getResponse().getContentAsString()));
+    }
+
+    @Test
+    @SqlMergeMode(SqlMergeMode.MergeMode.MERGE)
+    @Sql({
+            "/fixtures/student_and_user.sql",
+            "/fixtures/one_of_each_project.sql"
+    })
+    public void getAllProjectsOfStudent_withInvalidId_returns404(@Autowired MockMvc mvc) throws Exception {
+        mvc.perform(get("/project/all/def")
+                   .with(jwt()))
+           .andExpect(status().isNotFound())
+           .andExpect(jsonPath("$.message").value("Student not found"))
+           .andDo((r) -> System.out.println(r.getResponse().getContentAsString()));
+    }
+
+    @Test
+    @SqlMergeMode(SqlMergeMode.MergeMode.MERGE)
+    @Sql({
+            "/fixtures/student.sql",
+            "/fixtures/user.sql",
+            "/fixtures/one_of_each_project.sql"
+    })
+    public void getAllProjectsOfStudent_asUnauthorizedUser_returns401(@Autowired MockMvc mvc) throws Exception {
+        mvc.perform(get("/project/all/abc")
+                   .with(jwt()))
+           .andExpect(status().isUnauthorized())
+           .andExpect(jsonPath("$.message").value("Unauthorized access"))
+           .andDo((r) -> System.out.println(r.getResponse().getContentAsString()));
+    }
+
+    @Test
+    @SqlMergeMode(SqlMergeMode.MergeMode.MERGE)
+    @Sql({
+            "/fixtures/student_and_user.sql",
+    })
+    public void getAllProjectsOfStudent_forStudentWithNoProjects_returns204(@Autowired MockMvc mvc) throws Exception {
+        mvc.perform(get("/project/all/abc")
+                   .with(jwt()))
+           .andExpect(status().isNoContent())
+           .andExpect(jsonPath("$.message").value("No projects found"))
+           .andDo((r) -> System.out.println(r.getResponse().getContentAsString()));
+    }
 
 }
