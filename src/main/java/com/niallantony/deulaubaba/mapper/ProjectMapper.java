@@ -16,6 +16,8 @@ public interface ProjectMapper {
     @Mapping(source = "users", target = "userStatuses")
     ProjectDTO toDTO(Project project);
 
+    Project fromDTO(ProjectDTO projectDTO);
+
 
     default Set<ProjectUserStatus> projectUserToProjectUserStatus(Set<ProjectUser> projectUsers) {
         if (projectUsers.isEmpty()) return null;

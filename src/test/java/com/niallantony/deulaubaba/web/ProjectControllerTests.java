@@ -16,7 +16,6 @@ import org.springframework.test.context.DynamicPropertySource;
 import org.springframework.test.context.jdbc.Sql;
 import org.springframework.test.context.jdbc.SqlMergeMode;
 import org.springframework.test.web.servlet.MockMvc;
-import org.springframework.transaction.annotation.Transactional;
 import org.testcontainers.containers.PostgreSQLContainer;
 import org.testcontainers.junit.jupiter.Testcontainers;
 
@@ -88,6 +87,37 @@ public class ProjectControllerTests {
     @SqlMergeMode(SqlMergeMode.MergeMode.MERGE)
     @Sql({
             "/fixtures/student_and_user.sql",
+            "/fixtures/project.sql"
+    })
+    public void getProject_ofCreatedProjectWithValidId_returnsProjectWithTrueCreated(@Autowired MockMvc mvc) throws Exception {
+        mvc.perform(get("/project")
+                   .with(jwt())
+                   .param("id", String.valueOf(1)))
+           .andExpect(status().isOk())
+           .andExpect(jsonPath("$.ownProject").value(true))
+           .andDo((r) -> System.out.println(r.getResponse().getContentAsString()));
+
+    }
+
+    @Test
+    @SqlMergeMode(SqlMergeMode.MergeMode.MERGE)
+    @Sql({
+            "/fixtures/student_and_user.sql",
+            "/fixtures/project_unowned.sql"
+    })
+    public void getProject_ofUnownedProjectWithValidId_returnsProjectWithFalseCreated(@Autowired MockMvc mvc) throws Exception {
+        mvc.perform(get("/project")
+                   .with(jwt())
+                   .param("id", String.valueOf(1)))
+           .andExpect(status().isOk())
+           .andExpect(jsonPath("$.ownProject").value(false))
+           .andDo((r) -> System.out.println(r.getResponse().getContentAsString()));
+    }
+
+    @Test
+    @SqlMergeMode(SqlMergeMode.MergeMode.MERGE)
+    @Sql({
+            "/fixtures/student_and_user.sql",
     })
     public void getProject_withInvalidId_returns404(@Autowired MockMvc mvc) throws Exception {
         mvc.perform(get("/project")
@@ -102,7 +132,7 @@ public class ProjectControllerTests {
     @SqlMergeMode(SqlMergeMode.MergeMode.MERGE)
     @Sql({
             "/fixtures/student_and_user.sql",
-            "/fixtures/unrelatedproject.sql"
+            "/fixtures/project_unrelated.sql"
     })
     public void getProject_withUnauthorizedUser_returns401(@Autowired MockMvc mvc) throws Exception {
         mvc.perform(get("/project")

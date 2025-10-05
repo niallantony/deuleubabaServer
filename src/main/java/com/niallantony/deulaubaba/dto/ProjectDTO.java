@@ -20,8 +20,13 @@ public class ProjectDTO {
     private Set<CommunicationCategory> categories = new HashSet<>();
     private String description;
     private String imgsrc;
-    private Boolean completed;
+    private boolean completed;
     private LocalDate completedOn;
     private ProjectType type;
     private Set<ProjectUserStatus> userStatuses = new HashSet<>();
+    private boolean isOwnProject = false;
+
+    public void isOwnProject(boolean isOwnProject) {
+        this.isOwnProject = isOwnProject;
+    }
 }

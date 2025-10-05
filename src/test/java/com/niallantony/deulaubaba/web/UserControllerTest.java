@@ -85,7 +85,7 @@ class UserControllerTest {
     }
 
     @Test
-    @Sql("/fixtures/user.sql")
+    @Sql("/fixtures/student_and_user.sql")
     public void getProfile_ofAuthorisedUser_returnsUserDTO(@Autowired MockMvc mvc) throws Exception {
         mvc.perform(get("/me").with(jwt()))
             .andExpect(status().isOk())
@@ -93,7 +93,8 @@ class UserControllerTest {
             .andExpect(jsonPath("$.email").value("email@email.com"))
             .andExpect(jsonPath("$.userType").value("teacher"))
             .andExpect(jsonPath("$.username").value("user1"))
-            .andExpect(jsonPath("$.role.name").value("ROLE_USER"));
+            .andExpect(jsonPath("$.role.name").value("ROLE_USER"))
+        .andDo((r) -> System.out.println(r.getResponse().getContentAsString()));
     }
 
     @Test
@@ -119,7 +120,8 @@ class UserControllerTest {
                 .andExpect(jsonPath("$.email").value(request.getEmail()))
                 .andExpect(jsonPath("$.userType").value(request.getUserType()))
                 .andExpect(jsonPath("$.username").value(request.getUsername()))
-                .andExpect(jsonPath("$.role.name").value("ROLE_USER"));
+                .andExpect(jsonPath("$.role.name").value("ROLE_USER"))
+                .andDo((r) -> System.out.println(r.getResponse().getContentAsString()));
 
         List<User> users = userRepository.findAll();
         assertEquals(1, users.size());
@@ -145,7 +147,8 @@ class UserControllerTest {
            .andExpect(jsonPath("$.userType").value(request.getUserType()))
            .andExpect(jsonPath("$.username").value(request.getUsername()))
            .andExpect(jsonPath("$.role.name").value("ROLE_USER"))
-            .andExpect(jsonPath("$.imagesrc").value("user.jpg"));
+           .andExpect(jsonPath("$.imagesrc").value("user.jpg"))
+           .andDo((r) -> System.out.println(r.getResponse().getContentAsString()));
 
 
         List<User> users = userRepository.findAll();

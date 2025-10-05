@@ -1,17 +1,17 @@
-INSERT INTO project (completed, completed_on, description, imgsrc, objective, type, student_id, started_on)
-VALUES (false, null , 'description', 'example.jpg', 'objective', 'COMMUNICATION', 'abc', '2000-01-01');
+INSERT INTO project (completed, completed_on, description, imgsrc, objective, type, student_id, started_on, created_by)
+VALUES (false, null , 'description', 'example.jpg', 'objective', 'COMMUNICATION', 'abc', '2000-01-01', 'user');
 INSERT INTO project_communication_category (project_id, category_id) VALUES (1,6);
 INSERT INTO project_user (is_completed, project_id, user_id)
 VALUES (false, 1, 'user');
 
-INSERT INTO project (completed, completed_on, description, imgsrc, objective, type, student_id, started_on)
-VALUES (true, '2010-12-30', 'another description', 'example.jpg', 'objective', 'COMMUNICATION', 'abc', '2010-01-01');
+INSERT INTO project (completed, completed_on, description, imgsrc, objective, type, student_id, started_on, created_by)
+VALUES (true, '2010-12-30', 'another description', 'example.jpg', 'objective', 'COMMUNICATION', 'abc', '2010-01-01', 'user');
 INSERT INTO project_communication_category (project_id, category_id) VALUES (2,3);
 INSERT INTO project_user (is_completed, completed_on, project_id, user_id)
 VALUES (true, '2010-12-30', 2, 'user');
 
-INSERT INTO project (completed, completed_on, description, imgsrc, objective, type, student_id, started_on)
-VALUES (false, null , 'description', 'example.jpg', 'objective', 'COMMUNICATION', 'abc', CURRENT_DATE + INTERVAL '1 day');
+INSERT INTO project (completed, completed_on, description, imgsrc, objective, type, student_id, started_on, created_by)
+VALUES (false, null , 'description', 'example.jpg', 'objective', 'COMMUNICATION', 'abc', CURRENT_DATE + INTERVAL '1 day', 'user');
 INSERT INTO project_communication_category (project_id, category_id) VALUES (3,6);
 INSERT INTO project_user (is_completed, project_id, user_id)
 VALUES (false, 3, 'user');

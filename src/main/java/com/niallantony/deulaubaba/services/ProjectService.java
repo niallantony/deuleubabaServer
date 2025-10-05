@@ -46,7 +46,11 @@ public class ProjectService {
         if (!userAssignedToProject(user_id, project)) {
             throw new UserNotAuthorizedException("Unauthorized access");
         }
-        return projectMapper.toDTO(project);
+        ProjectDTO projectDTO = projectMapper.toDTO(project);
+        if (project.getCreatedBy().getUserId().equals(user_id)) {
+           projectDTO.isOwnProject(true);
+        }
+        return projectDTO;
     }
 
     public ProjectCollectionsDTO getProjectsOfUser(String user_id) {

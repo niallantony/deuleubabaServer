@@ -49,6 +49,9 @@ public class ProjectServiceTest {
     public void getProject_whenGivenValidId_returnsProject() {
         Project persistedProject = ProjectTestFactory.getEmptyProjectWithUser("abc");
         ProjectDTO expectedProject = new ProjectDTO();
+        User user = new User();
+        user.setUserId("abc");
+        persistedProject.setCreatedBy(user);
 
         when(projectRepository.findById(1L)).thenReturn(Optional.of(persistedProject));
         when(projectMapper.toDTO(persistedProject)).thenReturn(expectedProject);

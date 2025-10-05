@@ -1,9 +1,11 @@
 package com.niallantony.deulaubaba.domain;
 
+import com.fasterxml.jackson.annotation.JsonBackReference;
 import com.fasterxml.jackson.annotation.JsonManagedReference;
 import jakarta.persistence.*;
 import lombok.Data;
 import lombok.EqualsAndHashCode;
+import lombok.ToString;
 
 import java.time.LocalDate;
 import java.util.HashSet;
@@ -12,6 +14,7 @@ import java.util.Set;
 @Data
 @Entity
 @EqualsAndHashCode(onlyExplicitlyIncluded = true)
+@ToString(exclude = {"users", "student", "createdBy"})
 public class Project {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -52,4 +55,9 @@ public class Project {
 
     @OneToMany(mappedBy = "project", cascade = CascadeType.ALL)
     private Set<ProjectUser> users = new HashSet<>();
+
+    @ManyToOne(fetch = FetchType.EAGER, optional = false)
+    @JoinColumn(name = "created_by", referencedColumnName = "userId")
+    @JsonBackReference
+    private User createdBy;
 }
