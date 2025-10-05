@@ -2,9 +2,9 @@ package com.niallantony.deulaubaba.mapper;
 
 import com.niallantony.deulaubaba.domain.Project;
 import com.niallantony.deulaubaba.domain.ProjectUser;
-import com.niallantony.deulaubaba.dto.ProjectDTO;
-import com.niallantony.deulaubaba.dto.ProjectUserStatus;
-import com.niallantony.deulaubaba.dto.UserAvatar;
+import com.niallantony.deulaubaba.dto.project.ProjectDTO;
+import com.niallantony.deulaubaba.dto.project.ProjectUserStatus;
+import com.niallantony.deulaubaba.dto.user.UserAvatar;
 import org.mapstruct.Mapper;
 import org.mapstruct.Mapping;
 

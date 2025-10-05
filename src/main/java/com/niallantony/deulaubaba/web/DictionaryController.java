@@ -1,7 +1,7 @@
 package com.niallantony.deulaubaba.web;
 
 import com.niallantony.deulaubaba.domain.DictionaryEntry;
-import com.niallantony.deulaubaba.dto.DictionaryListingsResponse;
+import com.niallantony.deulaubaba.dto.dictionary.DictionaryListingsResponse;
 import com.niallantony.deulaubaba.security.CurrentUser;
 import com.niallantony.deulaubaba.services.DictionaryService;
 import lombok.extern.slf4j.Slf4j;

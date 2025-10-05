@@ -1,4 +1,4 @@
-package com.niallantony.deulaubaba.dto;
+package com.niallantony.deulaubaba.dto.user;
 
 import com.niallantony.deulaubaba.domain.Role;
 import lombok.AllArgsConstructor;

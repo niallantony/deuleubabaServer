@@ -1,7 +1,7 @@
 package com.niallantony.deulaubaba.mapper;
 
 import com.niallantony.deulaubaba.domain.*;
-import com.niallantony.deulaubaba.dto.ProjectDTO;
+import com.niallantony.deulaubaba.dto.project.ProjectDTO;
 import org.junit.jupiter.api.Test;
 
 import java.time.LocalDate;

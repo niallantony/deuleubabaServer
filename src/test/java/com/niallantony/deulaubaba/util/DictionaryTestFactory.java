@@ -2,8 +2,8 @@ package com.niallantony.deulaubaba.util;
 
 import com.niallantony.deulaubaba.domain.CommunicationCategoryLabel;
 import com.niallantony.deulaubaba.domain.ExpressionType;
-import com.niallantony.deulaubaba.dto.DictionaryPostRequest;
-import com.niallantony.deulaubaba.dto.DictionaryPutRequest;
+import com.niallantony.deulaubaba.dto.dictionary.DictionaryPostRequest;
+import com.niallantony.deulaubaba.dto.dictionary.DictionaryPutRequest;
 
 
 public class DictionaryTestFactory {

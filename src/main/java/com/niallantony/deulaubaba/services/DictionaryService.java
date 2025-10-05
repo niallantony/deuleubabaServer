@@ -6,7 +6,7 @@ import com.niallantony.deulaubaba.domain.ExpressionType;
 import com.niallantony.deulaubaba.domain.Student;
 import com.niallantony.deulaubaba.data.CommunicationCategoryRepository;
 import com.niallantony.deulaubaba.data.DictionaryRepository;
-import com.niallantony.deulaubaba.dto.*;
+import com.niallantony.deulaubaba.dto.dictionary.*;
 import com.niallantony.deulaubaba.exceptions.FileStorageException;
 import com.niallantony.deulaubaba.exceptions.InvalidDictionaryDataException;
 import com.niallantony.deulaubaba.exceptions.ResourceNotFoundException;

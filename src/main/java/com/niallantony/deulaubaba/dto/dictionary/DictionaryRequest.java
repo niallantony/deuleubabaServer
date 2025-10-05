@@ -1,4 +1,4 @@
-package com.niallantony.deulaubaba.dto;
+package com.niallantony.deulaubaba.dto.dictionary;
 
 import com.niallantony.deulaubaba.domain.CommunicationCategoryLabel;
 import com.niallantony.deulaubaba.domain.ExpressionType;

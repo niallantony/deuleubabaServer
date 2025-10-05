@@ -1,4 +1,4 @@
-package com.niallantony.deulaubaba.dto;
+package com.niallantony.deulaubaba.dto.project;
 
 import lombok.Data;
 import lombok.NoArgsConstructor;

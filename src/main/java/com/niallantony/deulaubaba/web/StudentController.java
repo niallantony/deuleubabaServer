@@ -1,7 +1,9 @@
 package com.niallantony.deulaubaba.web;
 
 import com.niallantony.deulaubaba.data.UserRepository;
-import com.niallantony.deulaubaba.dto.*;
+import com.niallantony.deulaubaba.dto.student.StudentDTO;
+import com.niallantony.deulaubaba.dto.student.StudentIdAvatar;
+import com.niallantony.deulaubaba.dto.user.UserAvatar;
 import com.niallantony.deulaubaba.exceptions.UserNotAuthorizedException;
 import com.niallantony.deulaubaba.security.CurrentUser;
 import com.niallantony.deulaubaba.services.StudentService;

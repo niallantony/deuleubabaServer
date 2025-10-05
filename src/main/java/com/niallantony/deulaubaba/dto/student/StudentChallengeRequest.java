@@ -1,4 +1,4 @@
-package com.niallantony.deulaubaba.dto;
+package com.niallantony.deulaubaba.dto.student;
 
 import lombok.AllArgsConstructor;
 import lombok.Data;

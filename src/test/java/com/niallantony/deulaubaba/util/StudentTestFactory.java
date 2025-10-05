@@ -1,6 +1,6 @@
 package com.niallantony.deulaubaba.util;
 
-import com.niallantony.deulaubaba.dto.StudentRequest;
+import com.niallantony.deulaubaba.dto.student.StudentRequest;
 
 public class StudentTestFactory {
     public static StudentRequest createStudentRequest(String uid) {

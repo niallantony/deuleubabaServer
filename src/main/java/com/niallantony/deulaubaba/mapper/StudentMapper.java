@@ -1,8 +1,8 @@
 package com.niallantony.deulaubaba.mapper;
 
 import com.niallantony.deulaubaba.domain.Student;
-import com.niallantony.deulaubaba.dto.StudentDTO;
-import com.niallantony.deulaubaba.dto.StudentRequest;
+import com.niallantony.deulaubaba.dto.student.StudentDTO;
+import com.niallantony.deulaubaba.dto.student.StudentRequest;
 import org.mapstruct.Mapper;
 import org.mapstruct.Mapping;
 

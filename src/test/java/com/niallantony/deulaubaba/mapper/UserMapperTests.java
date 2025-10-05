@@ -3,8 +3,8 @@ package com.niallantony.deulaubaba.mapper;
 import com.niallantony.deulaubaba.data.RoleRepository;
 import com.niallantony.deulaubaba.domain.Role;
 import com.niallantony.deulaubaba.domain.User;
-import com.niallantony.deulaubaba.dto.UserDTO;
-import com.niallantony.deulaubaba.dto.UserRequest;
+import com.niallantony.deulaubaba.dto.user.UserDTO;
+import com.niallantony.deulaubaba.dto.user.UserRequest;
 import org.junit.jupiter.api.Test;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 

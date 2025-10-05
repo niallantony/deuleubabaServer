@@ -1,7 +1,7 @@
 package com.niallantony.deulaubaba.web;
 
-import com.niallantony.deulaubaba.dto.StudentDTO;
-import com.niallantony.deulaubaba.dto.UserDTO;
+import com.niallantony.deulaubaba.dto.student.StudentDTO;
+import com.niallantony.deulaubaba.dto.user.UserDTO;
 import com.niallantony.deulaubaba.security.CurrentUser;
 import com.niallantony.deulaubaba.services.UserService;
 import lombok.extern.slf4j.Slf4j;
@@ -9,8 +9,6 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
-
-import java.io.IOException;
 
 
 @RestController

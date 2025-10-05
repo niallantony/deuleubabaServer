@@ -1,7 +1,7 @@
 package com.niallantony.deulaubaba.web;
 
-import com.niallantony.deulaubaba.dto.ProjectCollectionsDTO;
-import com.niallantony.deulaubaba.dto.ProjectDTO;
+import com.niallantony.deulaubaba.dto.project.ProjectCollectionsDTO;
+import com.niallantony.deulaubaba.dto.project.ProjectDTO;
 import com.niallantony.deulaubaba.security.CurrentUser;
 import com.niallantony.deulaubaba.services.ProjectService;
 import org.springframework.http.ResponseEntity;

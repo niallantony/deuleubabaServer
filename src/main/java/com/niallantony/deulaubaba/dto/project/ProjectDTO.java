@@ -1,4 +1,4 @@
-package com.niallantony.deulaubaba.dto;
+package com.niallantony.deulaubaba.dto.project;
 
 import com.niallantony.deulaubaba.domain.CommunicationCategory;
 import com.niallantony.deulaubaba.domain.ProjectType;

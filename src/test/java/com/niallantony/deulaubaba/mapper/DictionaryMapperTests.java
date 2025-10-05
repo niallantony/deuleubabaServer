@@ -4,7 +4,7 @@ import com.niallantony.deulaubaba.domain.CommunicationCategory;
 import com.niallantony.deulaubaba.domain.CommunicationCategoryLabel;
 import com.niallantony.deulaubaba.domain.DictionaryEntry;
 import com.niallantony.deulaubaba.domain.ExpressionType;
-import com.niallantony.deulaubaba.dto.DictionaryEntryDTO;
+import com.niallantony.deulaubaba.dto.dictionary.DictionaryEntryDTO;
 import org.junit.jupiter.api.Test;
 
 import static org.junit.jupiter.api.Assertions.*;

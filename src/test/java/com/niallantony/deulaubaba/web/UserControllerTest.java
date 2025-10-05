@@ -6,7 +6,7 @@ import com.niallantony.deulaubaba.data.StudentRepository;
 import com.niallantony.deulaubaba.data.UserRepository;
 import com.niallantony.deulaubaba.domain.Student;
 import com.niallantony.deulaubaba.domain.User;
-import com.niallantony.deulaubaba.dto.UserRequest;
+import com.niallantony.deulaubaba.dto.user.UserRequest;
 import com.niallantony.deulaubaba.services.FileStorageService;
 import com.niallantony.deulaubaba.util.UserTestFactory;
 import org.junit.ClassRule;

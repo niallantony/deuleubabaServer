@@ -1,6 +1,6 @@
 package com.niallantony.deulaubaba.util;
 
-import com.niallantony.deulaubaba.dto.UserRequest;
+import com.niallantony.deulaubaba.dto.user.UserRequest;
 
 public class UserTestFactory {
 
