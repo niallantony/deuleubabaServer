@@ -4,22 +4,24 @@ import com.niallantony.deulaubaba.data.ProjectRepository;
 import com.niallantony.deulaubaba.data.StudentRepository;
 import com.niallantony.deulaubaba.data.UserRepository;
 import com.niallantony.deulaubaba.domain.Project;
+import com.niallantony.deulaubaba.domain.ProjectType;
 import com.niallantony.deulaubaba.domain.Student;
 import com.niallantony.deulaubaba.domain.User;
 import com.niallantony.deulaubaba.dto.project.ProjectCollectionsDTO;
 import com.niallantony.deulaubaba.dto.project.ProjectDTO;
+import com.niallantony.deulaubaba.dto.project.ProjectPostDTO;
 import com.niallantony.deulaubaba.dto.project.ProjectPreviewDTO;
-import com.niallantony.deulaubaba.exceptions.NoProjectsFoundException;
-import com.niallantony.deulaubaba.exceptions.ResourceNotFoundException;
-import com.niallantony.deulaubaba.exceptions.UserNotAuthorizedException;
+import com.niallantony.deulaubaba.exceptions.*;
 import com.niallantony.deulaubaba.mapper.ProjectMapper;
 import com.niallantony.deulaubaba.util.ProjectTestFactory;
+import com.niallantony.deulaubaba.utils.JsonUtils;
 import org.jetbrains.annotations.NotNull;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.mock.web.MockMultipartFile;
 
 import java.time.LocalDate;
 import java.util.HashSet;
@@ -42,6 +44,13 @@ public class ProjectServiceTest {
 
     @Mock
     private StudentRepository studentRepository;
+
+    @Mock
+    private JsonUtils jsonUtils;
+
+    @Mock
+    private FileStorageService fileStorageService;
+
     @InjectMocks
     private ProjectService projectService;
 
@@ -54,11 +63,11 @@ public class ProjectServiceTest {
         persistedProject.setCreatedBy(user);
 
         when(projectRepository.findById(1L)).thenReturn(Optional.of(persistedProject));
-        when(projectMapper.toDTO(persistedProject)).thenReturn(expectedProject);
+        when(projectMapper.entityToDto(persistedProject)).thenReturn(expectedProject);
 
         ProjectDTO response = projectService.getProject("1", "abc");
         verify(projectRepository, times(1)).findById(1L);
-        verify(projectMapper, times(1)).toDTO(persistedProject);
+        verify(projectMapper, times(1)).entityToDto(persistedProject);
         assertEquals(expectedProject, response);
     }
 
@@ -148,7 +157,148 @@ public class ProjectServiceTest {
         when(projectRepository.findAllProjectsByStudentId(user, student)).thenReturn(projects);
         assertThrows(NoProjectsFoundException.class, () -> projectService.getProjectsOfStudent("abc", "123"));
         verify(projectRepository, times(1)).findAllProjectsByStudentId(user,student);
+    }
 
+    @Test void createProject_whenRequestIsValid_createsProjectAndReturnsDTO() {
+        User user = new User();
+        user.setUsername("user1");
+        Student student = new Student();
+        student.getUsers().add(user);
+        ProjectPostDTO postDTO = getProjectPostDTO(user);
+        ProjectDTO projectDTO = new ProjectDTO();
+        Project createdproject = new Project();
+        when(userRepository.findByUserId("abc")).thenReturn(Optional.of(user));
+        when(studentRepository.findById("123")).thenReturn(Optional.of(student));
+        when(userRepository.findByUsername("user1")).thenReturn(Optional.of(user));
+        when(projectMapper.entityToDto(any(Project.class))).thenReturn(projectDTO);
+        when(projectMapper.requestToEntity(postDTO)).thenReturn(createdproject);
+
+        ProjectDTO result = projectService.createProject(postDTO, null, "abc");
+        assertEquals(projectDTO, result);
+        verify(projectRepository, times(1)).save(any(Project.class));
+        assertEquals(1, createdproject.getUsers().size());
+        assertEquals(student, createdproject.getStudent());
+        assertEquals(user, createdproject.getCreatedBy());
+    }
+
+    @Test void createProject_whenRequestWithImageIsValid_createsProjectAndReturnsDTO() {
+        User user = new User();
+        user.setUsername("user1");
+        Student student = new Student();
+        student.getUsers().add(user);
+        ProjectPostDTO postDTO = getProjectPostDTO(user);
+        ProjectDTO projectDTO = new ProjectDTO();
+        Project createdproject = new Project();
+        MockMultipartFile image = new MockMultipartFile("image", "image".getBytes());
+        when(userRepository.findByUserId("abc")).thenReturn(Optional.of(user));
+        when(studentRepository.findById("123")).thenReturn(Optional.of(student));
+        when(userRepository.findByUsername("user1")).thenReturn(Optional.of(user));
+        when(projectMapper.entityToDto(any(Project.class))).thenReturn(projectDTO);
+        when(projectMapper.requestToEntity(postDTO)).thenReturn(createdproject);
+        when(fileStorageService.storeImage(image)).thenReturn("new_url");
+
+        ProjectDTO result = projectService.createProject(postDTO, image, "abc");
+        assertEquals(projectDTO, result);
+        verify(projectRepository, times(1)).save(any(Project.class));
+        verify(fileStorageService, times(1)).storeImage(image);
+        assertEquals("new_url", createdproject.getImgsrc());
+    }
+
+    @Test void createProject_whenStudentIsMissing_throwsResourceNotFoundException() {
+        User user = new User();
+        user.setUsername("user1");
+        ProjectPostDTO postDTO = getProjectPostDTO(user);
+        when(userRepository.findByUserId("abc")).thenReturn(Optional.of(user));
+        when(studentRepository.findById("123")).thenReturn(Optional.empty());
+        assertThrows(ResourceNotFoundException.class, () -> projectService.createProject(postDTO, null, "abc"));
+    }
+
+    @Test void createProject_whenUserNotAuthorised_throwsUserNotAuthorizedException() {
+        User user = new User();
+        user.setUsername("user1");
+        Student student = new Student();
+        ProjectPostDTO postDTO = getProjectPostDTO(user);
+        when(userRepository.findByUserId("abc")).thenReturn(Optional.of(user));
+        when(studentRepository.findById("123")).thenReturn(Optional.of(student));
+        assertThrows(UserNotAuthorizedException.class, () -> projectService.createProject(postDTO, null, "abc"));
+    }
+
+    @Test void createProject_whenRequestIsNotValid_throwsInvalidProjectRequestException() {
+        User user = new User();
+        Student student = new Student();
+        student.getUsers().add(user);
+        ProjectPostDTO postDTO = new ProjectPostDTO();
+        postDTO.setStudentId("123");
+        when(userRepository.findByUserId("abc")).thenReturn(Optional.of(user));
+        when(studentRepository.findById("123")).thenReturn(Optional.of(student));
+        assertThrows(InvalidProjectDataException.class, () -> projectService.createProject(postDTO, null, "abc"));
+    }
+
+    @Test void createProject_whenImageSaveFails_stillSavesProject() {
+        User user = new User();
+        user.setUsername("user1");
+        Student student = new Student();
+        student.getUsers().add(user);
+        ProjectPostDTO postDTO = getProjectPostDTO(user);
+        ProjectDTO projectDTO = new ProjectDTO();
+        Project createdproject = new Project();
+        MockMultipartFile image = new MockMultipartFile("image", "image".getBytes());
+        when(userRepository.findByUserId("abc")).thenReturn(Optional.of(user));
+        when(studentRepository.findById("123")).thenReturn(Optional.of(student));
+        when(userRepository.findByUsername("user1")).thenReturn(Optional.of(user));
+        when(projectMapper.entityToDto(any(Project.class))).thenReturn(projectDTO);
+        when(projectMapper.requestToEntity(postDTO)).thenReturn(createdproject);
+        when(fileStorageService.storeImage(image)).thenThrow(FileStorageException.class);
+
+        ProjectDTO result = projectService.createProject(postDTO, image, "abc");
+        assertEquals(projectDTO, result);
+        verify(projectRepository, times(1)).save(any(Project.class));
+        verify(fileStorageService, times(1)).storeImage(image);
+        assertNull(createdproject.getImgsrc());
+    }
+
+    @Test void createProject_whenGivenListOfAdditionalUsernames_populatesProjectUsers() {
+        User user = new User();
+        user.setUsername("user1");
+        user.setUserId("abc");
+        User user2 = new User();
+        user2.setUsername("user2");
+        user2.setUserId("def");
+        Student student = new Student();
+        student.getUsers().add(user);
+        ProjectPostDTO postDTO = getProjectPostDTO(user);
+        postDTO.getUsernames().add(user2.getUsername());
+        ProjectDTO projectDTO = new ProjectDTO();
+        Project createdproject = new Project();
+        when(userRepository.findByUserId("abc")).thenReturn(Optional.of(user));
+        when(studentRepository.findById("123")).thenReturn(Optional.of(student));
+        when(userRepository.findByUsername("user1")).thenReturn(Optional.of(user));
+        when(userRepository.findByUsername("user2")).thenReturn(Optional.of(user2));
+        when(projectMapper.entityToDto(any(Project.class))).thenReturn(projectDTO);
+        when(projectMapper.requestToEntity(postDTO)).thenReturn(createdproject);
+
+        ProjectDTO result = projectService.createProject(postDTO, null, "abc");
+        assertEquals(projectDTO, result);
+        verify(projectRepository, times(1)).save(any(Project.class));
+        assertEquals(user, createdproject.getCreatedBy());
+        assertEquals(2, createdproject.getUsers().size());
+        assertTrue(createdproject.getUsers().stream().anyMatch(
+                projectUser -> projectUser.getUser().equals(user2)
+        ));
+        assertTrue(createdproject.getUsers().stream().anyMatch(
+                projectUser -> projectUser.getUser().equals(user)
+        ));
+    }
+
+
+    private static ProjectPostDTO getProjectPostDTO(User user) {
+        ProjectPostDTO postDTO = new ProjectPostDTO();
+        postDTO.setStudentId("123");
+        postDTO.setStartedOn(LocalDate.of(2000,1,1));
+        postDTO.setType(ProjectType.COMMUNICATION);
+        postDTO.setUsernames(new HashSet<>());
+        postDTO.getUsernames().add(user.getUsername());
+        return postDTO;
     }
 
     private static @NotNull Set<ProjectPreviewDTO> getProjectPreviewDTOS() {
