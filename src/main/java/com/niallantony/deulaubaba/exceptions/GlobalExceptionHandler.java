@@ -30,6 +30,11 @@ public class GlobalExceptionHandler {
         return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(Map.of("message", e.getMessage()));
     }
 
+    @ExceptionHandler(InvalidCategoryTypeException.class)
+    public ResponseEntity<?> handleInvalidCategoryTypeException(InvalidCategoryTypeException e) {
+        return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(Map.of("message", e.getMessage()));
+    }
+
     @ExceptionHandler(InvalidDictionaryDataException.class)
     public ResponseEntity<?> handleInvalidDictionaryDataException(InvalidDictionaryDataException e) {
         return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(Map.of("message", e.getMessage()));
