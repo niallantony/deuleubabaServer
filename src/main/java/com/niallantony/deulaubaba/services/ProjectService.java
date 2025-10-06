@@ -1,23 +1,23 @@
 package com.niallantony.deulaubaba.services;
 
-import com.niallantony.deulaubaba.data.ProjectRepository;
-import com.niallantony.deulaubaba.data.StudentRepository;
-import com.niallantony.deulaubaba.data.UserRepository;
-import com.niallantony.deulaubaba.domain.Project;
-import com.niallantony.deulaubaba.domain.Student;
-import com.niallantony.deulaubaba.domain.User;
+import com.niallantony.deulaubaba.data.*;
+import com.niallantony.deulaubaba.domain.*;
 import com.niallantony.deulaubaba.dto.project.ProjectCollectionsDTO;
 import com.niallantony.deulaubaba.dto.project.ProjectDTO;
+import com.niallantony.deulaubaba.dto.project.ProjectPostDTO;
 import com.niallantony.deulaubaba.dto.project.ProjectPreviewDTO;
-import com.niallantony.deulaubaba.exceptions.NoProjectsFoundException;
-import com.niallantony.deulaubaba.exceptions.ResourceNotFoundException;
-import com.niallantony.deulaubaba.exceptions.UserNotAuthorizedException;
+import com.niallantony.deulaubaba.exceptions.*;
 import com.niallantony.deulaubaba.mapper.ProjectMapper;
+import com.niallantony.deulaubaba.utils.JsonUtils;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
+import org.springframework.web.multipart.MultipartFile;
 
 import java.time.LocalDate;
 import java.util.Set;
+import java.util.stream.Collectors;
 
+@Slf4j
 @Service
 public class ProjectService {
 
@@ -25,17 +25,26 @@ public class ProjectService {
     private final ProjectMapper projectMapper;
     private final UserRepository userRepository;
     private final StudentRepository studentRepository;
+    private final JsonUtils jsonUtils;
+    private final FileStorageService fileStorageService;
+    private final CommunicationCategoryRepository communicationCategoryRepository;
 
     public ProjectService(
             ProjectRepository projectRepository,
             ProjectMapper projectMapper,
             UserRepository userRepository,
-            StudentRepository studentRepository
+            StudentRepository studentRepository,
+            JsonUtils jsonUtils,
+            FileStorageService fileStorageService,
+            CommunicationCategoryRepository communicationCategoryRepository
     ) {
         this.projectRepository = projectRepository;
         this.projectMapper = projectMapper;
         this.userRepository = userRepository;
         this.studentRepository = studentRepository;
+        this.jsonUtils = jsonUtils;
+        this.fileStorageService = fileStorageService;
+        this.communicationCategoryRepository = communicationCategoryRepository;
     }
 
     public ProjectDTO getProject(String project_id, String user_id) {
@@ -46,7 +55,7 @@ public class ProjectService {
         if (!userAssignedToProject(user_id, project)) {
             throw new UserNotAuthorizedException("Unauthorized access");
         }
-        ProjectDTO projectDTO = projectMapper.toDTO(project);
+        ProjectDTO projectDTO = projectMapper.entityToDto(project);
         if (project.getCreatedBy().getUserId().equals(user_id)) {
            projectDTO.isOwnProject(true);
         }
@@ -74,6 +83,62 @@ public class ProjectService {
         }
         return createCollections(project);
     }
+
+    // TODO: TEST THIS - MAYBE REFACTOR TOO
+    public ProjectDTO createProject(ProjectPostDTO request, MultipartFile image, String user_id) {
+        User user = getUserOrThrow(user_id);
+        Student student = getStudentOrThrow(request.getStudentId());
+        if (!student.getUsers().contains(user)) {
+            throw new UserNotAuthorizedException("Unauthorized access");
+        }
+        validatePost(request);
+        Project project = projectMapper.requestToEntity(request);
+        project.setCategories(getCategories(request));
+        Set<ProjectUser> projectUsers = projectUsersFromPost(request);
+        projectUsers.forEach(projectUser -> projectUser.setProject(project));
+        project.setUsers(projectUsers);
+        project.setCreatedBy(user);
+        project.setStudent(student);
+        if (image != null) {
+            try {
+                String filename = fileStorageService.storeImage(image);
+                project.setImgsrc(filename);
+            } catch (FileStorageException e) {
+                log.warn("File not saved: ", e);
+            }
+        }
+        projectRepository.save(project);
+        return projectMapper.entityToDto(project);
+    }
+
+    private Set<ProjectUser> projectUsersFromPost(ProjectPostDTO post) {
+        return post.getUsernames().stream().map(userRepository::findByUsername)
+                .map(userOptional -> {
+                    User user = userOptional.orElseThrow(() -> new ResourceNotFoundException("User not found"));
+                    ProjectUser projectUser = new ProjectUser();
+                    projectUser.setUser(user);
+                    return projectUser;
+                })
+                .collect(Collectors.toSet());
+    }
+
+    private void validatePost(ProjectPostDTO post) {
+        if (
+                post.getStudentId() == null
+                        || post.getStartedOn() == null
+                        || post.getType() == null
+                        || post.getUsernames().isEmpty()
+        ) {
+            throw new InvalidProjectDataException("Invalid request");
+        }
+    }
+
+    private Set<CommunicationCategory> getCategories(ProjectPostDTO post) {
+        return post.getCategories().stream().map(label ->
+               communicationCategoryRepository.findByLabel(label).orElseThrow()
+        ).collect(Collectors.toSet());
+    }
+
 
     private Student getStudentOrThrow(String student_id) {
         return studentRepository.findById(student_id)
