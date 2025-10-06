@@ -52,8 +52,4 @@ public class User {
     )
     @JsonManagedReference
     private Set<Student> students = new HashSet<>();
-
-    @OneToMany(mappedBy = "user", fetch = FetchType.LAZY)
-    private Set<ProjectUser> projects = new HashSet<>();
-
 }
