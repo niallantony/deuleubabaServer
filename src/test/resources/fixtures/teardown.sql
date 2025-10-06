@@ -7,5 +7,5 @@ DELETE FROM dictionary_entry;
 DELETE FROM student;
 DELETE FROM app_user;
 ALTER SEQUENCE dictionary_entry_id_seq RESTART;
-ALTER SEQUENCE project_id_seq RESTART;
+ALTER SEQUENCE project_seq RESTART;
 ALTER SEQUENCE project_user_id_seq RESTART;
