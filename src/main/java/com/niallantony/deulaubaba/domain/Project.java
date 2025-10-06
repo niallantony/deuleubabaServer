@@ -17,14 +17,16 @@ import java.util.Set;
 @ToString(exclude = {"users", "student", "createdBy"})
 public class Project {
     @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    @GeneratedValue(strategy = GenerationType.SEQUENCE)
     @EqualsAndHashCode.Include
     private Long id;
 
     @Column(nullable = false)
+    @EqualsAndHashCode.Include
     private String objective;
 
     @Column(name = "started_on", nullable = false)
+    @EqualsAndHashCode.Include
     private LocalDate startedOn;
 
     @ManyToMany(fetch = FetchType.EAGER)
