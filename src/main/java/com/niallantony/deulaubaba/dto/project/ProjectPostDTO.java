@@ -2,7 +2,6 @@ package com.niallantony.deulaubaba.dto.project;
 
 import com.niallantony.deulaubaba.domain.CommunicationCategoryLabel;
 import com.niallantony.deulaubaba.domain.ProjectType;
-import com.niallantony.deulaubaba.domain.ProjectUser;
 import lombok.Data;
 
 import java.time.LocalDate;

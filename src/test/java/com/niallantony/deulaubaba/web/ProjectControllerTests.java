@@ -1,9 +1,14 @@
 package com.niallantony.deulaubaba.web;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.niallantony.deulaubaba.data.CommunicationCategoryRepository;
 import com.niallantony.deulaubaba.data.ProjectRepository;
 import com.niallantony.deulaubaba.data.StudentRepository;
 import com.niallantony.deulaubaba.data.UserRepository;
+import com.niallantony.deulaubaba.domain.Project;
+import com.niallantony.deulaubaba.dto.project.ProjectPostDTO;
+import com.niallantony.deulaubaba.services.FileStorageService;
+import com.niallantony.deulaubaba.util.ProjectTestFactory;
 import org.junit.ClassRule;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
@@ -11,20 +16,30 @@ import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.mock.web.MockMultipartFile;
 import org.springframework.test.context.DynamicPropertyRegistry;
 import org.springframework.test.context.DynamicPropertySource;
+import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.context.jdbc.Sql;
 import org.springframework.test.context.jdbc.SqlMergeMode;
 import org.springframework.test.web.servlet.MockMvc;
+import org.springframework.transaction.annotation.Transactional;
+import org.springframework.web.servlet.support.ServletUriComponentsBuilder;
 import org.testcontainers.containers.PostgreSQLContainer;
 import org.testcontainers.junit.jupiter.Testcontainers;
 
 
+import java.net.URI;
+import java.util.List;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.when;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.jwt;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
-import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
-import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.multipart;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 
 
 @Testcontainers
@@ -45,6 +60,12 @@ public class ProjectControllerTests {
 
     @Autowired
     CommunicationCategoryRepository communicationCategoryRepository;
+
+    @Autowired
+    ObjectMapper objectMapper;
+
+    @MockitoBean
+    FileStorageService fileStorageService;
 
     @ClassRule
     public static PostgreSQLContainer<?> postgreSQLContainer = new PostgreSQLContainer<>("postgres:13.2")
@@ -230,4 +251,99 @@ public class ProjectControllerTests {
            .andDo((r) -> System.out.println(r.getResponse().getContentAsString()));
     }
 
+    @Test
+    @SqlMergeMode(SqlMergeMode.MergeMode.MERGE)
+    @Sql({"/fixtures/student_and_user.sql"})
+    public void createProject_withValidRequest_returnsCorrectResponse(@Autowired MockMvc mvc) throws Exception {
+        ProjectPostDTO postDTO = ProjectTestFactory.getProjectPostDTOWithUser("user1");
+        String json = objectMapper.writeValueAsString(postDTO);
+        String redirect = ServletUriComponentsBuilder.fromCurrentContextPath().path("/project").toUriString() + "/1";
+        mvc.perform(multipart("/project")
+                .file("data", json.getBytes())
+                .with(jwt()))
+                .andExpect(status().isCreated())
+                .andExpect(jsonPath("$.completed").value(false))
+                .andExpect(jsonPath("$.userStatuses[0].user.username").value("user1"))
+                .andExpect(jsonPath("$.ownProject").value(true))
+                .andExpect(redirectedUrl(redirect))
+                .andDo((r) -> System.out.println(r.getResponse().getContentAsString()));
+        List<Project> projects = projectRepository.findAll().stream().toList();
+        assertEquals(1, projects.size());
+    }
+
+    @Test
+    @SqlMergeMode(SqlMergeMode.MergeMode.MERGE)
+    @Sql({"/fixtures/student_and_user.sql", "/fixtures/user_another.sql"})
+    public void createProject_withValidRequestAndOtherUsernames_returnsCorrectResponse(@Autowired MockMvc mvc) throws Exception {
+        ProjectPostDTO postDTO = ProjectTestFactory.getProjectPostDTOWithUser("user1");
+        postDTO.getUsernames().add("user2");
+        String json = objectMapper.writeValueAsString(postDTO);
+        mvc.perform(multipart("/project")
+                   .file("data", json.getBytes())
+                   .with(jwt()))
+           .andExpect(status().isCreated())
+           .andExpect(jsonPath("$.userStatuses.length()").value(2))
+           .andDo((r) -> System.out.println(r.getResponse().getContentAsString()));
+    }
+
+    @Test
+    @SqlMergeMode(SqlMergeMode.MergeMode.MERGE)
+    @Sql({"/fixtures/student_and_user.sql"})
+    public void createProject_withImage_returnsCorrectResponse(@Autowired MockMvc mvc) throws Exception {
+        when(fileStorageService.storeImage(any())).thenReturn("new_image.jpg");
+        ProjectPostDTO postDTO = ProjectTestFactory.getProjectPostDTOWithUser("user1");
+        String json = objectMapper.writeValueAsString(postDTO);
+        MockMultipartFile image = new MockMultipartFile("image", "new_image.jpg", "image/jpg", "image".getBytes());
+        mvc.perform(multipart("/project")
+                   .file("data", json.getBytes())
+                   .file(image)
+                   .with(jwt()))
+           .andExpect(status().isCreated())
+           .andExpect(jsonPath("$.imgsrc").value("new_image.jpg"))
+           .andDo((r) -> System.out.println(r.getResponse().getContentAsString()));
+        List<Project> projects = projectRepository.findAll().stream().toList();
+        assertEquals(1, projects.size());
+    }
+
+
+    @Test
+    @SqlMergeMode(SqlMergeMode.MergeMode.MERGE)
+    @Sql({"/fixtures/student_and_user.sql"})
+    public void createProject_withInvalidRequest_returns400(@Autowired MockMvc mvc) throws Exception {
+        String json = "json-placeholder";
+        mvc.perform(multipart("/project")
+                   .file("data", json.getBytes())
+                   .with(jwt()))
+           .andExpect(status().isBadRequest())
+           .andExpect(jsonPath("$.message").value("Invalid request"))
+           .andDo((r) -> System.out.println(r.getResponse().getContentAsString()));
+    }
+
+    @Test
+    @SqlMergeMode(SqlMergeMode.MergeMode.MERGE)
+    @Sql({"/fixtures/user.sql", "/fixtures/student.sql"})
+    public void createProject_withUnauthorizedUser_returns401(@Autowired MockMvc mvc) throws Exception {
+        ProjectPostDTO postDTO = ProjectTestFactory.getProjectPostDTOWithUser("user1");
+        String json = objectMapper.writeValueAsString(postDTO);
+        mvc.perform(multipart("/project")
+                   .file("data", json.getBytes())
+                   .with(jwt()))
+           .andExpect(status().isUnauthorized())
+           .andExpect(jsonPath("$.message").value("Unauthorized access"))
+           .andDo((r) -> System.out.println(r.getResponse().getContentAsString()));
+    }
+
+    @Test
+    @SqlMergeMode(SqlMergeMode.MergeMode.MERGE)
+    @Sql("/fixtures/user.sql")
+    public void createProject_forMissingStudent_returns404(@Autowired MockMvc mvc) throws Exception {
+        ProjectPostDTO postDTO = ProjectTestFactory.getProjectPostDTOWithUser("user1");
+        String json = objectMapper.writeValueAsString(postDTO);
+        mvc.perform(multipart("/project")
+                   .file("data", json.getBytes())
+                   .with(jwt()))
+           .andExpect(status().isNotFound())
+           .andExpect(jsonPath("$.message").value("Student not found"))
+           .andDo((r) -> System.out.println(r.getResponse().getContentAsString()));
+    }
 }

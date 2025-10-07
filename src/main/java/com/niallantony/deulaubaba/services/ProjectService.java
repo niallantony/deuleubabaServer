@@ -108,7 +108,9 @@ public class ProjectService {
             }
         }
         projectRepository.save(project);
-        return projectMapper.entityToDto(project);
+        ProjectDTO projectDTO = projectMapper.entityToDto(project);
+        projectDTO.isOwnProject(true);
+        return projectDTO;
     }
 
     private Set<ProjectUser> projectUsersFromPost(ProjectPostDTO post) {

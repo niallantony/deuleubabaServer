@@ -55,7 +55,7 @@ public class Project {
     @JoinColumn(name = "student_id", nullable = false)
     private Student student;
 
-    @OneToMany(mappedBy = "project", cascade = CascadeType.ALL)
+    @OneToMany(fetch = FetchType.EAGER, mappedBy = "project", cascade = CascadeType.ALL)
     private Set<ProjectUser> users = new HashSet<>();
 
     @ManyToOne(fetch = FetchType.EAGER, optional = false)
