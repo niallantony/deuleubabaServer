@@ -17,7 +17,15 @@ import java.util.Set;
 @ToString(exclude = {"users", "student", "createdBy"})
 public class Project {
     @Id
-    @GeneratedValue(strategy = GenerationType.SEQUENCE)
+    @SequenceGenerator(
+            name="project_seq_gen",
+            sequenceName = "project_seq",
+            allocationSize = 1
+    )
+    @GeneratedValue(
+            strategy = GenerationType.SEQUENCE,
+            generator = "project_seq_gen"
+    )
     @EqualsAndHashCode.Include
     private Long id;
 
@@ -62,4 +70,9 @@ public class Project {
     @JoinColumn(name = "created_by", referencedColumnName = "userId")
     @JsonBackReference
     private User createdBy;
+
+    public void setUsers(Set<ProjectUser> users) {
+        this.users = users;
+        users.forEach(user -> user.setProject(this));
+    }
 }

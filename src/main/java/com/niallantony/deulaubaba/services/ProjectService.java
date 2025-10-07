@@ -95,7 +95,6 @@ public class ProjectService {
         Project project = projectMapper.requestToEntity(request);
         project.setCategories(getCategories(request));
         Set<ProjectUser> projectUsers = projectUsersFromPost(request);
-        projectUsers.forEach(projectUser -> projectUser.setProject(project));
         project.setUsers(projectUsers);
         project.setCreatedBy(user);
         project.setStudent(student);
