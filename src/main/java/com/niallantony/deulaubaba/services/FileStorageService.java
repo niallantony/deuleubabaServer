@@ -1,5 +1,6 @@
 package com.niallantony.deulaubaba.services;
 
+import com.niallantony.deulaubaba.domain.HasImage;
 import com.niallantony.deulaubaba.exceptions.FileStorageException;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
@@ -43,4 +44,29 @@ public class FileStorageService {
             }
         }
     }
+
+    public void swapImage(MultipartFile image, HasImage entity) {
+        if (image == null || entity == null || image.isEmpty()) {
+            return;
+        }
+        String oldUri = entity.getImage();
+        String newUri;
+        try {
+            newUri = storeImage(image);
+        } catch (FileStorageException e) {
+            log.warn("Could not store image" + oldUri, e);
+            return;
+        }
+        if (oldUri != null && !oldUri.isEmpty()) {
+           try {
+               deleteImage(oldUri);
+           } catch (FileStorageException e) {
+               log.warn("Could not delete image{}", oldUri, e);
+           }
+        }
+        if (newUri != null && !newUri.isEmpty()) {
+            entity.setImage(newUri);
+        }
+    }
+
 }

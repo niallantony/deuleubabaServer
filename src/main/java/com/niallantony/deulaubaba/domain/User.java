@@ -14,7 +14,7 @@ import java.util.Set;
 @Entity
 @NoArgsConstructor
 @Table(name="app_user", uniqueConstraints = @UniqueConstraint(columnNames = { "username", "email"}))
-public class User {
+public class User extends HasImage{
 
     @EqualsAndHashCode.Include
     @Id
@@ -52,4 +52,14 @@ public class User {
     )
     @JsonManagedReference
     private Set<Student> students = new HashSet<>();
+
+    @Override
+    public String getImage() {
+        return imagesrc;
+    }
+
+    @Override
+    public void setImage(String image) {
+        imagesrc = image;
+    }
 }

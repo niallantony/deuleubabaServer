@@ -15,7 +15,7 @@ import java.util.Set;
 @Entity
 @EqualsAndHashCode(onlyExplicitlyIncluded = true)
 @ToString(exclude = {"users", "student", "createdBy"})
-public class Project {
+public class Project extends HasImage{
     @Id
     @SequenceGenerator(
             name="project_seq_gen",
@@ -74,5 +74,15 @@ public class Project {
     public void setUsers(Set<ProjectUser> users) {
         this.users = users;
         users.forEach(user -> user.setProject(this));
+    }
+
+    @Override
+    public String getImage() {
+        return imgsrc;
+    }
+
+    @Override
+    public void setImage(String image) {
+        imgsrc = image;
     }
 }

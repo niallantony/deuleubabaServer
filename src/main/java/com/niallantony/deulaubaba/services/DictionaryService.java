@@ -83,14 +83,7 @@ public class DictionaryService {
         Student student = studentService.getAuthorisedStudent(dictionaryPostRequest.getStudentId(), userId);
         DictionaryEntry entry = new DictionaryEntry();
         entry.setStudent(student);
-        if (imageFile != null) {
-            try {
-                String filename = fileStorageService.storeImage(imageFile);
-                entry.setImgsrc(filename);
-            } catch (FileStorageException e) {
-                log.warn("File not saved: ", e);
-            }
-        }
+        fileStorageService.swapImage(imageFile, entry);
         assignChanges(entry, dictionaryPostRequest);
         dictionaryRepository.save(entry);
         return entry;
@@ -98,7 +91,6 @@ public class DictionaryService {
 
     @Transactional
     public DictionaryEntry updateDictionaryEntry(String data, MultipartFile image, String userId) {
-        String oldFilename = null;
         DictionaryPutRequest dictionaryPutRequest = jsonUtils.parse(
                 data,
                 DictionaryPutRequest.class,
@@ -113,20 +105,9 @@ public class DictionaryService {
         }
         DictionaryEntry entry = dictionaryRepository.findById(dictionaryPutRequest.getId())
                 .orElseThrow(() -> new ResourceNotFoundException("Entry not found"));
-        if (image != null) {
-            try {
-                String filename = fileStorageService.storeImage(image);
-                oldFilename = entry.getImgsrc();
-                entry.setImgsrc(filename);
-            } catch (FileStorageException e) {
-                log.warn("Image failed to save into dictionary", e);
-            }
-        }
+        fileStorageService.swapImage(image, entry);
         assignChanges(entry, dictionaryPutRequest);
         dictionaryRepository.save(entry);
-        if (oldFilename != null) {
-            fileStorageService.deleteImage(oldFilename);
-        }
         return entry;
     }
 

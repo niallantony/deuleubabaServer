@@ -12,7 +12,7 @@ import java.util.Set;
 @Setter
 @NoArgsConstructor
 @Entity
-public class Student  {
+public class Student extends HasImage{
     @EqualsAndHashCode.Include
     @Id
     @Column(name="student_id")
@@ -55,4 +55,14 @@ public class Student  {
     @OneToMany(mappedBy = "student")
     @JsonBackReference
     private Set<Project> projects = new HashSet<>();
+
+    @Override
+    public String getImage() {
+        return imagesrc;
+    }
+
+    @Override
+    public void setImage(String image) {
+        imagesrc = image;
+    }
 }

@@ -101,14 +101,7 @@ public class StudentService {
         User user = userRepository.findByUserId(userId).orElseThrow(() -> new UserNotAuthorizedException("Unauthorized access"));
         validateStudentRequest(studentRequest);
         Student student = extractStudent(studentRequest, user);
-        if (image != null && !image.isEmpty()) {
-            try {
-                String filename = fileStorageService.storeImage(image);
-                student.setImagesrc(filename);
-            } catch (FileStorageException e) {
-                log.warn("Image not saved to storage", e);
-            }
-        }
+        fileStorageService.swapImage(image, student);
         studentRepository.save(student);
         linkStudentToUser(student, userId);
 
@@ -123,27 +116,8 @@ public class StudentService {
                 () -> new InvalidStudentDataException("Invalid request")
         );
         Student student = getAuthorisedStudent(studentId, userId);
-        String oldImg = null;
-        boolean newImageStored = false;
-        if (image != null && !image.isEmpty()) {
-            oldImg = student.getImagesrc();
-            try {
-                String filename = fileStorageService.storeImage(image);
-                student.setImagesrc(filename);
-                newImageStored = true;
-            } catch (FileStorageException e) {
-                log.warn("Image not saved to storage", e);
-            }
-        }
+        fileStorageService.swapImage(image, student);
         applyDetailUpdates(student, studentRequest);
-        studentRepository.save(student);
-        if (newImageStored && oldImg != null) {
-            try {
-                fileStorageService.deleteImage(oldImg);
-            } catch (FileStorageException e) {
-                log.warn("Couldn't delete old image from storage", e);
-            }
-        }
         return studentMapper.toDTO(student);
     }
 

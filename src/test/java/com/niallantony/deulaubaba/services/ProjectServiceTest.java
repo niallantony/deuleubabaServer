@@ -1,9 +1,6 @@
 package com.niallantony.deulaubaba.services;
 
-import com.niallantony.deulaubaba.data.ProjectRepository;
-import com.niallantony.deulaubaba.data.ProjectUserRepository;
-import com.niallantony.deulaubaba.data.StudentRepository;
-import com.niallantony.deulaubaba.data.UserRepository;
+import com.niallantony.deulaubaba.data.*;
 import com.niallantony.deulaubaba.domain.*;
 import com.niallantony.deulaubaba.dto.project.ProjectCollectionsDTO;
 import com.niallantony.deulaubaba.dto.project.ProjectDTO;
@@ -46,8 +43,12 @@ public class ProjectServiceTest {
     @Mock
     private ProjectUserRepository projectUserRepository;
 
+    @Mock
+    private CommunicationCategoryRepository communicationCategoryRepository;
+
     @InjectMocks
     private ProjectService projectService;
+
 
     @Test
     public void getProject_whenGivenValidId_returnsProject() {
@@ -167,6 +168,7 @@ public class ProjectServiceTest {
         when(userRepository.findByUsername("user1")).thenReturn(Optional.of(user));
         when(projectMapper.entityToDto(any(Project.class))).thenReturn(projectDTO);
         when(projectMapper.requestToEntity(postDTO)).thenReturn(createdproject);
+        when(communicationCategoryRepository.findAll()).thenReturn(new ArrayList<>());
 
         ProjectDTO result = projectService.createProject(postDTO, null, "abc");
         assertEquals(projectDTO, result);
@@ -185,12 +187,14 @@ public class ProjectServiceTest {
         ProjectDTO projectDTO = new ProjectDTO();
         Project createdproject = new Project();
         MockMultipartFile image = new MockMultipartFile("image", "image".getBytes());
+        doCallRealMethod().when(fileStorageService).swapImage(any(), any());
         when(userRepository.findByUserId("abc")).thenReturn(Optional.of(user));
         when(studentRepository.findById("123")).thenReturn(Optional.of(student));
         when(userRepository.findByUsername("user1")).thenReturn(Optional.of(user));
         when(projectMapper.entityToDto(any(Project.class))).thenReturn(projectDTO);
         when(projectMapper.requestToEntity(postDTO)).thenReturn(createdproject);
         when(fileStorageService.storeImage(image)).thenReturn("new_url");
+        when(communicationCategoryRepository.findAll()).thenReturn(new ArrayList<>());
 
         ProjectDTO result = projectService.createProject(postDTO, image, "abc");
         assertEquals(projectDTO, result);
@@ -238,6 +242,7 @@ public class ProjectServiceTest {
         ProjectDTO projectDTO = new ProjectDTO();
         Project createdproject = new Project();
         MockMultipartFile image = new MockMultipartFile("image", "image".getBytes());
+        doCallRealMethod().when(fileStorageService).swapImage(any(),any());
         when(userRepository.findByUserId("abc")).thenReturn(Optional.of(user));
         when(studentRepository.findById("123")).thenReturn(Optional.of(student));
         when(userRepository.findByUsername("user1")).thenReturn(Optional.of(user));
@@ -271,6 +276,7 @@ public class ProjectServiceTest {
         when(userRepository.findByUsername("user2")).thenReturn(Optional.of(user2));
         when(projectMapper.entityToDto(any(Project.class))).thenReturn(projectDTO);
         when(projectMapper.requestToEntity(postDTO)).thenReturn(createdproject);
+        when(communicationCategoryRepository.findAll()).thenReturn(new ArrayList<>());
 
         ProjectDTO result = projectService.createProject(postDTO, null, "abc");
         assertEquals(projectDTO, result);
@@ -286,11 +292,19 @@ public class ProjectServiceTest {
     }
 
     @Test void updateProjectStatus_whenGivenValidRequest_changesProjectStatus() {
+        Project project = new Project();
+        project.setId(1L);
+        Project completedProject = new Project();
+        completedProject.setId(2L);
         ProjectUser completedProjectUser = new ProjectUser();
+        completedProjectUser.setProject(completedProject);
         ProjectUser projectUser = new ProjectUser();
+        projectUser.setProject(project);
         completedProjectUser.setIsCompleted(true);
         when(projectUserRepository.findProjectUserById("abc", 1L)).thenReturn(Optional.of(projectUser));
         when(projectUserRepository.findProjectUserById("abc", 2L)).thenReturn(Optional.of(completedProjectUser));
+        when(projectUserRepository.findAllProjectUsersByProjectId(1L)).thenReturn(List.of(projectUser));
+        when(projectUserRepository.findAllProjectUsersByProjectId(2L)).thenReturn(List.of(completedProjectUser));
         projectService.changeCompletedStatus("abc", "1", true);
         projectService.changeCompletedStatus("abc", "2", false);
         assertTrue(projectUser.getIsCompleted());

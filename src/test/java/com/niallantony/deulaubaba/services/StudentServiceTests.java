@@ -182,6 +182,7 @@ public class StudentServiceTests {
         User user = new User();
         Student student = getMockStudent();
         MultipartFile image = mock(MultipartFile.class);
+        doCallRealMethod().when(fileStorageService).swapImage(any(), any());
         when(jsonUtils.parse(eq(json), any(), any())).thenReturn(request);
         when(userRepository.findByUserId("abc")).thenReturn(Optional.of(user));
         when(studentMapper.toStudent(request)).thenReturn(student);
@@ -202,6 +203,7 @@ public class StudentServiceTests {
         User user = new User();
         Student student = getMockStudent();
         MultipartFile image = mock(MultipartFile.class);
+        doCallRealMethod().when(fileStorageService).swapImage(any(), any());
         when(jsonUtils.parse(eq(json), any(), any())).thenReturn(request);
         when(userRepository.findByUserId("abc")).thenReturn(Optional.of(user));
         when(studentMapper.toStudent(request)).thenReturn(student);
@@ -294,6 +296,7 @@ public class StudentServiceTests {
         student.getUsers().add(user);
         student.setImagesrc("old_url");
         MultipartFile image = mock(MultipartFile.class);
+        doCallRealMethod().when(fileStorageService).swapImage(any(), any());
 
         when(jsonUtils.parse(eq(json), any(), any())).thenReturn(request);
         when(userRepository.findByUserId("abc")).thenReturn(Optional.of(user));
@@ -319,6 +322,7 @@ public class StudentServiceTests {
         student.setImagesrc("old_url");
         MultipartFile image = mock(MultipartFile.class);
 
+        doCallRealMethod().when(fileStorageService).swapImage(any(), any());
         when(jsonUtils.parse(eq(json), any(), any())).thenReturn(request);
         when(userRepository.findByUserId("abc")).thenReturn(Optional.of(user));
         when(studentRepository.findById("123")).thenReturn(Optional.of(student));

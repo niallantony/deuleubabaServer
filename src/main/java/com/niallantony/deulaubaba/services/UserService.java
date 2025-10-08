@@ -66,14 +66,7 @@ public class UserService {
         }
         validateUserRequest(userRequest);
         User user = userMapper.toNewUser(userRequest, userId);
-        if (image != null && !image.isEmpty()) {
-            try {
-                String filename = fileStorageService.storeImage(image);
-                user.setImagesrc(filename);
-            } catch (FileStorageException e) {
-                log.warn("Image storage failed", e);
-            }
-        }
+        fileStorageService.swapImage(image, user);
         userRepository.save(user);
 
         return userMapper.toDTO(user);

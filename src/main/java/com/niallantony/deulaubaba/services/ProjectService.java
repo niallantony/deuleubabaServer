@@ -10,6 +10,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.time.LocalDate;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Objects;
 import java.util.Set;
@@ -90,23 +91,35 @@ public class ProjectService {
         }
         validatePost(request);
         Project project = projectMapper.requestToEntity(request);
-        project.setCategories(getCategories(request));
+        project.setCategories(getCategories(request.getCategories()));
         Set<ProjectUser> projectUsers = projectUsersFromPost(request);
         project.setUsers(projectUsers);
         project.setCreatedBy(user);
         project.setStudent(student);
-        if (image != null) {
-            try {
-                String filename = fileStorageService.storeImage(image);
-                project.setImgsrc(filename);
-            } catch (FileStorageException e) {
-                log.warn("File not saved: ", e);
-            }
-        }
+        fileStorageService.swapImage(image, project);
         projectRepository.save(project);
         ProjectDTO projectDTO = projectMapper.entityToDto(project);
         projectDTO.isOwnProject(true);
         return projectDTO;
+    }
+
+    public void patchProjectDetails(String user_id, Long project_id, ProjectDetailsPatchDTO request, MultipartFile image) {
+        Project project = projectRepository.findById(project_id).orElseThrow(
+                () -> new ResourceNotFoundException("Project not found")
+        );
+        if (!project.getCreatedBy().getUserId().equals(user_id)) {
+            throw new UserNotAuthorizedException("Unauthorized access");
+        }
+        fileStorageService.swapImage(image, project);
+        applyDetailChanges(project, request);
+        projectRepository.save(project);
+    }
+
+    private void applyDetailChanges(Project project, ProjectDetailsPatchDTO request) {
+        project.setObjective(request.getObjective());
+        project.setDescription(request.getDescription());
+        project.setStartedOn(request.getStartedOn());
+        project.setCategories(getCategories(request.getCategories()));
     }
 
     public void changeCompletedStatus(String user_id, String project_id, boolean completed)  {
@@ -174,9 +187,10 @@ public class ProjectService {
         }
     }
 
-    private Set<CommunicationCategory> getCategories(ProjectPostDTO post) {
-        return post.getCategories().stream().map(label ->
-               communicationCategoryRepository.findByLabel(label).orElseThrow()
+    private Set<CommunicationCategory> getCategories(Set<CommunicationCategoryLabel> label) {
+        Set<CommunicationCategory> categories = new HashSet<>(communicationCategoryRepository.findAll());
+        return categories.stream().filter(category ->
+                label.contains(category.getLabel())
         ).collect(Collectors.toSet());
     }
 

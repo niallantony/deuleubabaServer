@@ -136,9 +136,8 @@ public class DictionaryServiceTests {
 
 
         DictionaryEntry result = dictionaryService.addDictionaryEntry(json, null, "userId");
-        verifyNoInteractions(fileStorageService);
-
         assertEquals(student, result.getStudent());
+        verify(fileStorageService, times(0)).storeImage(any());
         verify(dictionaryRepository).save(result);
     }
     @Test
@@ -148,11 +147,12 @@ public class DictionaryServiceTests {
         MultipartFile image = mock(MultipartFile.class);
         Student student = new Student();
         commonPostStubs(request, json, student);
+        doCallRealMethod().when(fileStorageService).swapImage(any(), any());
         when(fileStorageService.storeImage(image)).thenReturn("new_url");
 
 
         DictionaryEntry result = dictionaryService.addDictionaryEntry(json, image, "userId");
-        verify(fileStorageService).storeImage(image);
+        verify(fileStorageService).swapImage(eq(image), any());
 
         assertEquals(student, result.getStudent());
         assertEquals("new_url", result.getImgsrc());
@@ -166,11 +166,12 @@ public class DictionaryServiceTests {
         MultipartFile image = mock(MultipartFile.class);
         Student student = new Student();
         commonPostStubs(request, json, student);
+        doCallRealMethod().when(fileStorageService).swapImage(any(), any());
         when(fileStorageService.storeImage(image)).thenThrow(FileStorageException.class);
 
 
         DictionaryEntry result = dictionaryService.addDictionaryEntry(json, image, "userId");
-        verify(fileStorageService).storeImage(image);
+        verify(fileStorageService).swapImage(eq(image), any());
 
         assertEquals(student, result.getStudent());
         verify(dictionaryRepository).save(result);
@@ -184,8 +185,8 @@ public class DictionaryServiceTests {
 
         DictionaryEntry result = dictionaryService.updateDictionaryEntry(json, null, "userId");
         verify(dictionaryRepository).save(result);
-        verifyNoInteractions(fileStorageService);
         assertEquals("New Description", result.getDescription());
+        verify(fileStorageService, times(0)).storeImage(any());
     }
 
     @Test
@@ -194,11 +195,12 @@ public class DictionaryServiceTests {
         String json = "json-placeholder";
         MultipartFile image = mock(MultipartFile.class);
         commonPutStubs(request, json);
+        doCallRealMethod().when(fileStorageService).swapImage(any(), any());
         when(fileStorageService.storeImage(image)).thenReturn("new_url");
 
         DictionaryEntry result = dictionaryService.updateDictionaryEntry(json, image, "userId");
         verify(dictionaryRepository).save(result);
-        verify(fileStorageService).storeImage(image);
+        verify(fileStorageService).swapImage(eq(image), any());
         assertEquals("New Description", result.getDescription());
         verify(fileStorageService).deleteImage("./example.png");
         assertEquals("new_url", result.getImgsrc());
@@ -240,11 +242,11 @@ public class DictionaryServiceTests {
         String json = "json-placeholder";
         MultipartFile image = mock(MultipartFile.class);
         commonPutStubs(request, json);
-        when(fileStorageService.storeImage(image)).thenThrow(FileStorageException.class);
-
+        doCallRealMethod().when(fileStorageService).swapImage(any(), any());
+        doThrow(FileStorageException.class).when(fileStorageService).storeImage(any());
         DictionaryEntry result = dictionaryService.updateDictionaryEntry(json, image, "userId");
         verify(dictionaryRepository).save(result);
-        verify(fileStorageService).storeImage(image);
+        verify(fileStorageService).swapImage(eq(image), any() );
         assertEquals("New Description", result.getDescription());
         verifyNoMoreInteractions(fileStorageService);
         assertEquals("./example.png", result.getImgsrc());

@@ -31,6 +31,7 @@ import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.doCallRealMethod;
 import static org.mockito.Mockito.when;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.jwt;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
@@ -288,6 +289,7 @@ public class ProjectControllerTests {
     @Sql({"/fixtures/student_and_user.sql"})
     public void createProject_withImage_returnsCorrectResponse(@Autowired MockMvc mvc) throws Exception {
         when(fileStorageService.storeImage(any())).thenReturn("new_image.jpg");
+        doCallRealMethod().when(fileStorageService).swapImage(any(), any());
         ProjectPostDTO postDTO = ProjectTestFactory.getProjectPostDTOWithUser("user1");
         String json = objectMapper.writeValueAsString(postDTO);
         MockMultipartFile image = new MockMultipartFile("image", "new_image.jpg", "image/jpg", "image".getBytes());

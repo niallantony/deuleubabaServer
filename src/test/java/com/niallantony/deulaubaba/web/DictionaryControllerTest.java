@@ -186,6 +186,7 @@ public class DictionaryControllerTest {
     @Sql("/fixtures/student_and_user.sql")
     @Sql(scripts = "/fixtures/teardown.sql", executionPhase = Sql.ExecutionPhase.AFTER_TEST_METHOD)
     public void addDictionary_withValidDataAndImage_returns201(@Autowired MockMvc mvc) throws Exception {
+        doCallRealMethod().when(fileStorageService).swapImage(any(), any());
         when(fileStorageService.storeImage(any())).thenReturn("test.jpg");
         DictionaryPostRequest request = DictionaryTestFactory.createDictionaryPostRequest();
         String json = objectMapper.writeValueAsString(request);
@@ -223,7 +224,7 @@ public class DictionaryControllerTest {
            .andExpect(jsonPath("$.imgsrc").isEmpty())
            .andDo((r) -> System.out.println(r.getResponse().getContentAsString()));
         List<DictionaryEntry> dictionaries = dictionaryRepository.findAll().stream().toList();
-        verify(fileStorageService).storeImage(any());
+        verify(fileStorageService).swapImage(any(),any());
         assertEquals(1, dictionaries.size());
     }
 
@@ -404,6 +405,7 @@ public class DictionaryControllerTest {
     @Sql(scripts = "/fixtures/teardown.sql", executionPhase = Sql.ExecutionPhase.AFTER_TEST_METHOD)
     public void updateDictionary_withValidDataAndImage_updatesDictionaryEntry(@Autowired MockMvc mvc) throws Exception {
         when(fileStorageService.storeImage(any())).thenReturn("new_image.jpg");
+        doCallRealMethod().when(fileStorageService).swapImage(any(), any());
         DictionaryPutRequest request = DictionaryTestFactory.createDictionaryPutRequest();
         String json = objectMapper.writeValueAsString(request);
         MockMultipartFile data = new MockMultipartFile("data", "test.json", "application/json", json.getBytes());

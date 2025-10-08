@@ -117,8 +117,10 @@ public class UserServiceTest {
         when(userMapper.toNewUser(mockUserRequest, "ABC")).thenReturn(mockUser);
         when(userMapper.toDTO(mockUser)).thenReturn(mockDTO);
         when(fileStorageService.storeImage(mockFile)).thenReturn("./mock-file.png");
+        doCallRealMethod().when(fileStorageService).swapImage(any(), any());
 
         UserDTO result = userService.createUser("ABC", data, mockFile);
+
 
         assertSame(mockDTO, result);
         assertEquals("./mock-file.png", mockUser.getImagesrc());
@@ -157,6 +159,7 @@ public class UserServiceTest {
         when(userMapper.toNewUser(mockUserRequest, "ABC")).thenReturn(mockUser);
         when(userMapper.toDTO(mockUser)).thenReturn(mockDTO);
         when(fileStorageService.storeImage(mockFile)).thenThrow(FileStorageException.class);
+        doCallRealMethod().when(fileStorageService).swapImage(any(), any());
         UserDTO result = userService.createUser("ABC", data, mockFile);
 
         assertSame(mockDTO, result);

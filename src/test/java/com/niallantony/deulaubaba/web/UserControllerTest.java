@@ -136,6 +136,7 @@ class UserControllerTest {
         MockMultipartFile image = new MockMultipartFile("image", "user.jpg", "image/jpg", "fake-image".getBytes(
                 StandardCharsets.UTF_8));
         when(fileStorageService.storeImage(image)).thenReturn("user.jpg");
+        doCallRealMethod().when(fileStorageService).swapImage(any(), any());
         mvc.perform(multipart("/me")
                    .file(data)
                    .file(image)

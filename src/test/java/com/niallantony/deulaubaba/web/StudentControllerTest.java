@@ -255,6 +255,7 @@ class StudentControllerTest {
     @Test
     @Sql("/fixtures/user.sql")
     public void createStudent_withImage_returnsStudentDTOWithImageURI(@Autowired MockMvc mvc) throws Exception {
+        doCallRealMethod().when(fileStorageService).swapImage(any(),any());
         when(fileStorageService.storeImage(any())).thenReturn("new-image.jpg");
         StudentRequest student = StudentTestFactory.createStudentRequest("user");
         String request = objectMapper.writeValueAsString(student);
@@ -271,7 +272,7 @@ class StudentControllerTest {
 
         String body = res.getResponse().getContentAsString();
         String imageSrc = objectMapper.readTree(body).get("imagesrc").asText();
-        verify(fileStorageService, times(1)).storeImage(any());
+        verify(fileStorageService, times(1)).swapImage(any(), any());
         assertEquals("new-image.jpg", imageSrc);
 
     }
@@ -392,6 +393,7 @@ class StudentControllerTest {
     @Sql("/fixtures/student_with_image_and_user.sql")
     public void updateStudent_withImage_createsNewFileUri(@Autowired MockMvc mvc) throws Exception {
         when(fileStorageService.storeImage(any())).thenReturn("new_image.jpg");
+        doCallRealMethod().when(fileStorageService).swapImage(any(),any());
         StudentRequest request = StudentTestFactory.createStudentRequest("user");
         String json = objectMapper.writeValueAsString(request);
         MockMultipartFile data = new MockMultipartFile("data", "student.json", "application/json", json.getBytes());
@@ -433,7 +435,7 @@ class StudentControllerTest {
         Iterable<Student> students = studentRepository.findAll();
         assertEquals(1, studentRepository.count());
         assertEquals("example.jpg", students.iterator().next().getImagesrc());
-        verify(fileStorageService, times(1)).storeImage(any());
+        verify(fileStorageService, times(1)).swapImage(any(), any());
         verifyNoMoreInteractions(fileStorageService);
     }
 
@@ -442,6 +444,7 @@ class StudentControllerTest {
     @Sql("/fixtures/student_with_image_and_user.sql")
     public void updateStudent_whenFileDeletionFails_updatesFile(@Autowired MockMvc mvc) throws Exception {
         when(fileStorageService.storeImage(any())).thenReturn("new_image.jpg");
+        doCallRealMethod().when(fileStorageService).swapImage(any(), any());
         doThrow(FileStorageException.class).when(fileStorageService).deleteImage(any());
         StudentRequest request = StudentTestFactory.createStudentRequest("user");
         String json = objectMapper.writeValueAsString(request);
@@ -459,7 +462,7 @@ class StudentControllerTest {
         Iterable<Student> students = studentRepository.findAll();
         assertEquals(1, studentRepository.count());
         assertEquals("new_image.jpg", students.iterator().next().getImagesrc());
-        verify(fileStorageService, times(1)).storeImage(any());
+        verify(fileStorageService, times(1)).swapImage(any(), any());
     }
 
     @Test
