@@ -5,7 +5,6 @@ import com.niallantony.deulaubaba.domain.*;
 import com.niallantony.deulaubaba.dto.project.*;
 import com.niallantony.deulaubaba.exceptions.*;
 import com.niallantony.deulaubaba.mapper.ProjectMapper;
-import com.niallantony.deulaubaba.utils.JsonUtils;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
@@ -24,7 +23,6 @@ public class ProjectService {
     private final ProjectMapper projectMapper;
     private final UserRepository userRepository;
     private final StudentRepository studentRepository;
-    private final JsonUtils jsonUtils;
     private final FileStorageService fileStorageService;
     private final CommunicationCategoryRepository communicationCategoryRepository;
     private final ProjectUserRepository projectUserRepository;
@@ -34,7 +32,6 @@ public class ProjectService {
             ProjectMapper projectMapper,
             UserRepository userRepository,
             StudentRepository studentRepository,
-            JsonUtils jsonUtils,
             FileStorageService fileStorageService,
             CommunicationCategoryRepository communicationCategoryRepository,
             ProjectUserRepository projectUserRepository
@@ -43,7 +40,6 @@ public class ProjectService {
         this.projectMapper = projectMapper;
         this.userRepository = userRepository;
         this.studentRepository = studentRepository;
-        this.jsonUtils = jsonUtils;
         this.fileStorageService = fileStorageService;
         this.communicationCategoryRepository = communicationCategoryRepository;
         this.projectUserRepository = projectUserRepository;

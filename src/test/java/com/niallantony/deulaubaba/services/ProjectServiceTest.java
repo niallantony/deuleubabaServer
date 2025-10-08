@@ -12,7 +12,6 @@ import com.niallantony.deulaubaba.dto.project.ProjectPreviewDTO;
 import com.niallantony.deulaubaba.exceptions.*;
 import com.niallantony.deulaubaba.mapper.ProjectMapper;
 import com.niallantony.deulaubaba.util.ProjectTestFactory;
-import com.niallantony.deulaubaba.utils.JsonUtils;
 import org.jetbrains.annotations.NotNull;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -40,9 +39,6 @@ public class ProjectServiceTest {
 
     @Mock
     private StudentRepository studentRepository;
-
-    @Mock
-    private JsonUtils jsonUtils;
 
     @Mock
     private FileStorageService fileStorageService;
