@@ -10,9 +10,8 @@ import java.time.LocalDate;
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
-public class ProjectUserStatus {
+public class ProjectUserStatusDTO {
     UserAvatar user;
     Boolean completed;
     LocalDate completedOn;
-
 }

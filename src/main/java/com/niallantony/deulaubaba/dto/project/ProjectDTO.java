@@ -23,7 +23,7 @@ public class ProjectDTO {
     private boolean completed;
     private LocalDate completedOn;
     private ProjectType type;
-    private Set<ProjectUserStatus> userStatuses = new HashSet<>();
+    private Set<ProjectUserStatusDTO> userStatuses = new HashSet<>();
     private boolean isOwnProject = false;
 
     public void isOwnProject(boolean isOwnProject) {
