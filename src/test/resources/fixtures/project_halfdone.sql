@@ -5,5 +5,5 @@ VALUES (1,false, null, 'description', 'example.jpg', 'objective', 'COMMUNICATION
 INSERT INTO project_communication_category (project_id, category_id) VALUES (1,6);
 INSERT INTO project_user (is_completed, project_id, user_id)
 VALUES (false, 1, 'user');
-INSERT INTO project_user (is_completed, project_id, user_id)
-VALUES (false, 1, 'unrelated')
+INSERT INTO project_user (is_completed, completed_on, project_id, user_id)
+VALUES (true, '2000-01-01', 1, 'unrelated')

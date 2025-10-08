@@ -13,7 +13,6 @@ import com.niallantony.deulaubaba.exceptions.*;
 import com.niallantony.deulaubaba.mapper.ProjectMapper;
 import com.niallantony.deulaubaba.util.ProjectTestFactory;
 import com.niallantony.deulaubaba.utils.JsonUtils;
-import net.bytebuddy.asm.Advice;
 import org.jetbrains.annotations.NotNull;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -356,6 +355,7 @@ public class ProjectServiceTest {
         verify(projectUserRepository, times(1)).findAllProjectUsersByProjectId(1L);
         assertEquals(true, project.getCompleted());
         assertEquals(LocalDate.of(2000, 1, 1), project.getCompletedOn());
+        verify(projectRepository, times(1)).save(any());
     }
 
     @Test void checkProjectStatus_whenNotAllStudentsDone_doesNotChangeStatus() {
@@ -375,6 +375,7 @@ public class ProjectServiceTest {
         verify(projectUserRepository, times(1)).findAllProjectUsersByProjectId(1L);
         assertFalse(project.getCompleted());
         assertNull(project.getCompletedOn());
+        verify(projectRepository, times(0)).save(any());
     }
 
     @Test void checkProjectStatus_whenNotAllStudentsDoneOnAPreviouslyCompletedProject_changesStatus() {
@@ -396,6 +397,7 @@ public class ProjectServiceTest {
         verify(projectUserRepository, times(1)).findAllProjectUsersByProjectId(1L);
         assertFalse(project.getCompleted());
         assertNull(project.getCompletedOn());
+        verify(projectRepository, times(1)).save(any());
     }
 
     @Test void checkProjectStatus_OnAMissingProject_throwsNoProjectsFoundException() {

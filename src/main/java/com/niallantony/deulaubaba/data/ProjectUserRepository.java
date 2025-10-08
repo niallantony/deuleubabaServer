@@ -21,7 +21,7 @@ public interface ProjectUserRepository extends CrudRepository<ProjectUser, Long>
     @EntityGraph(attributePaths = {"project"})
     @Query(
             "SELECT p FROM ProjectUser p JOIN " +
-                    "p.project d WHERE d.id = :project_id ORDER BY p.completedOn ASC "
+                    "p.project d WHERE d.id = :project_id ORDER BY p.completedOn DESC "
     )
     List<ProjectUser> findAllProjectUsersByProjectId(long project_id);
 }

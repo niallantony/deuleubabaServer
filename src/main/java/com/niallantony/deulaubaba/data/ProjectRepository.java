@@ -24,5 +24,5 @@ public interface ProjectRepository extends JpaRepository<Project, Long> {
                     "p.id, p.completed, p.description, p.objective, p.imgsrc, p.startedOn) " +
                     "FROM Project p JOIN p.users u WHERE u.user = :user AND p.student = :student"
     )
-    Set<ProjectPreviewDTO> findAllProjectsByStudentId(@Param("user") User user, @Param("student") Student student); ;
+    Set<ProjectPreviewDTO> findAllProjectsByStudentId(@Param("user") User user, @Param("student") Student student);
 }

@@ -133,6 +133,7 @@ public class ProjectService {
             relation.setCompletedOn(null);
         }
         projectUserRepository.save(relation);
+        checkProjectStatus(longProjectId);
     }
 
     public void checkProjectStatus(Long project_id) {
@@ -144,12 +145,14 @@ public class ProjectService {
             throw new InvalidProjectUsersException("Project users not returned correctly - try again later");
         }
         Project project = projectUsers.getFirst().getProject();
-        if (projectUsers.stream().allMatch(ProjectUser::getIsCompleted)) {
+        if (projectUsers.stream().allMatch(ProjectUser::getIsCompleted) && !project.getCompleted()) {
             project.setCompleted(true);
             project.setCompletedOn(projectUsers.getFirst().getCompletedOn());
-        } else {
+            projectRepository.save(project);
+        } else if (projectUsers.stream().anyMatch(user -> !user.getIsCompleted()) && project.getCompleted()){
             project.setCompleted(false);
             project.setCompletedOn(null);
+            projectRepository.save(project);
         }
     }
 

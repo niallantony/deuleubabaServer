@@ -28,6 +28,7 @@ import org.testcontainers.junit.jupiter.Testcontainers;
 
 
 import java.net.URI;
+import java.time.LocalDate;
 import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.*;
@@ -368,4 +369,104 @@ public class ProjectControllerTests {
         assertNotNull(project.getCompletedOn());
     }
 
+    @Test
+    @SqlMergeMode(SqlMergeMode.MergeMode.MERGE)
+    @Sql({
+            "/fixtures/student_and_user.sql",
+            "/fixtures/project_unrelated.sql"
+    })
+    public void changeCompleteStatus_asUnauthorizedUser_returns401(@Autowired MockMvc mvc) throws Exception {
+        mvc.perform(patch("/project/status/1")
+                   .with(jwt())
+                   .contentType("application/json")
+                   .content("{\"isCompleted\":\"true\"}"))
+           .andExpect(status().isNotFound())
+           .andExpect(jsonPath("$.message").value("Project user not found"))
+           .andDo((r) -> System.out.println(r.getResponse().getRedirectedUrl()));
+    }
+
+    @Test
+    @SqlMergeMode(SqlMergeMode.MergeMode.MERGE)
+    @Sql({
+            "/fixtures/student_and_user.sql",
+            "/fixtures/project_unrelated.sql"
+    })
+    public void changeCompleteStatus_ofNonExistantProject_returns404(@Autowired MockMvc mvc) throws Exception {
+        mvc.perform(patch("/project/status/2")
+                   .with(jwt())
+                   .contentType("application/json")
+                   .content("{\"isCompleted\":\"true\"}"))
+           .andExpect(status().isNotFound())
+           .andExpect(jsonPath("$.message").value("Project user not found"))
+           .andDo((r) -> System.out.println(r.getResponse().getRedirectedUrl()));
+    }
+
+    @Test
+    @SqlMergeMode(SqlMergeMode.MergeMode.MERGE)
+    @Sql({
+            "/fixtures/student_and_user.sql",
+            "/fixtures/project_unowned.sql"
+    })
+    public void changeCompleteStatus_whenOtherUserNotComplete_doesNotChangeProjectStatus(@Autowired MockMvc mvc) throws Exception {
+        String redirect = ServletUriComponentsBuilder.fromCurrentContextPath().path("/project").toUriString() + "/1";
+        mvc.perform(patch("/project/status/1")
+                   .with(jwt())
+                   .contentType("application/json")
+                   .content("{\"isCompleted\":\"true\"}"))
+           .andExpect(status().isNoContent())
+           .andExpect(redirectedUrl(redirect))
+           .andDo((r) -> System.out.println(r.getResponse().getRedirectedUrl()));
+        Project project = projectRepository.findById(1L).orElseThrow();
+        ProjectUser projectUser = projectUserRepository.findProjectUserById("user", 1L).orElseThrow();
+        assertEquals(true, projectUser.getIsCompleted());
+        assertNotNull(projectUser.getCompletedOn());
+        assertFalse(project.getCompleted());
+        assertNull(project.getCompletedOn());
+    }
+
+    @Test
+    @SqlMergeMode(SqlMergeMode.MergeMode.MERGE)
+    @Sql({
+            "/fixtures/student_and_user.sql",
+            "/fixtures/project_completed.sql"
+    })
+    public void changeCompleteStatus_toIncomplete_changesStatus(@Autowired MockMvc mvc) throws Exception {
+        String redirect = ServletUriComponentsBuilder.fromCurrentContextPath().path("/project").toUriString() + "/1";
+        mvc.perform(patch("/project/status/1")
+                   .with(jwt())
+                   .contentType("application/json")
+                   .content("{\"isCompleted\":\"false\"}"))
+           .andExpect(status().isNoContent())
+           .andExpect(redirectedUrl(redirect))
+           .andDo((r) -> System.out.println(r.getResponse().getRedirectedUrl()));
+        Project project = projectRepository.findById(1L).orElseThrow();
+        ProjectUser projectUser = projectUserRepository.findProjectUserById("user", 1L).orElseThrow();
+        assertFalse(projectUser.getIsCompleted());
+        assertNull(projectUser.getCompletedOn());
+        assertFalse(project.getCompleted());
+        assertNull(project.getCompletedOn());
+    }
+
+    @Test
+    @SqlMergeMode(SqlMergeMode.MergeMode.MERGE)
+    @Sql({
+            "/fixtures/student_and_user.sql",
+            "/fixtures/project_halfdone.sql"
+    })
+    public void changeCompleteStatus_ofHalfDoneProject_changesStatusAndAppliesLatestData(@Autowired MockMvc mvc) throws Exception {
+        String redirect = ServletUriComponentsBuilder.fromCurrentContextPath().path("/project").toUriString() + "/1";
+        mvc.perform(patch("/project/status/1")
+                   .with(jwt())
+                   .contentType("application/json")
+                   .content("{\"isCompleted\":\"true\"}"))
+           .andExpect(status().isNoContent())
+           .andExpect(redirectedUrl(redirect))
+           .andDo((r) -> System.out.println(r.getResponse().getRedirectedUrl()));
+        Project project = projectRepository.findById(1L).orElseThrow();
+        ProjectUser projectUser = projectUserRepository.findProjectUserById("user", 1L).orElseThrow();
+        assertTrue(projectUser.getIsCompleted());
+        assertNotNull(projectUser.getCompletedOn());
+        assertTrue(project.getCompleted());
+        assertTrue(LocalDate.of(2000, 1, 1).isBefore(project.getCompletedOn()));
+    }
 }
