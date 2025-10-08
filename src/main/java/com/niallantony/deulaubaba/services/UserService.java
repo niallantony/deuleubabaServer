@@ -11,8 +11,6 @@ import com.niallantony.deulaubaba.exceptions.*;
 import com.niallantony.deulaubaba.mapper.StudentMapper;
 import com.niallantony.deulaubaba.mapper.UserMapper;
 import com.niallantony.deulaubaba.utils.JsonUtils;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -20,7 +18,6 @@ import org.springframework.web.multipart.MultipartFile;
 
 @Service
 public class UserService {
-    private static final Logger log = LoggerFactory.getLogger(UserService.class);
     private final StudentRepository studentRepository;
     private final UserRepository userRepository;
     private final JsonUtils jsonUtils;

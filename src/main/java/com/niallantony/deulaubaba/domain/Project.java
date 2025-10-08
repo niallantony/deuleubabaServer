@@ -13,7 +13,7 @@ import java.util.Set;
 
 @Data
 @Entity
-@EqualsAndHashCode(onlyExplicitlyIncluded = true)
+@EqualsAndHashCode(onlyExplicitlyIncluded = true, callSuper = false)
 @ToString(exclude = {"users", "student", "createdBy"})
 public class Project extends HasImage{
     @Id

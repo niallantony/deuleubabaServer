@@ -7,7 +7,6 @@ import com.niallantony.deulaubaba.data.StudentRepository;
 import com.niallantony.deulaubaba.data.UserRepository;
 import com.niallantony.deulaubaba.dto.student.*;
 import com.niallantony.deulaubaba.dto.user.UserAvatar;
-import com.niallantony.deulaubaba.exceptions.FileStorageException;
 import com.niallantony.deulaubaba.exceptions.InvalidStudentDataException;
 import com.niallantony.deulaubaba.exceptions.ResourceNotFoundException;
 import com.niallantony.deulaubaba.exceptions.UserNotAuthorizedException;
