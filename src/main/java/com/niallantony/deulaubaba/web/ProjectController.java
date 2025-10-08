@@ -1,8 +1,6 @@
 package com.niallantony.deulaubaba.web;
 
-import com.niallantony.deulaubaba.dto.project.ProjectCollectionsDTO;
-import com.niallantony.deulaubaba.dto.project.ProjectDTO;
-import com.niallantony.deulaubaba.dto.project.ProjectPostDTO;
+import com.niallantony.deulaubaba.dto.project.*;
 import com.niallantony.deulaubaba.exceptions.InvalidProjectDataException;
 import com.niallantony.deulaubaba.security.CurrentUser;
 import com.niallantony.deulaubaba.services.ProjectService;
@@ -64,5 +62,19 @@ public class ProjectController {
         return ResponseEntity.created(
                 URI.create(ServletUriComponentsBuilder.fromCurrentContextPath().path("/project").toUriString() + "/" + project.getId()
         )).body(project);
+    }
+
+    @PatchMapping(path = "/status/{project_id}")
+    public ResponseEntity<ProjectUserStatusDTO> updateProjectStatus(
+            @CurrentUser String user_id,
+            @PathVariable String project_id,
+            @RequestBody String body
+    ) {
+        ProjectStatusDTO request = jsonUtils.parse(body, ProjectStatusDTO.class,
+                () -> new InvalidProjectDataException("Invalid request"));
+        projectService.changeCompletedStatus(user_id, project_id, request.getIsCompleted());
+        return ResponseEntity.noContent().location(
+                URI.create(ServletUriComponentsBuilder.fromCurrentContextPath().path("/project").toUriString() + "/" + project_id)
+        ).build();
     }
 }

@@ -1,11 +1,9 @@
 package com.niallantony.deulaubaba.web;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.niallantony.deulaubaba.data.CommunicationCategoryRepository;
-import com.niallantony.deulaubaba.data.ProjectRepository;
-import com.niallantony.deulaubaba.data.StudentRepository;
-import com.niallantony.deulaubaba.data.UserRepository;
+import com.niallantony.deulaubaba.data.*;
 import com.niallantony.deulaubaba.domain.Project;
+import com.niallantony.deulaubaba.domain.ProjectUser;
 import com.niallantony.deulaubaba.dto.project.ProjectPostDTO;
 import com.niallantony.deulaubaba.services.FileStorageService;
 import com.niallantony.deulaubaba.util.ProjectTestFactory;
@@ -32,13 +30,11 @@ import org.testcontainers.junit.jupiter.Testcontainers;
 import java.net.URI;
 import java.util.List;
 
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.when;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.jwt;
-import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
-import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.multipart;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 
 
@@ -72,6 +68,8 @@ public class ProjectControllerTests {
             .withDatabaseName("integration-test-db")
             .withUsername("sa")
             .withPassword("sa");
+    @Autowired
+    private ProjectUserRepository projectUserRepository;
 
     @BeforeAll
     public static void setUp() { postgreSQLContainer.start(); }
@@ -346,4 +344,28 @@ public class ProjectControllerTests {
            .andExpect(jsonPath("$.message").value("Student not found"))
            .andDo((r) -> System.out.println(r.getResponse().getContentAsString()));
     }
+
+    @Test
+    @SqlMergeMode(SqlMergeMode.MergeMode.MERGE)
+    @Sql({
+            "/fixtures/student_and_user.sql",
+            "/fixtures/project.sql"
+    })
+    public void changeCompleteStatus_withValidRequestAndOneUser_changesIncompleteProjectToComplete(@Autowired MockMvc mvc) throws Exception {
+        String redirect = ServletUriComponentsBuilder.fromCurrentContextPath().path("/project").toUriString() + "/1";
+        mvc.perform(patch("/project/status/1")
+                .with(jwt())
+                .contentType("application/json")
+                .content("{\"isCompleted\":\"true\"}"))
+                .andExpect(status().isNoContent())
+                .andExpect(redirectedUrl(redirect))
+                .andDo((r) -> System.out.println(r.getResponse().getRedirectedUrl()));
+        Project project = projectRepository.findById(1L).orElseThrow();
+        ProjectUser projectUser = projectUserRepository.findProjectUserById("user", 1L).orElseThrow();
+        assertEquals(true, projectUser.getIsCompleted());
+        assertNotNull(projectUser.getCompletedOn());
+        assertEquals(true, project.getCompleted());
+        assertNotNull(project.getCompletedOn());
+    }
+
 }
