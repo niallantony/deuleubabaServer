@@ -2,10 +2,7 @@ package com.niallantony.deulaubaba.services;
 
 import com.niallantony.deulaubaba.data.*;
 import com.niallantony.deulaubaba.domain.*;
-import com.niallantony.deulaubaba.dto.project.ProjectCollectionsDTO;
-import com.niallantony.deulaubaba.dto.project.ProjectDTO;
-import com.niallantony.deulaubaba.dto.project.ProjectPostDTO;
-import com.niallantony.deulaubaba.dto.project.ProjectPreviewDTO;
+import com.niallantony.deulaubaba.dto.project.*;
 import com.niallantony.deulaubaba.exceptions.*;
 import com.niallantony.deulaubaba.mapper.ProjectMapper;
 import com.niallantony.deulaubaba.utils.JsonUtils;
@@ -14,6 +11,8 @@ import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.time.LocalDate;
+import java.util.List;
+import java.util.Objects;
 import java.util.Set;
 import java.util.stream.Collectors;
 
@@ -28,6 +27,7 @@ public class ProjectService {
     private final JsonUtils jsonUtils;
     private final FileStorageService fileStorageService;
     private final CommunicationCategoryRepository communicationCategoryRepository;
+    private final ProjectUserRepository projectUserRepository;
 
     public ProjectService(
             ProjectRepository projectRepository,
@@ -36,7 +36,8 @@ public class ProjectService {
             StudentRepository studentRepository,
             JsonUtils jsonUtils,
             FileStorageService fileStorageService,
-            CommunicationCategoryRepository communicationCategoryRepository
+            CommunicationCategoryRepository communicationCategoryRepository,
+            ProjectUserRepository projectUserRepository
     ) {
         this.projectRepository = projectRepository;
         this.projectMapper = projectMapper;
@@ -45,6 +46,7 @@ public class ProjectService {
         this.jsonUtils = jsonUtils;
         this.fileStorageService = fileStorageService;
         this.communicationCategoryRepository = communicationCategoryRepository;
+        this.projectUserRepository = projectUserRepository;
     }
 
     public ProjectDTO getProject(String project_id, String user_id) {
@@ -84,7 +86,6 @@ public class ProjectService {
         return createCollections(project);
     }
 
-    // TODO: TEST THIS - MAYBE REFACTOR TOO
     public ProjectDTO createProject(ProjectPostDTO request, MultipartFile image, String user_id) {
         User user = getUserOrThrow(user_id);
         Student student = getStudentOrThrow(request.getStudentId());
@@ -110,6 +111,46 @@ public class ProjectService {
         ProjectDTO projectDTO = projectMapper.entityToDto(project);
         projectDTO.isOwnProject(true);
         return projectDTO;
+    }
+
+    public void changeCompletedStatus(String user_id, String project_id, boolean completed)  {
+        long longProjectId;
+        try {
+            longProjectId = Long.parseLong(project_id);
+        } catch (NumberFormatException e) {
+            throw new InvalidProjectDataException("Invalid project ID");
+        }
+        ProjectUser relation = projectUserRepository.findProjectUserById(user_id, longProjectId).orElseThrow(
+                () -> new ResourceNotFoundException("Project user not found")
+        );
+        if (relation.getIsCompleted() == completed) {
+            return;
+        }
+        relation.setIsCompleted(completed);
+        if (completed) {
+            relation.setCompletedOn(LocalDate.now());
+        } else {
+            relation.setCompletedOn(null);
+        }
+        projectUserRepository.save(relation);
+    }
+
+    public void checkProjectStatus(Long project_id) {
+        List<ProjectUser> projectUsers = projectUserRepository.findAllProjectUsersByProjectId(project_id);
+        if (projectUsers.isEmpty()) {
+            throw new NoProjectsFoundException("No projects found");
+        }
+        if (projectUsers.stream().anyMatch(user -> user.getProject() == null || !Objects.equals(user.getProject().getId(), project_id))) {
+            throw new InvalidProjectUsersException("Project users not returned correctly - try again later");
+        }
+        Project project = projectUsers.getFirst().getProject();
+        if (projectUsers.stream().allMatch(ProjectUser::getIsCompleted)) {
+            project.setCompleted(true);
+            project.setCompletedOn(projectUsers.getFirst().getCompletedOn());
+        } else {
+            project.setCompleted(false);
+            project.setCompletedOn(null);
+        }
     }
 
     private Set<ProjectUser> projectUsersFromPost(ProjectPostDTO post) {

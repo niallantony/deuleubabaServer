@@ -1,12 +1,10 @@
 package com.niallantony.deulaubaba.services;
 
 import com.niallantony.deulaubaba.data.ProjectRepository;
+import com.niallantony.deulaubaba.data.ProjectUserRepository;
 import com.niallantony.deulaubaba.data.StudentRepository;
 import com.niallantony.deulaubaba.data.UserRepository;
-import com.niallantony.deulaubaba.domain.Project;
-import com.niallantony.deulaubaba.domain.ProjectType;
-import com.niallantony.deulaubaba.domain.Student;
-import com.niallantony.deulaubaba.domain.User;
+import com.niallantony.deulaubaba.domain.*;
 import com.niallantony.deulaubaba.dto.project.ProjectCollectionsDTO;
 import com.niallantony.deulaubaba.dto.project.ProjectDTO;
 import com.niallantony.deulaubaba.dto.project.ProjectPostDTO;
@@ -15,6 +13,7 @@ import com.niallantony.deulaubaba.exceptions.*;
 import com.niallantony.deulaubaba.mapper.ProjectMapper;
 import com.niallantony.deulaubaba.util.ProjectTestFactory;
 import com.niallantony.deulaubaba.utils.JsonUtils;
+import net.bytebuddy.asm.Advice;
 import org.jetbrains.annotations.NotNull;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -24,9 +23,7 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.mock.web.MockMultipartFile;
 
 import java.time.LocalDate;
-import java.util.HashSet;
-import java.util.Optional;
-import java.util.Set;
+import java.util.*;
 
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.Mockito.*;
@@ -50,6 +47,9 @@ public class ProjectServiceTest {
 
     @Mock
     private FileStorageService fileStorageService;
+
+    @Mock
+    private ProjectUserRepository projectUserRepository;
 
     @InjectMocks
     private ProjectService projectService;
@@ -290,6 +290,138 @@ public class ProjectServiceTest {
         ));
     }
 
+    @Test void updateProjectStatus_whenGivenValidRequest_changesProjectStatus() {
+        ProjectUser completedProjectUser = new ProjectUser();
+        ProjectUser projectUser = new ProjectUser();
+        completedProjectUser.setIsCompleted(true);
+        when(projectUserRepository.findProjectUserById("abc", 1L)).thenReturn(Optional.of(projectUser));
+        when(projectUserRepository.findProjectUserById("abc", 2L)).thenReturn(Optional.of(completedProjectUser));
+        projectService.changeCompletedStatus("abc", "1", true);
+        projectService.changeCompletedStatus("abc", "2", false);
+        assertTrue(projectUser.getIsCompleted());
+        assertNotNull(projectUser.getCompletedOn());
+        assertNull(completedProjectUser.getCompletedOn());
+        assertFalse(completedProjectUser.getIsCompleted());
+        verify(projectUserRepository, times(2)).save(any());
+    }
+
+    @Test void updateProjectStatus_whenStatusIsIdentical_doesNotChangeStatus() {
+        LocalDate date = LocalDate.now();
+        ProjectUser completedProjectUser = new ProjectUser();
+        ProjectUser projectUser = new ProjectUser();
+        completedProjectUser.setIsCompleted(true);
+        completedProjectUser.setCompletedOn(date);
+        when(projectUserRepository.findProjectUserById("abc", 1L)).thenReturn(Optional.of(projectUser));
+        when(projectUserRepository.findProjectUserById("abc", 2L)).thenReturn(Optional.of(completedProjectUser));
+        projectService.changeCompletedStatus("abc", "1", false);
+        projectService.changeCompletedStatus("abc", "2", true);
+        assertTrue(completedProjectUser.getIsCompleted());
+        assertFalse(projectUser.getIsCompleted());
+        assertEquals(date, completedProjectUser.getCompletedOn());
+        verify(projectUserRepository, times(0)).save(any());
+    }
+
+    @Test void updateProjectStatus_withIncorrectInformation_throws404() {
+        when(projectUserRepository.findProjectUserById("abc", 1L)).thenReturn(Optional.empty());
+        ResourceNotFoundException exception = assertThrows(
+                ResourceNotFoundException.class,
+                () -> projectService.changeCompletedStatus("abc", "1", true)
+        );
+        assertEquals("Project user not found", exception.getMessage());
+    }
+
+    @Test void updateProjectStatus_withMalformedProjectId_throws400() {
+        InvalidProjectDataException exception = assertThrows(
+                InvalidProjectDataException.class,
+                () -> projectService.changeCompletedStatus("abc", "a", false)
+        );
+        assertEquals("Invalid project ID", exception.getMessage());
+    }
+
+    @Test void checkProjectStatus_whenAllStudentsDone_changesProjectStatus() {
+        Project project = new Project();
+        project.setId(1L);
+        ProjectUser earlierUser = new ProjectUser();
+        ProjectUser laterUser = new ProjectUser();
+        earlierUser.setIsCompleted(true);
+        laterUser.setIsCompleted(true);
+        earlierUser.setCompletedOn(LocalDate.of(1991, 5, 30));
+        laterUser.setCompletedOn(LocalDate.of(2000, 1, 1));
+        earlierUser.setProject(project);
+        laterUser.setProject(project);
+        project.getUsers().add(earlierUser);
+        project.getUsers().add(laterUser);
+        when(projectUserRepository.findAllProjectUsersByProjectId(1L)).thenReturn(Arrays.asList(laterUser, earlierUser));
+        projectService.checkProjectStatus(1L);
+        verify(projectUserRepository, times(1)).findAllProjectUsersByProjectId(1L);
+        assertEquals(true, project.getCompleted());
+        assertEquals(LocalDate.of(2000, 1, 1), project.getCompletedOn());
+    }
+
+    @Test void checkProjectStatus_whenNotAllStudentsDone_doesNotChangeStatus() {
+        Project project = new Project();
+        project.setId(1L);
+        ProjectUser earlierUser = new ProjectUser();
+        ProjectUser laterUser = new ProjectUser();
+        earlierUser.setIsCompleted(false);
+        laterUser.setIsCompleted(true);
+        laterUser.setCompletedOn(LocalDate.of(2000, 1, 1));
+        earlierUser.setProject(project);
+        laterUser.setProject(project);
+        project.getUsers().add(earlierUser);
+        project.getUsers().add(laterUser);
+        when(projectUserRepository.findAllProjectUsersByProjectId(1L)).thenReturn(Arrays.asList(laterUser, earlierUser));
+        projectService.checkProjectStatus(1L);
+        verify(projectUserRepository, times(1)).findAllProjectUsersByProjectId(1L);
+        assertFalse(project.getCompleted());
+        assertNull(project.getCompletedOn());
+    }
+
+    @Test void checkProjectStatus_whenNotAllStudentsDoneOnAPreviouslyCompletedProject_changesStatus() {
+        Project project = new Project();
+        project.setId(1L);
+        project.setCompleted(true);
+        project.setCompletedOn(LocalDate.now());
+        ProjectUser earlierUser = new ProjectUser();
+        ProjectUser laterUser = new ProjectUser();
+        earlierUser.setIsCompleted(false);
+        laterUser.setIsCompleted(true);
+        laterUser.setCompletedOn(LocalDate.of(2000, 1, 1));
+        earlierUser.setProject(project);
+        laterUser.setProject(project);
+        project.getUsers().add(earlierUser);
+        project.getUsers().add(laterUser);
+        when(projectUserRepository.findAllProjectUsersByProjectId(1L)).thenReturn(Arrays.asList(laterUser, earlierUser));
+        projectService.checkProjectStatus(1L);
+        verify(projectUserRepository, times(1)).findAllProjectUsersByProjectId(1L);
+        assertFalse(project.getCompleted());
+        assertNull(project.getCompletedOn());
+    }
+
+    @Test void checkProjectStatus_OnAMissingProject_throwsNoProjectsFoundException() {
+        when(projectUserRepository.findAllProjectUsersByProjectId(1L)).thenReturn(new ArrayList<>());
+        assertThrows(
+                NoProjectsFoundException.class,
+                () ->projectService.checkProjectStatus(1L));
+        verify(projectUserRepository, times(1)).findAllProjectUsersByProjectId(1L);
+    }
+
+    @Test void checkProjectStatus_whenRepoReturnsInvalidUsers_returnsServerError() {
+        Project project = new Project();
+        project.setId(1L);
+        project.setCompleted(true);
+        project.setCompletedOn(LocalDate.now());
+        ProjectUser earlierUser = new ProjectUser();
+        ProjectUser laterUser = new ProjectUser();
+        earlierUser.setIsCompleted(false);
+        laterUser.setIsCompleted(true);
+        laterUser.setCompletedOn(LocalDate.of(2000, 1, 1));
+        laterUser.setProject(project);
+        project.getUsers().add(laterUser);
+        when(projectUserRepository.findAllProjectUsersByProjectId(1L)).thenReturn(Arrays.asList(laterUser, earlierUser));
+        assertThrows(InvalidProjectUsersException.class,  () -> projectService.checkProjectStatus(1L));
+        verify(projectUserRepository, times(1)).findAllProjectUsersByProjectId(1L);
+    }
 
     private static ProjectPostDTO getProjectPostDTO(User user) {
         ProjectPostDTO postDTO = new ProjectPostDTO();
