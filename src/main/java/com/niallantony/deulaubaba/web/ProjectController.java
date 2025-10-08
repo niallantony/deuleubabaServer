@@ -65,7 +65,7 @@ public class ProjectController {
     }
 
     @PatchMapping(path = "/status/{project_id}")
-    public ResponseEntity<ProjectUserStatusDTO> updateProjectStatus(
+    public ResponseEntity<?> updateProjectStatus(
             @CurrentUser String user_id,
             @PathVariable String project_id,
             @RequestBody String body
@@ -76,5 +76,30 @@ public class ProjectController {
         return ResponseEntity.noContent().location(
                 URI.create(ServletUriComponentsBuilder.fromCurrentContextPath().path("/project").toUriString() + "/" + project_id)
         ).build();
+    }
+
+    @PatchMapping(path = "/{project_id}")
+    public ResponseEntity<?> updateProject(
+            @CurrentUser String user_id,
+            @PathVariable String project_id,
+            @RequestPart(name = "data") String data,
+            @RequestPart(name = "image", required = false) MultipartFile image
+    ) {
+        try {
+            Long longProjectId = Long.parseLong(project_id);
+            ProjectDetailsPatchDTO request = jsonUtils.parse(
+                    data,
+                    ProjectDetailsPatchDTO.class,
+                    () -> new InvalidProjectDataException("Invalid request")
+            );
+            projectService.patchProjectDetails(user_id, longProjectId, request, image);
+            return ResponseEntity.noContent()
+                                 .location(
+                                         URI.create(ServletUriComponentsBuilder.fromCurrentContextPath().path("/project").toUriString() + "/" + project_id)
+                                 )
+                                 .build();
+        } catch (NumberFormatException e) {
+            throw new InvalidProjectDataException("Invalid project_id: " + project_id);
+        }
     }
 }

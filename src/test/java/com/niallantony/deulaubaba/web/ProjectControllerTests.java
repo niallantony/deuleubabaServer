@@ -2,9 +2,13 @@ package com.niallantony.deulaubaba.web;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.niallantony.deulaubaba.data.*;
+import com.niallantony.deulaubaba.domain.CommunicationCategory;
+import com.niallantony.deulaubaba.domain.CommunicationCategoryLabel;
 import com.niallantony.deulaubaba.domain.Project;
 import com.niallantony.deulaubaba.domain.ProjectUser;
+import com.niallantony.deulaubaba.dto.project.ProjectDetailsPatchDTO;
 import com.niallantony.deulaubaba.dto.project.ProjectPostDTO;
+import com.niallantony.deulaubaba.exceptions.FileStorageException;
 import com.niallantony.deulaubaba.services.FileStorageService;
 import com.niallantony.deulaubaba.util.ProjectTestFactory;
 import org.junit.ClassRule;
@@ -14,6 +18,7 @@ import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.http.HttpMethod;
 import org.springframework.mock.web.MockMultipartFile;
 import org.springframework.test.context.DynamicPropertyRegistry;
 import org.springframework.test.context.DynamicPropertySource;
@@ -26,13 +31,14 @@ import org.testcontainers.containers.PostgreSQLContainer;
 import org.testcontainers.junit.jupiter.Testcontainers;
 
 
+import java.io.FileNotFoundException;
 import java.time.LocalDate;
 import java.util.List;
+import java.util.Set;
 
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.Mockito.doCallRealMethod;
-import static org.mockito.Mockito.when;
+import static org.mockito.Mockito.*;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.jwt;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
@@ -469,4 +475,161 @@ public class ProjectControllerTests {
         assertTrue(project.getCompleted());
         assertTrue(LocalDate.of(2000, 1, 1).isBefore(project.getCompletedOn()));
     }
+
+    @Test
+    @SqlMergeMode(SqlMergeMode.MergeMode.MERGE)
+    @Sql({
+            "/fixtures/student_and_user.sql",
+            "/fixtures/project.sql"
+    })
+    public void patchProjectDetails_withGoodRequest_changesProjectDetails(@Autowired MockMvc mvc) throws Exception {
+        String redirect = ServletUriComponentsBuilder.fromCurrentContextPath().path("/project").toUriString() + "/1";
+        ProjectDetailsPatchDTO projectDetailsPatchDTO = new ProjectDetailsPatchDTO();
+        projectDetailsPatchDTO.setCategories(Set.of(CommunicationCategoryLabel.PAIN));
+        projectDetailsPatchDTO.setDescription("new description");
+        projectDetailsPatchDTO.setObjective("new objective");
+        projectDetailsPatchDTO.setStartedOn(LocalDate.of(2020,1,1));
+        String json = objectMapper.writeValueAsString(projectDetailsPatchDTO);
+        MockMultipartFile data = new MockMultipartFile("data", "data.json", "application/json", json.getBytes());
+        MockMultipartFile image = new MockMultipartFile("image", "new_image.jpg", "application/json", "image".getBytes());
+        when(fileStorageService.storeImage(image)).thenReturn("new_image.jpg");
+        doCallRealMethod().when(fileStorageService).swapImage(any(), any());
+
+        mvc.perform(multipart(HttpMethod.PATCH, "/project/1")
+                .file(data)
+                .file(image)
+                .with(jwt()))
+                .andExpect(status().isNoContent())
+                .andExpect(redirectedUrl(redirect))
+                .andDo((r) -> System.out.println(r.getResponse().getRedirectedUrl()));
+
+        Project project = projectRepository.findById(1L).orElseThrow();
+        assertAll(
+                () -> assertEquals("new_image.jpg", project.getImgsrc()),
+                () -> assertEquals(projectDetailsPatchDTO.getStartedOn(), project.getStartedOn()),
+                () -> assertEquals(projectDetailsPatchDTO.getDescription(), project.getDescription()),
+                () -> assertEquals(projectDetailsPatchDTO.getObjective(), project.getObjective()),
+                () -> assertEquals(1, project.getCategories().size()),
+                () -> assertTrue(project.getCategories().stream().allMatch(cat -> cat.getLabel().equals(CommunicationCategoryLabel.PAIN)))
+        );
+    }
+
+    @Test
+    @SqlMergeMode(SqlMergeMode.MergeMode.MERGE)
+    @Sql({
+            "/fixtures/student_and_user.sql",
+            "/fixtures/project.sql"
+    })
+    public void patchProjectDetails_withBadRequest_returns400(@Autowired MockMvc mvc) throws Exception {
+        String json = "json_placeholder";
+        MockMultipartFile data = new MockMultipartFile("data", "data.json", "application/json", json.getBytes());
+        mvc.perform(multipart(HttpMethod.PATCH, "/project/1")
+                   .file(data)
+                   .with(jwt()))
+           .andExpect(status().isBadRequest())
+            .andExpect(jsonPath("$.message").value("Invalid request"))
+           .andDo((r) -> System.out.println(r.getResponse().getRedirectedUrl()));
+    }
+
+    @Test
+    @SqlMergeMode(SqlMergeMode.MergeMode.MERGE)
+    @Sql({
+            "/fixtures/student_and_user.sql",
+            "/fixtures/project_unowned.sql"
+    })
+    public void patchProjectDetails_ofUnownedProject_returns401(@Autowired MockMvc mvc) throws Exception {
+        ProjectDetailsPatchDTO projectDetailsPatchDTO = new ProjectDetailsPatchDTO();
+        projectDetailsPatchDTO.setCategories(Set.of(CommunicationCategoryLabel.PAIN));
+        projectDetailsPatchDTO.setDescription("new description");
+        projectDetailsPatchDTO.setObjective("new objective");
+        projectDetailsPatchDTO.setStartedOn(LocalDate.of(2020,1,1));
+        String json = objectMapper.writeValueAsString(projectDetailsPatchDTO);
+        MockMultipartFile data = new MockMultipartFile("data", "data.json", "application/json", json.getBytes());
+
+        mvc.perform(multipart(HttpMethod.PATCH, "/project/1")
+                   .file(data)
+                   .with(jwt()))
+           .andExpect(status().isUnauthorized())
+            .andExpect(jsonPath("$.message").value("Unauthorized access"))
+           .andDo((r) -> System.out.println(r.getResponse().getRedirectedUrl()));
+    }
+
+    @Test
+    @SqlMergeMode(SqlMergeMode.MergeMode.MERGE)
+    @Sql({
+            "/fixtures/student_and_user.sql",
+    })
+    public void patchProjectDetails_ofMissingProject_returns404(@Autowired MockMvc mvc) throws Exception {
+        ProjectDetailsPatchDTO projectDetailsPatchDTO = new ProjectDetailsPatchDTO();
+        projectDetailsPatchDTO.setCategories(Set.of(CommunicationCategoryLabel.PAIN));
+        projectDetailsPatchDTO.setDescription("new description");
+        projectDetailsPatchDTO.setObjective("new objective");
+        projectDetailsPatchDTO.setStartedOn(LocalDate.of(2020,1,1));
+        String json = objectMapper.writeValueAsString(projectDetailsPatchDTO);
+        MockMultipartFile data = new MockMultipartFile("data", "data.json", "application/json", json.getBytes());
+
+        mvc.perform(multipart(HttpMethod.PATCH, "/project/2")
+                   .file(data)
+                   .with(jwt()))
+           .andExpect(status().isNotFound())
+           .andExpect(jsonPath("$.message").value("Project not found"))
+           .andDo((r) -> System.out.println(r.getResponse().getRedirectedUrl()));
+    }
+
+    @Test
+    @SqlMergeMode(SqlMergeMode.MergeMode.MERGE)
+    @Sql({
+            "/fixtures/student_and_user.sql",
+            "/fixtures/project.sql"
+    })
+    public void patchProjectDetails_whenImageFailsToSave_stillSavesProject(@Autowired MockMvc mvc) throws Exception {
+        String redirect = ServletUriComponentsBuilder.fromCurrentContextPath().path("/project").toUriString() + "/1";
+        ProjectDetailsPatchDTO projectDetailsPatchDTO = new ProjectDetailsPatchDTO();
+        projectDetailsPatchDTO.setCategories(Set.of(CommunicationCategoryLabel.PAIN));
+        projectDetailsPatchDTO.setDescription("new description");
+        projectDetailsPatchDTO.setObjective("new objective");
+        projectDetailsPatchDTO.setStartedOn(LocalDate.of(2020,1,1));
+        String json = objectMapper.writeValueAsString(projectDetailsPatchDTO);
+        MockMultipartFile data = new MockMultipartFile("data", "data.json", "application/json", json.getBytes());
+        MockMultipartFile image = new MockMultipartFile("image", "new_image.jpg", "application/json", "image".getBytes());
+        when(fileStorageService.storeImage(image)).thenThrow(FileStorageException.class);
+        doCallRealMethod().when(fileStorageService).swapImage(any(), any());
+
+        mvc.perform(multipart(HttpMethod.PATCH, "/project/1")
+                   .file(data)
+                   .file(image)
+                   .with(jwt()))
+           .andExpect(status().isNoContent())
+           .andExpect(redirectedUrl(redirect))
+           .andDo((r) -> System.out.println(r.getResponse().getRedirectedUrl()));
+
+        verify(fileStorageService, never()).deleteImage(any());
+        Project project = projectRepository.findById(1L).orElseThrow();
+        assertAll(
+                () -> assertEquals("example.jpg", project.getImgsrc()),
+                () -> assertEquals(projectDetailsPatchDTO.getStartedOn(), project.getStartedOn()),
+                () -> assertEquals(projectDetailsPatchDTO.getDescription(), project.getDescription()),
+                () -> assertEquals(projectDetailsPatchDTO.getObjective(), project.getObjective()),
+                () -> assertEquals(1, project.getCategories().size()),
+                () -> assertTrue(project.getCategories().stream().allMatch(cat -> cat.getLabel().equals(CommunicationCategoryLabel.PAIN)))
+        );
+    }
+
+    @Test
+    @SqlMergeMode(SqlMergeMode.MergeMode.MERGE)
+    @Sql({
+            "/fixtures/student_and_user.sql",
+    })
+    public void patchProjectDetails_withInvalidId_returns400(@Autowired MockMvc mvc) throws Exception {
+        String json = "json_placeholder";
+        MockMultipartFile data = new MockMultipartFile("data", "data.json", "application/json", json.getBytes());
+
+        mvc.perform(multipart(HttpMethod.PATCH, "/project/a")
+                   .file(data)
+                   .with(jwt()))
+           .andExpect(status().isBadRequest())
+           .andExpect(jsonPath("$.message").value("Invalid project_id: a"))
+           .andDo((r) -> System.out.println(r.getResponse().getRedirectedUrl()));
+    }
+
 }
