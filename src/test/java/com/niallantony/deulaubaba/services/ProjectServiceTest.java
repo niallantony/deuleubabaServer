@@ -2,13 +2,11 @@ package com.niallantony.deulaubaba.services;
 
 import com.niallantony.deulaubaba.data.*;
 import com.niallantony.deulaubaba.domain.*;
-import com.niallantony.deulaubaba.dto.project.ProjectCollectionsDTO;
-import com.niallantony.deulaubaba.dto.project.ProjectDTO;
-import com.niallantony.deulaubaba.dto.project.ProjectPostDTO;
-import com.niallantony.deulaubaba.dto.project.ProjectPreviewDTO;
+import com.niallantony.deulaubaba.dto.project.*;
 import com.niallantony.deulaubaba.exceptions.*;
 import com.niallantony.deulaubaba.mapper.ProjectMapper;
 import com.niallantony.deulaubaba.util.ProjectTestFactory;
+import net.bytebuddy.asm.Advice;
 import org.jetbrains.annotations.NotNull;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -16,6 +14,7 @@ import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.mock.web.MockMultipartFile;
+import org.springframework.web.multipart.MultipartFile;
 
 import java.time.LocalDate;
 import java.util.*;
@@ -416,6 +415,72 @@ public class ProjectServiceTest {
                 NoProjectsFoundException.class,
                 () ->projectService.checkProjectStatus(1L));
         verify(projectUserRepository, times(1)).findAllProjectUsersByProjectId(1L);
+    }
+
+    @Test void patchProjectDetails_whenGivenGoodRequest_updatesProject() {
+        Project mockProject = new Project();
+        CommunicationCategory pain = new CommunicationCategory();
+        pain.setLabel(CommunicationCategoryLabel.PAIN);
+        ProjectDetailsPatchDTO projectDetailsPatchDTO = new ProjectDetailsPatchDTO();
+        projectDetailsPatchDTO.setCategories(Set.of(CommunicationCategoryLabel.PAIN));
+        projectDetailsPatchDTO.setDescription("description");
+        projectDetailsPatchDTO.setObjective("objective");
+        projectDetailsPatchDTO.setStartedOn(LocalDate.of(2000,1,1));
+        User mockUser = new User();
+        MultipartFile image = new MockMultipartFile("image", "image", "image/jpg", "image".getBytes());
+        mockUser.setUserId("abc");
+        mockProject.setCreatedBy(mockUser);
+        when(projectRepository.findById(1L)).thenReturn(Optional.of(mockProject));
+        when(fileStorageService.storeImage(image)).thenReturn("new_url");
+        when(communicationCategoryRepository.findAll()).thenReturn(List.of(pain));
+        doCallRealMethod().when(fileStorageService).swapImage(any(), any());
+
+        projectService.patchProjectDetails("abc", 1L, projectDetailsPatchDTO, image );
+
+        assertEquals("new_url", mockProject.getImgsrc());
+        assertEquals("description", mockProject.getDescription());
+        assertEquals("objective", mockProject.getObjective());
+        assertEquals(LocalDate.of(2000,1,1), mockProject.getStartedOn());
+        assertTrue(mockProject.getCategories().contains(pain));
+    }
+
+    @Test void patchProjectDetails_whenGivenBadRequest_throwsBadRequestException() {
+        Project mockProject = new Project();
+        ProjectDetailsPatchDTO projectDetailsPatchDTO = new ProjectDetailsPatchDTO();
+        User mockUser = new User();
+        mockUser.setUserId("abc");
+        mockProject.setCreatedBy(mockUser);
+        when(projectRepository.findById(1L)).thenReturn(Optional.of(mockProject));
+        doCallRealMethod().when(fileStorageService).swapImage(any(), any());
+
+        assertThrows(
+                InvalidProjectDataException.class,
+                () ->projectService.patchProjectDetails("abc", 1L, projectDetailsPatchDTO, null )
+        );
+    }
+
+    @Test void patchProjectDetails_whenUserNotCreator_throwsUserNotAuthorizedException() {
+        Project mockProject = new Project();
+        ProjectDetailsPatchDTO projectDetailsPatchDTO = new ProjectDetailsPatchDTO();
+        User mockUser = new User();
+        mockUser.setUserId("def");
+        mockProject.setCreatedBy(mockUser);
+        when(projectRepository.findById(1L)).thenReturn(Optional.of(mockProject));
+
+        assertThrows(
+                UserNotAuthorizedException.class,
+                () ->projectService.patchProjectDetails("abc", 1L, projectDetailsPatchDTO, null )
+        );
+    }
+
+    @Test void patchProjectDetails_whenProjectDoesNotExist_throwsResourceNotFoundException() {
+        ProjectDetailsPatchDTO projectDetailsPatchDTO = new ProjectDetailsPatchDTO();
+        when(projectRepository.findById(1L)).thenReturn(Optional.empty());
+
+        assertThrows(
+                ResourceNotFoundException.class,
+                () ->projectService.patchProjectDetails("abc", 1L, projectDetailsPatchDTO, null )
+        );
     }
 
     @Test void checkProjectStatus_whenRepoReturnsInvalidUsers_returnsServerError() {

@@ -111,8 +111,18 @@ public class ProjectService {
             throw new UserNotAuthorizedException("Unauthorized access");
         }
         fileStorageService.swapImage(image, project);
+        validatePatch(request);
         applyDetailChanges(project, request);
         projectRepository.save(project);
+    }
+
+    private void validatePatch(ProjectDetailsPatchDTO request) {
+        if (
+                request.getCategories() == null
+                || request.getCategories().isEmpty()
+                || request.getObjective() == null
+                || request.getStartedOn() == null
+        ) throw new InvalidProjectDataException("Invalid patch request");
     }
 
     private void applyDetailChanges(Project project, ProjectDetailsPatchDTO request) {
