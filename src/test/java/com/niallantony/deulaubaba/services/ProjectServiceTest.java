@@ -544,7 +544,58 @@ public class ProjectServiceTest {
 
         verify(fileStorageService, times(1)).deleteImage("example.png");
         verify(projectRepository, times(1)).delete(mockProject);
+    }
 
+    @Test void addUser_whenValidRequest_addsUsersToProject() {
+        User mockCreator = new User();
+        mockCreator.setUserId("abc");
+        Project mockProject = new Project();
+        mockProject.setCreatedBy(mockCreator);
+        User mockNewUser = new User();
+        mockNewUser.setUserId("def");
+
+        when(projectRepository.findById(1L)).thenReturn(Optional.of(mockProject));
+        when(userRepository.findByIds(List.of("def"))).thenReturn(List.of(mockNewUser));
+
+        ProjectAddUserResponseDTO response = projectService.addUsersToProject("abc", 1L, new ProjectAddUserRequestDTO(List.of("def")));
+
+        assertTrue(mockProject.getUsers().stream().allMatch(pu -> pu.getUser().equals(mockNewUser)));
+        assertTrue(response.getNotFound().isEmpty());
+    }
+
+    @Test void addUser_whenUsersToProjectNotFound_returnsNotFound() {
+        User mockCreator = new User();
+        mockCreator.setUserId("abc");
+        Project mockProject = new Project();
+        mockProject.setCreatedBy(mockCreator);
+
+        when(projectRepository.findById(1L)).thenReturn(Optional.of(mockProject));
+        when(userRepository.findByIds(List.of("def"))).thenReturn(new ArrayList<>());
+
+        ProjectAddUserResponseDTO response = projectService.addUsersToProject("abc", 1L, new ProjectAddUserRequestDTO(List.of("def")));
+
+        assertTrue(mockProject.getUsers().isEmpty());
+        assertTrue(response.getNotFound().contains("def"));
+
+    }
+
+    @Test void addUser_whenNotCreator_throwsUsersToProjectNotAuthorizedException() {
+        Project mockProject = new Project();
+
+        when(projectRepository.findById(1L)).thenReturn(Optional.of(mockProject));
+
+        assertThrows(
+                UserNotAuthorizedException.class,
+                () -> projectService.addUsersToProject("abc", 1L, new ProjectAddUserRequestDTO(List.of("def")))
+        );
+    }
+
+    @Test void addUsersToProject_whenProjectNotFound_throwsResourceNotFoundException() {
+        when(projectRepository.findById(1L)).thenReturn(Optional.empty());
+        assertThrows(
+                ResourceNotFoundException.class,
+                () -> projectService.addUsersToProject("abc", 1L, new ProjectAddUserRequestDTO(List.of("def")))
+        );
     }
 
     private static ProjectPostDTO getProjectPostDTO(User user) {

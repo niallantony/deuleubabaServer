@@ -5,6 +5,7 @@ import com.niallantony.deulaubaba.exceptions.InvalidProjectDataException;
 import com.niallantony.deulaubaba.security.CurrentUser;
 import com.niallantony.deulaubaba.services.ProjectService;
 import com.niallantony.deulaubaba.utils.JsonUtils;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
@@ -112,6 +113,34 @@ public class ProjectController {
             Long longProjectId = Long.parseLong(project_id);
             projectService.deleteProject(user_id, longProjectId);
             return ResponseEntity.noContent().build();
+        } catch (NumberFormatException e) {
+            throw new InvalidProjectDataException("Invalid project_id: " + project_id);
+        }
+    }
+
+    @PatchMapping(path = "/{project_id}/add-user")
+    public ResponseEntity<ProjectAddUserResponseDTO> addUserToProject(
+            @CurrentUser String user_id,
+            @PathVariable String project_id,
+            @RequestBody String data
+    ) {
+        try {
+            Long longProjectId = Long.parseLong(project_id);
+            ProjectAddUserRequestDTO request = jsonUtils.parse(
+                    data,
+                    ProjectAddUserRequestDTO.class,
+                    () -> new InvalidProjectDataException("Invalid request")
+            );
+            ProjectAddUserResponseDTO response = projectService.addUsersToProject(
+                    user_id,
+                    longProjectId,
+                    request
+            );
+            if (response.getNotFound().size() == request.getToAdd().size()) {
+                return ResponseEntity.status(HttpStatus.NOT_FOUND).body(response);
+
+            }
+            return ResponseEntity.ok(response);
         } catch (NumberFormatException e) {
             throw new InvalidProjectDataException("Invalid project_id: " + project_id);
         }

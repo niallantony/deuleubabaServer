@@ -195,7 +195,33 @@ public class ProjectService {
         projectRepository.delete(project);
     }
 
-    public void addUser(String user_id, Long project_id, String toAdd) {}
+    public ProjectAddUserResponseDTO addUsersToProject(String user_id, Long project_id, ProjectAddUserRequestDTO request) {
+        Project project = projectRepository.findById(project_id).orElseThrow(
+                () -> new ResourceNotFoundException("Project not found")
+        );
+        if (project.getCreatedBy() == null || !project.getCreatedBy().getUserId().equals(user_id)) {
+            throw new UserNotAuthorizedException("Unauthorized access");
+        }
+        List<User> users = userRepository.findByIds(request.getToAdd());
+
+        List<String> notFound = request.getToAdd().stream().filter( name ->
+                users.stream()
+                     .filter(user -> user.getUserId() != null)
+                     .noneMatch(user -> user.getUserId().equals(name))
+        ).toList();
+
+        users.stream().filter(user ->
+                     project.getUsers().stream().noneMatch(current -> current.getUser().equals(user)) )
+             .forEach(user -> {
+                 ProjectUser projectUser = new ProjectUser();
+                 projectUser.setProject(project);
+                 projectUser.setUser(user);
+                 project.getUsers().add(projectUser);
+             });
+
+        projectRepository.save(project);
+        return new ProjectAddUserResponseDTO(notFound);
+    }
 
     private Set<ProjectUser> projectUsersFromPost(ProjectPostDTO post) {
         return post.getUsernames().stream().map(userRepository::findByUsername)

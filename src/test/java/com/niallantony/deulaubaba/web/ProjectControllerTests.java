@@ -5,6 +5,7 @@ import com.niallantony.deulaubaba.data.*;
 import com.niallantony.deulaubaba.domain.CommunicationCategoryLabel;
 import com.niallantony.deulaubaba.domain.Project;
 import com.niallantony.deulaubaba.domain.ProjectUser;
+import com.niallantony.deulaubaba.dto.project.ProjectAddUserRequestDTO;
 import com.niallantony.deulaubaba.dto.project.ProjectDetailsPatchDTO;
 import com.niallantony.deulaubaba.dto.project.ProjectPostDTO;
 import com.niallantony.deulaubaba.exceptions.FileStorageException;
@@ -707,5 +708,157 @@ public class ProjectControllerTests {
 
     }
 
+    @Test
+    @SqlMergeMode(SqlMergeMode.MergeMode.MERGE)
+    @Sql({
+            "/fixtures/student_and_user.sql",
+            "/fixtures/project.sql",
+            "/fixtures/user_another.sql"
+    })
+    public void addUserToProject_withValidId_addsANewProjectUser(@Autowired MockMvc mvc) throws Exception {
+        ProjectAddUserRequestDTO request = new ProjectAddUserRequestDTO(List.of("user2"));
+        String json = objectMapper.writeValueAsString(request);
+        mvc.perform(patch("/project/1/add-user")
+                .with(jwt())
+                .content(json))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.notFound.length()").value(0))
+                .andDo((r) -> System.out.println(r.getResponse().getContentAsString()));
+
+        Project project = projectRepository.findById(1L).orElseThrow();
+        List<ProjectUser> users = projectUserRepository.findAllProjectUsersByProjectId(1L);
+        assertEquals(2, users.size());
+        assertEquals(2, project.getUsers().size());
+        assertTrue(users.stream().anyMatch(user -> user.getUser().getUserId().equals("user2")));
+    }
+
+    @Test
+    @SqlMergeMode(SqlMergeMode.MergeMode.MERGE)
+    @Sql({
+            "/fixtures/student_and_user.sql",
+            "/fixtures/project.sql",
+    })
+    public void addUserToProject_whenUserDoesNotExist_returnsNotFound(@Autowired MockMvc mvc) throws Exception {
+        ProjectAddUserRequestDTO request = new ProjectAddUserRequestDTO(List.of("user2"));
+        String json = objectMapper.writeValueAsString(request);
+        mvc.perform(patch("/project/1/add-user")
+                   .with(jwt())
+                   .content(json))
+           .andExpect(status().isNotFound())
+           .andExpect(jsonPath("$.notFound.length()").value(1))
+                .andExpect(jsonPath("$.notFound[0]").value("user2"))
+           .andDo((r) -> System.out.println(r.getResponse().getContentAsString()));
+
+        Project project = projectRepository.findById(1L).orElseThrow();
+        List<ProjectUser> users = projectUserRepository.findAllProjectUsersByProjectId(1L);
+        assertEquals(1, users.size());
+        assertEquals(1, project.getUsers().size());
+        assertTrue(users.stream().noneMatch(user -> user.getUser().getUserId().equals("user2")));
+    }
+
+
+    @Test
+    @SqlMergeMode(SqlMergeMode.MergeMode.MERGE)
+    @Sql({
+            "/fixtures/student_and_user.sql",
+            "/fixtures/project.sql",
+            "/fixtures/user_another.sql"
+    })
+    public void addUserToProject_whenSomeUsersDoNotExist_returnsOkWithNotFoundUsers(@Autowired MockMvc mvc) throws Exception {
+        ProjectAddUserRequestDTO request = new ProjectAddUserRequestDTO(List.of("user2", "user3"));
+        String json = objectMapper.writeValueAsString(request);
+        mvc.perform(patch("/project/1/add-user")
+                   .with(jwt())
+                   .content(json))
+           .andExpect(status().isOk())
+           .andExpect(jsonPath("$.notFound.length()").value(1))
+           .andExpect(jsonPath("$.notFound[0]").value("user3"))
+           .andDo((r) -> System.out.println(r.getResponse().getContentAsString()));
+
+        Project project = projectRepository.findById(1L).orElseThrow();
+        List<ProjectUser> users = projectUserRepository.findAllProjectUsersByProjectId(1L);
+        assertEquals(2, users.size());
+        assertEquals(2, project.getUsers().size());
+        assertTrue(users.stream().anyMatch(user -> user.getUser().getUserId().equals("user2")));
+        assertTrue(users.stream().noneMatch(user -> user.getUser().getUserId().equals("user3")));
+    }
+
+    @SqlMergeMode(SqlMergeMode.MergeMode.MERGE)
+    @Sql({
+            "/fixtures/student_and_user.sql",
+            "/fixtures/project_two_users.sql",
+            "/fixtures/user_another.sql"
+    })
+    @Test
+    public void addUserToProject_whenGivenAUserAlreadyAdded_doesNotAddTheUserTwice(@Autowired MockMvc mvc) throws Exception {
+        ProjectAddUserRequestDTO request = new ProjectAddUserRequestDTO(List.of("user2", "user3"));
+        String json = objectMapper.writeValueAsString(request);
+        mvc.perform(patch("/project/1/add-user")
+                   .with(jwt())
+                   .content(json))
+           .andExpect(status().isOk())
+           .andExpect(jsonPath("$.notFound.length()").value(0))
+           .andDo((r) -> System.out.println(r.getResponse().getContentAsString()));
+
+        Project project = projectRepository.findById(1L).orElseThrow();
+        List<ProjectUser> users = projectUserRepository.findAllProjectUsersByProjectId(1L);
+        assertAll(
+                () -> assertEquals(3, users.size()),
+                () -> assertEquals(3, project.getUsers().size()),
+                () -> assertTrue(users.stream().anyMatch(user -> user.getUser().getUserId().equals("user"))),
+                () -> assertTrue(users.stream().anyMatch(user -> user.getUser().getUserId().equals("user2"))),
+                () -> assertTrue(users.stream().anyMatch(user -> user.getUser().getUserId().equals("user3")))
+        );
+    }
+
+    @SqlMergeMode(SqlMergeMode.MergeMode.MERGE)
+    @Sql({
+            "/fixtures/student_and_user.sql",
+            "/fixtures/project_unowned.sql",
+    })
+    @Test
+    public void addUserToProject_whenProjectIsNotOwned_returns401(@Autowired MockMvc mvc) throws Exception {
+        ProjectAddUserRequestDTO request = new ProjectAddUserRequestDTO(List.of("user2"));
+        String json = objectMapper.writeValueAsString(request);
+        mvc.perform(patch("/project/1/add-user")
+                   .with(jwt())
+                   .content(json))
+           .andExpect(status().isUnauthorized())
+           .andExpect(jsonPath("$.message").value("Unauthorized access"))
+           .andDo((r) -> System.out.println(r.getResponse().getContentAsString()));
+
+    }
+
+    @SqlMergeMode(SqlMergeMode.MergeMode.MERGE)
+    @Sql({
+            "/fixtures/student_and_user.sql",
+    })
+    @Test
+    public void addUserToProject_whenProjectDoesNotExist_throws404(@Autowired MockMvc mvc) throws Exception {
+        ProjectAddUserRequestDTO request = new ProjectAddUserRequestDTO(List.of("user2"));
+        String json = objectMapper.writeValueAsString(request);
+        mvc.perform(patch("/project/2/add-user")
+                   .with(jwt())
+                   .content(json))
+           .andExpect(status().isNotFound())
+           .andExpect(jsonPath("$.message").value("Project not found"))
+           .andDo((r) -> System.out.println(r.getResponse().getContentAsString()));
+    }
+
+    @SqlMergeMode(SqlMergeMode.MergeMode.MERGE)
+    @Sql({
+            "/fixtures/student_and_user.sql",
+    })
+    @Test
+    public void addUserToProject_whenProjecIdIsNotNumber_throws400(@Autowired MockMvc mvc) throws Exception {
+        ProjectAddUserRequestDTO request = new ProjectAddUserRequestDTO(List.of("user2"));
+        String json = objectMapper.writeValueAsString(request);
+        mvc.perform(patch("/project/a/add-user")
+                   .with(jwt())
+                   .content(json))
+           .andExpect(status().isBadRequest())
+           .andExpect(jsonPath("$.message").value("Invalid project_id: a"))
+           .andDo((r) -> System.out.println(r.getResponse().getContentAsString()));
+    }
 
 }
