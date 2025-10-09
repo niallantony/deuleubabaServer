@@ -175,6 +175,28 @@ public class ProjectService {
         }
     }
 
+    public void deleteProject(String user_id, Long project_id) {
+        Project project = projectRepository.findById(project_id).orElseThrow(
+                () -> new ResourceNotFoundException("Project not found")
+        );
+        if (
+                project.getCreatedBy() == null ||
+                !project.getCreatedBy().getUserId().equals(user_id)
+        ) {
+            throw new UserNotAuthorizedException("Unauthorized access");
+        }
+        if (project.getImgsrc() != null) {
+            try {
+                fileStorageService.deleteImage(project.getImgsrc());
+            } catch (FileStorageException e) {
+                log.warn("Image not deleted: {}", project.getImgsrc(), e);
+            }
+        }
+        projectRepository.delete(project);
+    }
+
+    public void addUser(String user_id, Long project_id, String toAdd) {}
+
     private Set<ProjectUser> projectUsersFromPost(ProjectPostDTO post) {
         return post.getUsernames().stream().map(userRepository::findByUsername)
                 .map(userOptional -> {

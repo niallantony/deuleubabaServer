@@ -2,7 +2,6 @@ package com.niallantony.deulaubaba.web;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.niallantony.deulaubaba.data.*;
-import com.niallantony.deulaubaba.domain.CommunicationCategory;
 import com.niallantony.deulaubaba.domain.CommunicationCategoryLabel;
 import com.niallantony.deulaubaba.domain.Project;
 import com.niallantony.deulaubaba.domain.ProjectUser;
@@ -31,7 +30,6 @@ import org.testcontainers.containers.PostgreSQLContainer;
 import org.testcontainers.junit.jupiter.Testcontainers;
 
 
-import java.io.FileNotFoundException;
 import java.time.LocalDate;
 import java.util.List;
 import java.util.Set;
@@ -631,5 +629,83 @@ public class ProjectControllerTests {
            .andExpect(jsonPath("$.message").value("Invalid project_id: a"))
            .andDo((r) -> System.out.println(r.getResponse().getRedirectedUrl()));
     }
+
+    @Test
+    @SqlMergeMode(SqlMergeMode.MergeMode.MERGE)
+    @Sql({
+            "/fixtures/student_and_user.sql",
+            "/fixtures/project_completed.sql"
+    })
+    public void deleteProject_withValidId_deletesProjectAndUsers(@Autowired MockMvc mvc) throws Exception {
+        mvc.perform(delete("/project/1")
+                .with(jwt()))
+                .andExpect(status().isNoContent());
+
+        List<Project> projects = projectRepository.findAll();
+        List<ProjectUser> users = projectUserRepository.findAllProjectUsersByProjectId(1L);
+        assertEquals(0, projects.size());
+        assertEquals(0, users.size());
+
+    }
+
+    @Test
+    @SqlMergeMode(SqlMergeMode.MergeMode.MERGE)
+    @Sql({
+            "/fixtures/student_and_user.sql",
+            "/fixtures/project.sql"
+    })
+    public void deleteProject_withInvalidId_throws404(@Autowired MockMvc mvc) throws Exception {
+        mvc.perform(delete("/project/2")
+                   .with(jwt()))
+           .andExpect(status().isNotFound())
+            .andExpect(jsonPath("$.message").value("Project not found"));
+
+        List<Project> projects = projectRepository.findAll();
+        List<ProjectUser> users = projectUserRepository.findAllProjectUsersByProjectId(1L);
+        assertEquals(1, projects.size());
+        assertEquals(1, users.size());
+        verifyNoInteractions(fileStorageService);
+
+    }
+
+    @Test
+    @SqlMergeMode(SqlMergeMode.MergeMode.MERGE)
+    @Sql({
+            "/fixtures/student_and_user.sql",
+            "/fixtures/project_unowned.sql"
+    })
+    public void deleteProject_asUnauthorizedUser_throws401(@Autowired MockMvc mvc) throws Exception {
+        mvc.perform(delete("/project/1")
+                   .with(jwt()))
+           .andExpect(status().isUnauthorized())
+                .andExpect(jsonPath("$.message").value("Unauthorized access"));
+
+        List<Project> projects = projectRepository.findAll();
+        List<ProjectUser> users = projectUserRepository.findAllProjectUsersByProjectId(1L);
+        assertEquals(1, projects.size());
+        assertEquals(2, users.size());
+        verifyNoInteractions(fileStorageService);
+    }
+
+    @Test
+    @SqlMergeMode(SqlMergeMode.MergeMode.MERGE)
+    @Sql({
+            "/fixtures/student_and_user.sql",
+            "/fixtures/project.sql"
+    })
+    public void deleteProject_withMisformedId_throws400(@Autowired MockMvc mvc) throws Exception {
+        mvc.perform(delete("/project/a")
+                   .with(jwt()))
+           .andExpect(status().isBadRequest())
+           .andExpect(jsonPath("$.message").value("Invalid project_id: a"));
+
+        List<Project> projects = projectRepository.findAll();
+        List<ProjectUser> users = projectUserRepository.findAllProjectUsersByProjectId(1L);
+        assertEquals(1, projects.size());
+        assertEquals(1, users.size());
+        verifyNoInteractions(fileStorageService);
+
+    }
+
 
 }

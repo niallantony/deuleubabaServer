@@ -102,4 +102,18 @@ public class ProjectController {
             throw new InvalidProjectDataException("Invalid project_id: " + project_id);
         }
     }
+
+    @DeleteMapping(path = "/{project_id}")
+    public ResponseEntity<?> deleteProject(
+            @CurrentUser String user_id,
+            @PathVariable String project_id
+    ) {
+        try {
+            Long longProjectId = Long.parseLong(project_id);
+            projectService.deleteProject(user_id, longProjectId);
+            return ResponseEntity.noContent().build();
+        } catch (NumberFormatException e) {
+            throw new InvalidProjectDataException("Invalid project_id: " + project_id);
+        }
+    }
 }

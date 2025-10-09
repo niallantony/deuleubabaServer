@@ -499,6 +499,54 @@ public class ProjectServiceTest {
         verify(projectUserRepository, times(1)).findAllProjectUsersByProjectId(1L);
     }
 
+    @Test void deleteProject_withValidDetails_deletesProject() {
+        Project mockProject = new Project();
+        mockProject.setImgsrc("example.png");
+        User mockUser = new User();
+        mockUser.setUserId("abc");
+        mockProject.setCreatedBy(mockUser);
+
+        when(projectRepository.findById(1L)).thenReturn(Optional.of(mockProject));
+
+        projectService.deleteProject("abc", 1L);
+
+        verify(fileStorageService, times(1)).deleteImage("example.png");
+        verify(projectRepository, times(1)).delete(mockProject);
+    }
+
+    @Test void deleteProject_withIncorrectId_throwsResourceNotFoundException() {
+        when(projectRepository.findById(1L)).thenReturn(Optional.empty());
+        assertThrows(
+                ResourceNotFoundException.class,
+                () -> projectService.deleteProject("abc", 1L)
+        );
+    }
+
+    @Test void deleteProject_calledByUnauthorizedUser_throwsUserNotAuthorizedException() {
+        when(projectRepository.findById(1L)).thenReturn(Optional.of(new Project()));
+        assertThrows(
+                UserNotAuthorizedException.class,
+                () -> projectService.deleteProject("abc", 1L)
+        );
+    }
+
+    @Test void deleteProject_whenDeleteFileFails_stillDeletesProject() {
+        Project mockProject = new Project();
+        mockProject.setImgsrc("example.png");
+        User mockUser = new User();
+        mockUser.setUserId("abc");
+        mockProject.setCreatedBy(mockUser);
+
+        when(projectRepository.findById(1L)).thenReturn(Optional.of(mockProject));
+        doThrow(FileStorageException.class).when(fileStorageService).deleteImage(any());
+
+        projectService.deleteProject("abc", 1L);
+
+        verify(fileStorageService, times(1)).deleteImage("example.png");
+        verify(projectRepository, times(1)).delete(mockProject);
+
+    }
+
     private static ProjectPostDTO getProjectPostDTO(User user) {
         ProjectPostDTO postDTO = new ProjectPostDTO();
         postDTO.setStudentId("123");
