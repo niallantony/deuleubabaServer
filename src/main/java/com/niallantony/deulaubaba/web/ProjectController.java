@@ -53,6 +53,19 @@ public class ProjectController {
         return ResponseEntity.ok(projectService.getProjectsOfStudent(user_id, student_id));
     }
 
+    @GetMapping(path = "/{project_id}/feed")
+    public ResponseEntity<ProjectFeedDTO> getProjectFeed(
+            @CurrentUser String id,
+            @PathVariable String project_id
+    ) {
+        try {
+            Long projectId = Long.parseLong(project_id);
+            return ResponseEntity.ok(projectService.getProjectFeed(projectId, id));
+        } catch (NumberFormatException e) {
+            throw new InvalidProjectDataException("Invalid project id: " + project_id);
+        }
+    }
+
     @PostMapping()
     public ResponseEntity<ProjectDTO> createProject(
             @CurrentUser String user_id,
