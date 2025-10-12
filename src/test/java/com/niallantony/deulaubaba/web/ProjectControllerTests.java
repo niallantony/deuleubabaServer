@@ -861,4 +861,18 @@ public class ProjectControllerTests {
            .andDo((r) -> System.out.println(r.getResponse().getContentAsString()));
     }
 
+    @SqlMergeMode(SqlMergeMode.MergeMode.MERGE)
+    @Sql({
+        "/fixtures/student_and_user.sql",
+        "/fixtures/project.sql",
+        "/fixtures/project_feed_items.sql"
+    })
+    @Test
+    public void getProjectFeed_withValidRequest_returnsProjectFeed(@Autowired MockMvc mvc) throws Exception {
+        mvc.perform(get("/project/1/feed")
+                .with(jwt()))
+                .andExpect(status().isOk())
+                .andDo(r -> System.out.println(r.getResponse().getContentAsString()));
+    }
+
 }
