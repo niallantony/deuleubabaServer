@@ -18,6 +18,9 @@ public class ProjectFeedItem {
     @OneToOne(fetch = FetchType.LAZY)
     private User user;
 
+    @Column(nullable = false)
+    private ProjectFeedItemType type;
+
     private String body;
 
     private LocalDateTime createdAt;
