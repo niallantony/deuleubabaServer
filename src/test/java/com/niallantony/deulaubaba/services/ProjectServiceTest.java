@@ -615,8 +615,38 @@ public class ProjectServiceTest {
         ProjectFeedDTO response = projectService.getProjectFeed(1L, "abc");
 
         assertEquals(itemDTO, response.getFeed().getFirst());
+    }
 
+    @Test void getProjectFeed_whenNoFeedItems_returnsEmptyList() {
+        Project mockProject = new Project();
+        User mockUser = new User();
+        mockUser.setUserId("abc");
+        ProjectUser projectUser = new ProjectUser();
+        projectUser.setUser(mockUser);
+        projectUser.setProject(mockProject);
+        mockProject.getUsers().add(projectUser);
 
+        when(projectRepository.findById(1L)).thenReturn(Optional.of(mockProject));
+        when(projectFeedRepository.findByProjectIdOrderByCreatedAtDesc(1L)).thenReturn(List.of());
+        ProjectFeedDTO response = projectService.getProjectFeed(1L, "abc");
+        assertTrue(response.getFeed().isEmpty());
+    }
+
+    @Test void getProjectFeed_whenProjectNotFound_throwsResourceNotFoundException() {
+        when(projectRepository.findById(1L)).thenReturn(Optional.empty());
+        assertThrows(
+                ResourceNotFoundException.class,
+                () -> projectService.getProjectFeed(1L, "abc")
+        );
+    }
+
+    @Test void getProjectFeed_whenUnauthorizedUser_throwsUnauthorizedUserException() {
+        Project mockProject = new Project();
+        when(projectRepository.findById(1L)).thenReturn(Optional.of(mockProject));
+        assertThrows(
+                UserNotAuthorizedException.class,
+                () -> projectService.getProjectFeed(1L, "abc")
+        );
     }
 
     private static ProjectPostDTO getProjectPostDTO(User user) {
