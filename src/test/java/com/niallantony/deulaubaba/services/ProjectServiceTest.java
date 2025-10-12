@@ -4,6 +4,7 @@ import com.niallantony.deulaubaba.data.*;
 import com.niallantony.deulaubaba.domain.*;
 import com.niallantony.deulaubaba.dto.project.*;
 import com.niallantony.deulaubaba.exceptions.*;
+import com.niallantony.deulaubaba.mapper.ProjectFeedMapper;
 import com.niallantony.deulaubaba.mapper.ProjectMapper;
 import com.niallantony.deulaubaba.util.ProjectTestFactory;
 import org.jetbrains.annotations.NotNull;
@@ -30,6 +31,9 @@ public class ProjectServiceTest {
     private ProjectMapper projectMapper;
 
     @Mock
+    private ProjectFeedMapper projectFeedMapper;
+
+    @Mock
     private UserRepository userRepository;
 
     @Mock
@@ -43,6 +47,9 @@ public class ProjectServiceTest {
 
     @Mock
     private CommunicationCategoryRepository communicationCategoryRepository;
+
+    @Mock
+    private ProjectFeedRepository projectFeedRepository;
 
     @InjectMocks
     private ProjectService projectService;
@@ -596,6 +603,28 @@ public class ProjectServiceTest {
                 ResourceNotFoundException.class,
                 () -> projectService.addUsersToProject("abc", 1L, new ProjectAddUserRequestDTO(List.of("def")))
         );
+    }
+
+    @Test void getProjectFeed_whenValidRequest_returnsProjectFeed() {
+        Project mockProject = new Project();
+        User mockUser = new User();
+        mockUser.setUserId("abc");
+        ProjectUser projectUser = new ProjectUser();
+        projectUser.setUser(mockUser);
+        projectUser.setProject(mockProject);
+        mockProject.getUsers().add(projectUser);
+        List<ProjectFeedItem> repoReturn = List.of(new ProjectFeedItem());
+        ProjectFeedItemDTO itemDTO = new ProjectFeedItemDTO();
+
+        when(projectRepository.findById(1L)).thenReturn(Optional.of(mockProject));
+        when(projectFeedRepository.findByProjectIdOrderByCreatedAtDesc(1L)).thenReturn(repoReturn);
+        when(projectFeedMapper.entityToDto(repoReturn.getFirst())).thenReturn(itemDTO);
+
+        ProjectFeedDTO response = projectService.getProjectFeed(1L, "abc");
+
+        assertEquals(itemDTO, response.getFeed().getFirst());
+
+
     }
 
     private static ProjectPostDTO getProjectPostDTO(User user) {

@@ -4,8 +4,10 @@ import com.niallantony.deulaubaba.data.*;
 import com.niallantony.deulaubaba.domain.*;
 import com.niallantony.deulaubaba.dto.project.*;
 import com.niallantony.deulaubaba.exceptions.*;
+import com.niallantony.deulaubaba.mapper.ProjectFeedMapper;
 import com.niallantony.deulaubaba.mapper.ProjectMapper;
 import lombok.extern.slf4j.Slf4j;
+import org.jetbrains.annotations.NotNull;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
 
@@ -22,11 +24,13 @@ public class ProjectService {
 
     private final ProjectRepository projectRepository;
     private final ProjectMapper projectMapper;
+    private final ProjectFeedMapper projectFeedMapper;
     private final UserRepository userRepository;
     private final StudentRepository studentRepository;
     private final FileStorageService fileStorageService;
     private final CommunicationCategoryRepository communicationCategoryRepository;
     private final ProjectUserRepository projectUserRepository;
+    private final ProjectFeedRepository projectFeedRepository;
 
     public ProjectService(
             ProjectRepository projectRepository,
@@ -35,7 +39,9 @@ public class ProjectService {
             StudentRepository studentRepository,
             FileStorageService fileStorageService,
             CommunicationCategoryRepository communicationCategoryRepository,
-            ProjectUserRepository projectUserRepository
+            ProjectUserRepository projectUserRepository,
+            ProjectFeedMapper projectFeedMapper,
+            ProjectFeedRepository projectFeedRepository
     ) {
         this.projectRepository = projectRepository;
         this.projectMapper = projectMapper;
@@ -44,16 +50,14 @@ public class ProjectService {
         this.fileStorageService = fileStorageService;
         this.communicationCategoryRepository = communicationCategoryRepository;
         this.projectUserRepository = projectUserRepository;
+        this.projectFeedRepository = projectFeedRepository;
+        this.projectFeedMapper = projectFeedMapper;
     }
 
+    // TODO: Pass Long to this service
     public ProjectDTO getProject(String project_id, String user_id) {
         Long longProjectId = Long.parseLong(project_id);
-        Project project = projectRepository.findById(longProjectId).orElseThrow(
-                () -> new ResourceNotFoundException("Project not found")
-        );
-        if (!userAssignedToProject(user_id, project)) {
-            throw new UserNotAuthorizedException("Unauthorized access");
-        }
+        Project project = getAuthorizedProject(longProjectId, user_id);
         ProjectDTO projectDTO = projectMapper.entityToDto(project);
         if (project.getCreatedBy().getUserId().equals(user_id)) {
            projectDTO.isOwnProject(true);
@@ -82,6 +86,20 @@ public class ProjectService {
         }
         return createCollections(project);
     }
+
+    public ProjectFeedDTO getProjectFeed(Long project_id, String user_id) {
+        getAuthorizedProject(project_id, user_id);
+        List<ProjectFeedItemDTO> feedItems = projectFeedRepository
+                .findByProjectIdOrderByCreatedAtDesc(project_id)
+                .stream()
+                .map(projectFeedMapper::entityToDto)
+                .toList();
+        ProjectFeedDTO response = new ProjectFeedDTO();
+        response.setFeed(feedItems);
+        return response;
+    }
+
+
 
     public ProjectDTO createProject(ProjectPostDTO request, MultipartFile image, String user_id) {
         User user = getUserOrThrow(user_id);
@@ -132,6 +150,7 @@ public class ProjectService {
         project.setCategories(getCategories(request.getCategories()));
     }
 
+    // TODO: Pass long to this method
     public void changeCompletedStatus(String user_id, String project_id, boolean completed)  {
         long longProjectId;
         try {
@@ -176,15 +195,7 @@ public class ProjectService {
     }
 
     public void deleteProject(String user_id, Long project_id) {
-        Project project = projectRepository.findById(project_id).orElseThrow(
-                () -> new ResourceNotFoundException("Project not found")
-        );
-        if (
-                project.getCreatedBy() == null ||
-                !project.getCreatedBy().getUserId().equals(user_id)
-        ) {
-            throw new UserNotAuthorizedException("Unauthorized access");
-        }
+        Project project = getCreatedProject(user_id, project_id);
         if (project.getImgsrc() != null) {
             try {
                 fileStorageService.deleteImage(project.getImgsrc());
@@ -196,12 +207,7 @@ public class ProjectService {
     }
 
     public ProjectAddUserResponseDTO addUsersToProject(String user_id, Long project_id, ProjectAddUserRequestDTO request) {
-        Project project = projectRepository.findById(project_id).orElseThrow(
-                () -> new ResourceNotFoundException("Project not found")
-        );
-        if (project.getCreatedBy() == null || !project.getCreatedBy().getUserId().equals(user_id)) {
-            throw new UserNotAuthorizedException("Unauthorized access");
-        }
+        Project project = getCreatedProject(user_id, project_id);
         List<User> users = userRepository.findByIds(request.getToAdd());
 
         List<String> notFound = request.getToAdd().stream().filter( name ->
@@ -221,6 +227,16 @@ public class ProjectService {
 
         projectRepository.save(project);
         return new ProjectAddUserResponseDTO(notFound);
+    }
+
+    private @NotNull Project getCreatedProject(String user_id, Long project_id) {
+        Project project = projectRepository.findById(project_id).orElseThrow(
+                () -> new ResourceNotFoundException("Project not found")
+        );
+        if (project.getCreatedBy() == null || !project.getCreatedBy().getUserId().equals(user_id)) {
+            throw new UserNotAuthorizedException("Unauthorized access");
+        }
+        return project;
     }
 
     private Set<ProjectUser> projectUsersFromPost(ProjectPostDTO post) {
@@ -285,5 +301,15 @@ public class ProjectService {
         return project.getUsers().stream()
                 .filter(projectUser -> projectUser.getUser() != null)
                 .anyMatch(projectUser -> projectUser.getUser().getUserId().equals(user_id));
+    }
+
+    private Project getAuthorizedProject(Long project_id, String user_id) {
+        Project project = projectRepository.findById(project_id).orElseThrow(
+                () -> new ResourceNotFoundException("Project not found")
+        );
+        if (!userAssignedToProject(user_id, project)) {
+            throw new UserNotAuthorizedException("Unauthorized access");
+        }
+        return project;
     }
 }
