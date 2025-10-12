@@ -11,6 +11,7 @@ public interface ProjectFeedMapper {
     ProjectFeedItemDTO entityToDto(ProjectFeedItem item);
 
     default UserAvatar entityToAvatar(User user) {
+        if (user == null) return null;
         return new UserAvatar(
                 user.getUsername(),
                 user.getImagesrc(),
