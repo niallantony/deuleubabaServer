@@ -73,7 +73,7 @@ public class Project extends HasImage{
     @JsonBackReference
     private User createdBy;
 
-    @OneToMany(fetch = FetchType.LAZY)
+    @OneToMany(fetch = FetchType.LAZY, mappedBy = "project", cascade = CascadeType.ALL, orphanRemoval = true)
     private List<ProjectFeedItem> feed = new ArrayList<>();
 
     public void setUsers(Set<ProjectUser> users) {
