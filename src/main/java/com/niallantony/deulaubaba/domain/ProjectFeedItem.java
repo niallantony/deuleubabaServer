@@ -15,10 +15,11 @@ public class ProjectFeedItem {
     @ManyToOne(optional = false, fetch = FetchType.LAZY)
     private Project project;
 
-    @OneToOne(fetch = FetchType.LAZY)
+    @ManyToOne(fetch = FetchType.LAZY)
     private User user;
 
     @Column(nullable = false)
+    @Enumerated(EnumType.STRING)
     private ProjectFeedItemType type;
 
     private String body;
