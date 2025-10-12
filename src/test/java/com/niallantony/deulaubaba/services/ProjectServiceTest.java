@@ -66,7 +66,7 @@ public class ProjectServiceTest {
         when(projectRepository.findById(1L)).thenReturn(Optional.of(persistedProject));
         when(projectMapper.entityToDto(persistedProject)).thenReturn(expectedProject);
 
-        ProjectDTO response = projectService.getProject("1", "abc");
+        ProjectDTO response = projectService.getProject(1L, "abc");
         verify(projectRepository, times(1)).findById(1L);
         verify(projectMapper, times(1)).entityToDto(persistedProject);
         assertEquals(expectedProject, response);
@@ -75,7 +75,7 @@ public class ProjectServiceTest {
     @Test
     public void getProject_whenGivenInvalidId_throwsResourceNotFoundException() {
         when(projectRepository.findById(1L)).thenReturn(Optional.empty());
-        assertThrows(ResourceNotFoundException.class, () -> projectService.getProject("1", "abc"));
+        assertThrows(ResourceNotFoundException.class, () -> projectService.getProject(1L, "abc"));
     }
 
     @Test
@@ -83,7 +83,7 @@ public class ProjectServiceTest {
         Project persistedProject = new Project();
 
         when(projectRepository.findById(1L)).thenReturn(Optional.of(persistedProject));
-        assertThrows(UserNotAuthorizedException.class, () -> projectService.getProject("1", "abc"));
+        assertThrows(UserNotAuthorizedException.class, () -> projectService.getProject(1L, "abc"));
     }
 
     @Test
@@ -310,8 +310,8 @@ public class ProjectServiceTest {
         when(projectUserRepository.findProjectUserById("abc", 2L)).thenReturn(Optional.of(completedProjectUser));
         when(projectUserRepository.findAllProjectUsersByProjectId(1L)).thenReturn(List.of(projectUser));
         when(projectUserRepository.findAllProjectUsersByProjectId(2L)).thenReturn(List.of(completedProjectUser));
-        projectService.changeCompletedStatus("abc", "1", true);
-        projectService.changeCompletedStatus("abc", "2", false);
+        projectService.changeCompletedStatus("abc", 1L, true);
+        projectService.changeCompletedStatus("abc", 2L, false);
         assertTrue(projectUser.getIsCompleted());
         assertNotNull(projectUser.getCompletedOn());
         assertNull(completedProjectUser.getCompletedOn());
@@ -327,8 +327,8 @@ public class ProjectServiceTest {
         completedProjectUser.setCompletedOn(date);
         when(projectUserRepository.findProjectUserById("abc", 1L)).thenReturn(Optional.of(projectUser));
         when(projectUserRepository.findProjectUserById("abc", 2L)).thenReturn(Optional.of(completedProjectUser));
-        projectService.changeCompletedStatus("abc", "1", false);
-        projectService.changeCompletedStatus("abc", "2", true);
+        projectService.changeCompletedStatus("abc", 1L, false);
+        projectService.changeCompletedStatus("abc", 2L, true);
         assertTrue(completedProjectUser.getIsCompleted());
         assertFalse(projectUser.getIsCompleted());
         assertEquals(date, completedProjectUser.getCompletedOn());
@@ -339,17 +339,9 @@ public class ProjectServiceTest {
         when(projectUserRepository.findProjectUserById("abc", 1L)).thenReturn(Optional.empty());
         ResourceNotFoundException exception = assertThrows(
                 ResourceNotFoundException.class,
-                () -> projectService.changeCompletedStatus("abc", "1", true)
+                () -> projectService.changeCompletedStatus("abc", 1L, true)
         );
         assertEquals("Project user not found", exception.getMessage());
-    }
-
-    @Test void updateProjectStatus_withMalformedProjectId_throws400() {
-        InvalidProjectDataException exception = assertThrows(
-                InvalidProjectDataException.class,
-                () -> projectService.changeCompletedStatus("abc", "a", false)
-        );
-        assertEquals("Invalid project ID", exception.getMessage());
     }
 
     @Test void checkProjectStatus_whenAllStudentsDone_changesProjectStatus() {

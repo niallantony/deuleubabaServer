@@ -54,10 +54,8 @@ public class ProjectService {
         this.projectFeedMapper = projectFeedMapper;
     }
 
-    // TODO: Pass Long to this service
-    public ProjectDTO getProject(String project_id, String user_id) {
-        Long longProjectId = Long.parseLong(project_id);
-        Project project = getAuthorizedProject(longProjectId, user_id);
+    public ProjectDTO getProject(Long project_id, String user_id) {
+        Project project = getAuthorizedProject(project_id, user_id);
         ProjectDTO projectDTO = projectMapper.entityToDto(project);
         if (project.getCreatedBy().getUserId().equals(user_id)) {
            projectDTO.isOwnProject(true);
@@ -150,15 +148,8 @@ public class ProjectService {
         project.setCategories(getCategories(request.getCategories()));
     }
 
-    // TODO: Pass long to this method
-    public void changeCompletedStatus(String user_id, String project_id, boolean completed)  {
-        long longProjectId;
-        try {
-            longProjectId = Long.parseLong(project_id);
-        } catch (NumberFormatException e) {
-            throw new InvalidProjectDataException("Invalid project ID");
-        }
-        ProjectUser relation = projectUserRepository.findProjectUserById(user_id, longProjectId).orElseThrow(
+    public void changeCompletedStatus(String user_id, Long project_id, boolean completed)  {
+        ProjectUser relation = projectUserRepository.findProjectUserById(user_id, project_id).orElseThrow(
                 () -> new ResourceNotFoundException("Project user not found")
         );
         if (relation.getIsCompleted() == completed) {
@@ -171,7 +162,7 @@ public class ProjectService {
             relation.setCompletedOn(null);
         }
         projectUserRepository.save(relation);
-        checkProjectStatus(longProjectId);
+        checkProjectStatus(project_id);
     }
 
     public void checkProjectStatus(Long project_id) {

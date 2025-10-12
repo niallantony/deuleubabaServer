@@ -30,7 +30,12 @@ public class ProjectController {
             @RequestParam String id,
             @CurrentUser String userID
     ) {
-        return ResponseEntity.ok(projectService.getProject(id, userID));
+        try {
+            Long projectId = Long.parseLong(id);
+            return ResponseEntity.ok(projectService.getProject(projectId, userID));
+        } catch (NumberFormatException e) {
+            throw new InvalidProjectDataException("Invalid project id");
+        }
     }
 
     @GetMapping(path = "/all")
@@ -71,12 +76,17 @@ public class ProjectController {
             @PathVariable String project_id,
             @RequestBody String body
     ) {
-        ProjectStatusDTO request = jsonUtils.parse(body, ProjectStatusDTO.class,
-                () -> new InvalidProjectDataException("Invalid request"));
-        projectService.changeCompletedStatus(user_id, project_id, request.getIsCompleted());
-        return ResponseEntity.noContent().location(
-                URI.create(ServletUriComponentsBuilder.fromCurrentContextPath().path("/project").toUriString() + "/" + project_id)
-        ).build();
+        try {
+            Long id = Long.parseLong(project_id);
+            ProjectStatusDTO request = jsonUtils.parse(body, ProjectStatusDTO.class,
+                    () -> new InvalidProjectDataException("Invalid request"));
+            projectService.changeCompletedStatus(user_id, id, request.getIsCompleted());
+            return ResponseEntity.noContent().location(
+                    URI.create(ServletUriComponentsBuilder.fromCurrentContextPath().path("/project").toUriString() + "/" + project_id)
+            ).build();
+        } catch (NumberFormatException e) {
+            throw new InvalidProjectDataException("Invalid project ID");
+        }
     }
 
     @PatchMapping(path = "/{project_id}")
