@@ -12,6 +12,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Objects;
@@ -98,11 +99,31 @@ public class ProjectService {
     }
 
     public void addUserComment(Long project_id, String user_id, ProjectFeedCommentDTO request) {
-        getAuthorizedProject(project_id, user_id);
-
+        ProjectUser projectUser = projectUserRepository.findProjectUserById(user_id, project_id)
+                .orElseThrow(() -> new InvalidProjectUsersException("Invalid request"));
+        ProjectFeedItem comment = new ProjectFeedItem();
+        if (request.getBody() == null || request.getBody().trim().isEmpty()) {
+            throw new InvalidProjectDataException("Comment is empty");
+        }
+        comment.setProject(projectUser.getProject());
+        comment.setUser(projectUser.getUser());
+        comment.setBody(request.getBody());
+        comment.setType(ProjectFeedItemType.COMMENT);
+        comment.setCreatedAt(LocalDateTime.now());
+        projectFeedRepository.save(comment);
     }
 
+    public void deleteUserComment(Long comment_id, String user_id) {
+        ProjectFeedItem comment = projectFeedRepository.findById(comment_id).orElseThrow(
+                () -> new ResourceNotFoundException("Comment not found")
+        );
 
+        if (!comment.getUser().getUserId().equals(user_id)) {
+            throw new UserNotAuthorizedException("Unauthorized access");
+        }
+
+        projectFeedRepository.delete(comment);
+    }
 
     public ProjectDTO createProject(ProjectPostDTO request, MultipartFile image, String user_id) {
         User user = getUserOrThrow(user_id);
@@ -121,6 +142,10 @@ public class ProjectService {
         projectRepository.save(project);
         ProjectDTO projectDTO = projectMapper.entityToDto(project);
         projectDTO.isOwnProject(true);
+        addSystemEventMessage(project, "Project created");
+        projectUsers.forEach(pu ->
+                addNewUserFeedMessage(project, pu.getUser())
+        );
         return projectDTO;
     }
 
@@ -135,6 +160,7 @@ public class ProjectService {
         validatePatch(request);
         applyDetailChanges(project, request);
         projectRepository.save(project);
+        addSystemEventMessage(project, "Project updated");
     }
 
     private void validatePatch(ProjectDetailsPatchDTO request) {
@@ -222,6 +248,7 @@ public class ProjectService {
              });
 
         projectRepository.save(project);
+        project.getUsers().forEach(user -> addNewUserFeedMessage(project, user.getUser()));
         return new ProjectAddUserResponseDTO(notFound);
     }
 
@@ -274,6 +301,25 @@ public class ProjectService {
         return userRepository.findByUserId(user_id)
                              .orElseThrow(() -> new ResourceNotFoundException("User not found"));
 
+    }
+
+    private void addNewUserFeedMessage(Project project, User user) {
+        ProjectFeedItem comment = new ProjectFeedItem();
+        comment.setProject(project);
+        comment.setUser(user);
+        comment.setBody("New user added: " + user.getUserType());
+        comment.setType(ProjectFeedItemType.NEW_USER);
+        comment.setCreatedAt(LocalDateTime.now());
+        projectFeedRepository.save(comment);
+    }
+
+    private void addSystemEventMessage(Project project, String eventBody) {
+        ProjectFeedItem comment = new ProjectFeedItem();
+        comment.setProject(project);
+        comment.setBody(eventBody);
+        comment.setType(ProjectFeedItemType.EVENT);
+        comment.setCreatedAt(LocalDateTime.now());
+        projectFeedRepository.save(comment);
     }
 
     private ProjectCollectionsDTO createCollections(Set<ProjectPreviewDTO> projects) {

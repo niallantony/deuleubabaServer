@@ -8,6 +8,7 @@ import java.time.LocalDateTime;
 
 @Data
 public class ProjectFeedItemDTO {
+    private Long id;
     private String body;
     private ProjectFeedItemType type;
     private UserAvatar user;

@@ -648,6 +648,239 @@ public class ProjectServiceTest {
         );
     }
 
+    @Test void addUserComment_withValidRequest_addsAComment() {
+        Project mockProject = new Project();
+        User mockUser = new User();
+        ProjectUser projectUser = new ProjectUser();
+        projectUser.setUser(mockUser);
+        projectUser.setProject(mockProject);
+
+        ProjectFeedCommentDTO request = new ProjectFeedCommentDTO("Comment");
+
+        when(projectUserRepository.findProjectUserById("abc", 1L))
+                .thenReturn(Optional.of(projectUser));
+
+        projectService.addUserComment(1L, "abc", request);
+
+        verify(projectFeedRepository, times(1)).save(
+                argThat(arg ->
+                        arg.getProject().equals(mockProject) &&
+                                arg.getUser().equals(mockUser) &&
+                                arg.getType().equals(ProjectFeedItemType.COMMENT) &&
+                                arg.getBody().equals("Comment")
+                )
+        );
+    }
+
+    @Test void addUserComment_whenUserOrProjectNotFound_throwsInvalidProjectUsersException() {
+        when(projectUserRepository.findProjectUserById("abc", 1L)).thenReturn(Optional.empty());
+        assertThrows(
+                InvalidProjectUsersException.class,
+                () -> projectService.addUserComment(1L, "abc", new ProjectFeedCommentDTO())
+        );
+        verify(projectFeedRepository, never()).save(any());
+    }
+
+    @Test void addUserComment_whenBodyIsEmpty_returnsInvalidProjectDataException() {
+        Project mockProject = new Project();
+        User mockUser = new User();
+        ProjectUser projectUser = new ProjectUser();
+        projectUser.setUser(mockUser);
+        projectUser.setProject(mockProject);
+
+        ProjectFeedCommentDTO request = new ProjectFeedCommentDTO("");
+
+        when(projectUserRepository.findProjectUserById("abc", 1L))
+                .thenReturn(Optional.of(projectUser));
+
+        assertThrows(
+                InvalidProjectDataException.class,
+                () -> projectService.addUserComment(1L, "abc", request)
+        );
+
+        verify(projectFeedRepository, never()).save(any() );
+    }
+
+    @Test void addUserComment_whenBodyIsWhitespace_returnsInvalidProjectDataException() {
+        Project mockProject = new Project();
+        User mockUser = new User();
+        ProjectUser projectUser = new ProjectUser();
+        projectUser.setUser(mockUser);
+        projectUser.setProject(mockProject);
+
+        ProjectFeedCommentDTO request = new ProjectFeedCommentDTO("  ");
+
+        when(projectUserRepository.findProjectUserById("abc", 1L))
+                .thenReturn(Optional.of(projectUser));
+
+        assertThrows(
+                InvalidProjectDataException.class,
+                () -> projectService.addUserComment(1L, "abc", request)
+        );
+
+        verify(projectFeedRepository, never()).save(any() );
+    }
+
+    @Test void addUsers_whenSuccessful_addsNewFeedItemsForEachUser() {
+        User mockCreator = new User();
+        mockCreator.setUserId("abc");
+        Project mockProject = new Project();
+        mockProject.setCreatedBy(mockCreator);
+        User mockNewUser = new User();
+        mockNewUser.setUserId("def");
+        mockNewUser.setUserType("Teacher");
+        User mockNewUser2 = new User();
+        mockNewUser2.setUserId("ghi");
+        mockNewUser2.setUserType("Parent");
+
+        when(projectRepository.findById(1L)).thenReturn(Optional.of(mockProject));
+        when(userRepository.findByIds(List.of("def", "ghi", "jkl"))).thenReturn(List.of(mockNewUser, mockNewUser2));
+
+        ProjectAddUserResponseDTO response = projectService
+                .addUsersToProject(
+                        "abc",
+                        1L, new ProjectAddUserRequestDTO(List.of("def", "ghi", "jkl"))
+                );
+        assertEquals(1, response.getNotFound().size());
+        verify(projectFeedRepository ,times(2)).save(argThat(req ->
+                (req.getUser().equals(mockNewUser) ||
+                        req.getUser().equals(mockNewUser2)) &&
+                        (req.getBody().equals("New user added: Teacher") ||
+                                req.getBody().equals("New user added: Parent"))
+        ));
+    }
+
+    @Test void addUsers_whenUnsuccessful_doesNotAddFeedItems() {
+        User mockCreator = new User();
+        mockCreator.setUserId("abc");
+        Project mockProject = new Project();
+        mockProject.setCreatedBy(mockCreator);
+        User mockNewUser = new User();
+        mockNewUser.setUserId("def");
+        mockNewUser.setUserType("Teacher");
+
+        when(projectRepository.findById(1L)).thenReturn(Optional.of(mockProject));
+        when(userRepository.findByIds(List.of("def"))).thenReturn(List.of(mockNewUser));
+
+        doThrow(RuntimeException.class).when(projectRepository).save(any());
+
+        assertThrows(
+                RuntimeException.class,
+                () -> projectService.addUsersToProject("abc", 1L, new ProjectAddUserRequestDTO(List.of("def")))
+        );
+        verify(projectFeedRepository , never()).save(any());
+    }
+
+    @Test void createProject_whenSuccessful_addsAppropriateFeedItems() {
+        User user = new User();
+        user.setUsername("user1");
+        user.setUserType("Teacher");
+        Student student = new Student();
+        student.getUsers().add(user);
+        ProjectPostDTO postDTO = getProjectPostDTO(user);
+        ProjectDTO projectDTO = new ProjectDTO();
+        Project createdproject = new Project();
+        when(userRepository.findByUserId("abc")).thenReturn(Optional.of(user));
+        when(studentRepository.findById("123")).thenReturn(Optional.of(student));
+        when(userRepository.findAllByUsernames(Set.of("user1"))).thenReturn(Set.of(user));
+        when(projectMapper.entityToDto(any(Project.class))).thenReturn(projectDTO);
+        when(projectMapper.requestToEntity(postDTO)).thenReturn(createdproject);
+        when(communicationCategoryRepository.findAll()).thenReturn(new ArrayList<>());
+
+        projectService.createProject(postDTO, null, "abc");
+        verify(projectFeedRepository , times(2)).save(argThat(req ->
+                req.getBody().equals("Project created") || req.getBody().equals("New user added: Teacher")
+                ));
+    }
+
+    @Test void patchProjectDetails_whenSuccessful_addsSystemEventFeedItem() {
+        Project mockProject = new Project();
+        CommunicationCategory pain = new CommunicationCategory();
+        pain.setLabel(CommunicationCategoryLabel.PAIN);
+        ProjectDetailsPatchDTO projectDetailsPatchDTO = new ProjectDetailsPatchDTO();
+        projectDetailsPatchDTO.setCategories(Set.of(CommunicationCategoryLabel.PAIN));
+        projectDetailsPatchDTO.setDescription("description");
+        projectDetailsPatchDTO.setObjective("objective");
+        projectDetailsPatchDTO.setStartedOn(LocalDate.of(2000,1,1));
+        User mockUser = new User();
+        mockUser.setUserId("abc");
+        mockProject.setCreatedBy(mockUser);
+        when(projectRepository.findById(1L)).thenReturn(Optional.of(mockProject));
+        when(communicationCategoryRepository.findAll()).thenReturn(List.of(pain));
+        doCallRealMethod().when(fileStorageService).swapImage(any(), any());
+
+        projectService.patchProjectDetails("abc", 1L, projectDetailsPatchDTO, null );
+
+        verify(projectFeedRepository , times(1)).save(argThat(req ->
+                req.getBody().equals("Project updated") &&
+                req.getType().equals(ProjectFeedItemType.EVENT) &&
+                req.getCreatedAt() != null
+                )
+        );
+    }
+
+    @Test void patchProjectDetails_whenUnsuccessful_doesNotAddNewSystemEventFeedItem() {
+        Project mockProject = new Project();
+        CommunicationCategory pain = new CommunicationCategory();
+        pain.setLabel(CommunicationCategoryLabel.PAIN);
+        ProjectDetailsPatchDTO projectDetailsPatchDTO = new ProjectDetailsPatchDTO();
+        projectDetailsPatchDTO.setCategories(Set.of(CommunicationCategoryLabel.PAIN));
+        projectDetailsPatchDTO.setDescription("description");
+        projectDetailsPatchDTO.setObjective("objective");
+        projectDetailsPatchDTO.setStartedOn(LocalDate.of(2000,1,1));
+        User mockUser = new User();
+        mockUser.setUserId("abc");
+        mockProject.setCreatedBy(mockUser);
+        when(projectRepository.findById(1L)).thenReturn(Optional.of(mockProject));
+        when(communicationCategoryRepository.findAll()).thenReturn(List.of(pain));
+        doThrow(RuntimeException.class).when(projectRepository).save(any());
+
+        assertThrows(
+                RuntimeException.class,
+                () -> projectService.patchProjectDetails("abc", 1L, projectDetailsPatchDTO, null )
+        );
+
+        verify(projectFeedRepository , never()).save(any());
+    }
+
+    @Test void deleteProject_whenProjectExists_deletesProject() {
+        User mockUser = new User();
+        mockUser.setUserId("abc");
+        ProjectFeedItem mockItem = new ProjectFeedItem();
+        mockItem.setUser(mockUser);
+        when(projectFeedRepository.findById(1L)).thenReturn(Optional.of(mockItem));
+
+        projectService.deleteUserComment(1L, "abc");
+
+        verify(projectFeedRepository , times(1)).delete(mockItem);
+    }
+
+    @Test void deleteProject_whenProjectDoesNotExist_throwsResourceNotFoundException() {
+        when(projectFeedRepository.findById(1L)).thenReturn(Optional.empty());
+
+        assertThrows(
+                ResourceNotFoundException.class,
+                () -> projectService.deleteUserComment(1L, "abc")
+        );
+
+        verify(projectFeedRepository , never()).delete(any());
+    }
+
+    @Test void deleteProject_whenCommentNotUsers_throwsUserNotAuthorizedException() {
+        User mockUser = new User();
+        mockUser.setUserId("def");
+        ProjectFeedItem mockItem = new ProjectFeedItem();
+        mockItem.setUser(mockUser);
+        when(projectFeedRepository.findById(1L)).thenReturn(Optional.of(mockItem));
+
+        assertThrows(
+                UserNotAuthorizedException.class,
+                () -> projectService.deleteUserComment(1L, "abc")
+       );
+
+        verify(projectFeedRepository , never()).delete(any());
+    }
+
     private static ProjectPostDTO getProjectPostDTO(User user) {
         ProjectPostDTO postDTO = new ProjectPostDTO();
         postDTO.setStudentId("123");
