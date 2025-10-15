@@ -170,7 +170,7 @@ public class ProjectServiceTest {
         Project createdproject = new Project();
         when(userRepository.findByUserId("abc")).thenReturn(Optional.of(user));
         when(studentRepository.findById("123")).thenReturn(Optional.of(student));
-        when(userRepository.findByUsername("user1")).thenReturn(Optional.of(user));
+        when(userRepository.findAllByUsernames(Set.of("user1"))).thenReturn(Set.of(user));
         when(projectMapper.entityToDto(any(Project.class))).thenReturn(projectDTO);
         when(projectMapper.requestToEntity(postDTO)).thenReturn(createdproject);
         when(communicationCategoryRepository.findAll()).thenReturn(new ArrayList<>());
@@ -195,7 +195,7 @@ public class ProjectServiceTest {
         doCallRealMethod().when(fileStorageService).swapImage(any(), any());
         when(userRepository.findByUserId("abc")).thenReturn(Optional.of(user));
         when(studentRepository.findById("123")).thenReturn(Optional.of(student));
-        when(userRepository.findByUsername("user1")).thenReturn(Optional.of(user));
+        when(userRepository.findAllByUsernames(Set.of("user1"))).thenReturn(Set.of(user));
         when(projectMapper.entityToDto(any(Project.class))).thenReturn(projectDTO);
         when(projectMapper.requestToEntity(postDTO)).thenReturn(createdproject);
         when(fileStorageService.storeImage(image)).thenReturn("new_url");
@@ -250,7 +250,7 @@ public class ProjectServiceTest {
         doCallRealMethod().when(fileStorageService).swapImage(any(),any());
         when(userRepository.findByUserId("abc")).thenReturn(Optional.of(user));
         when(studentRepository.findById("123")).thenReturn(Optional.of(student));
-        when(userRepository.findByUsername("user1")).thenReturn(Optional.of(user));
+        when(userRepository.findAllByUsernames(Set.of("user1"))).thenReturn(Set.of(user));
         when(projectMapper.entityToDto(any(Project.class))).thenReturn(projectDTO);
         when(projectMapper.requestToEntity(postDTO)).thenReturn(createdproject);
         when(fileStorageService.storeImage(image)).thenThrow(FileStorageException.class);
@@ -277,8 +277,7 @@ public class ProjectServiceTest {
         Project createdproject = new Project();
         when(userRepository.findByUserId("abc")).thenReturn(Optional.of(user));
         when(studentRepository.findById("123")).thenReturn(Optional.of(student));
-        when(userRepository.findByUsername("user1")).thenReturn(Optional.of(user));
-        when(userRepository.findByUsername("user2")).thenReturn(Optional.of(user2));
+        when(userRepository.findAllByUsernames(Set.of("user1", "user2"))).thenReturn(Set.of(user, user2));
         when(projectMapper.entityToDto(any(Project.class))).thenReturn(projectDTO);
         when(projectMapper.requestToEntity(postDTO)).thenReturn(createdproject);
         when(communicationCategoryRepository.findAll()).thenReturn(new ArrayList<>());

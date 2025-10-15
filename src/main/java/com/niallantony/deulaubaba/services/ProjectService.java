@@ -97,6 +97,11 @@ public class ProjectService {
         return response;
     }
 
+    public void addUserComment(Long project_id, String user_id, ProjectFeedCommentDTO request) {
+        getAuthorizedProject(project_id, user_id);
+
+    }
+
 
 
     public ProjectDTO createProject(ProjectPostDTO request, MultipartFile image, String user_id) {
@@ -231,9 +236,9 @@ public class ProjectService {
     }
 
     private Set<ProjectUser> projectUsersFromPost(ProjectPostDTO post) {
-        return post.getUsernames().stream().map(userRepository::findByUsername)
-                .map(userOptional -> {
-                    User user = userOptional.orElseThrow(() -> new ResourceNotFoundException("User not found"));
+        Set<User> users = userRepository.findAllByUsernames(post.getUsernames());
+        return users.stream()
+                .map(user -> {
                     ProjectUser projectUser = new ProjectUser();
                     projectUser.setUser(user);
                     return projectUser;
