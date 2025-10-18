@@ -13,6 +13,7 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.mock.web.MockMultipartFile;
 import org.springframework.web.multipart.MultipartFile;
 
@@ -608,7 +609,7 @@ public class ProjectServiceTest {
         ProjectFeedItemDTO itemDTO = new ProjectFeedItemDTO();
 
         when(projectRepository.findById(1L)).thenReturn(Optional.of(mockProject));
-        when(projectFeedRepository.findByProjectIdOrderByCreatedAtDesc(1L)).thenReturn(repoReturn);
+        when(projectFeedRepository.findByProjectIdOrderByCreatedAtDesc(1L, PageRequest.of(0, 10))).thenReturn(repoReturn);
         when(projectFeedMapper.entityToDto(repoReturn.getFirst())).thenReturn(itemDTO);
 
         ProjectFeedDTO response = projectService.getProjectFeed(1L, "abc", 0 ,10);
@@ -626,7 +627,7 @@ public class ProjectServiceTest {
         mockProject.getUsers().add(projectUser);
 
         when(projectRepository.findById(1L)).thenReturn(Optional.of(mockProject));
-        when(projectFeedRepository.findByProjectIdOrderByCreatedAtDesc(1L)).thenReturn(List.of());
+        when(projectFeedRepository.findByProjectIdOrderByCreatedAtDesc(1L, PageRequest.of(0, 10))).thenReturn(List.of());
         ProjectFeedDTO response = projectService.getProjectFeed(1L, "abc",0, 10);
         assertTrue(response.getFeed().isEmpty());
     }
@@ -647,6 +648,28 @@ public class ProjectServiceTest {
                 () -> projectService.getProjectFeed(1L, "abc", 0 ,10)
         );
     }
+
+    @Test void getProjectFeed_whenRequestingNextPage_returnsFeed() {
+        Project mockProject = new Project();
+        User mockUser = new User();
+        mockUser.setUserId("abc");
+        ProjectUser projectUser = new ProjectUser();
+        projectUser.setUser(mockUser);
+        projectUser.setProject(mockProject);
+        mockProject.getUsers().add(projectUser);
+        List<ProjectFeedItem> repoReturn = List.of(new ProjectFeedItem());
+        ProjectFeedItemDTO itemDTO = new ProjectFeedItemDTO();
+
+        when(projectRepository.findById(1L)).thenReturn(Optional.of(mockProject));
+        when(projectFeedRepository.findByProjectIdOrderByCreatedAtDesc(1L, PageRequest.of(1, 10))).thenReturn(repoReturn);
+        when(projectFeedMapper.entityToDto(repoReturn.getFirst())).thenReturn(itemDTO);
+
+        ProjectFeedDTO response = projectService.getProjectFeed(1L, "abc", 1 ,10);
+
+        assertEquals(itemDTO, response.getFeed().getFirst());
+
+    }
+
 
     @Test void addUserComment_withValidRequest_addsAComment() {
         Project mockProject = new Project();
@@ -854,8 +877,6 @@ public class ProjectServiceTest {
 
         verify(projectFeedRepository , times(1)).delete(mockItem);
     }
-    
-
 
     private static ProjectPostDTO getProjectPostDTO(User user) {
         ProjectPostDTO postDTO = new ProjectPostDTO();
