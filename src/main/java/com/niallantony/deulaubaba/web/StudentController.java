@@ -1,12 +1,13 @@
 package com.niallantony.deulaubaba.web;
 
 import com.niallantony.deulaubaba.data.UserRepository;
-import com.niallantony.deulaubaba.dto.student.StudentDTO;
-import com.niallantony.deulaubaba.dto.student.StudentIdAvatar;
+import com.niallantony.deulaubaba.dto.student.*;
 import com.niallantony.deulaubaba.dto.user.UserAvatar;
+import com.niallantony.deulaubaba.exceptions.InvalidStudentDataException;
 import com.niallantony.deulaubaba.exceptions.UserNotAuthorizedException;
 import com.niallantony.deulaubaba.security.CurrentUser;
 import com.niallantony.deulaubaba.services.StudentService;
+import com.niallantony.deulaubaba.utils.JsonUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -20,11 +21,13 @@ import java.util.List;
 public class StudentController {
     private final StudentService studentService;
     private final UserRepository userRepository;
+    private final JsonUtils jsonUtils;
 
     @Autowired
-    public StudentController(StudentService studentService, UserRepository userRepository) {
+    public StudentController(StudentService studentService, UserRepository userRepository, JsonUtils jsonUtils) {
         this.studentService = studentService;
         this.userRepository = userRepository;
+        this.jsonUtils = jsonUtils;
     }
 
     @GetMapping(path= "/preview")
@@ -74,7 +77,12 @@ public class StudentController {
             @RequestPart("data") String request,
             @CurrentUser String userId,
             @RequestPart(value = "image", required = false) MultipartFile image)  {
-        return ResponseEntity.ok(studentService.createStudent(request, image, userId));
+        StudentRequest studentRequest = jsonUtils.parse(
+                request,
+                StudentRequest.class,
+                () -> new InvalidStudentDataException("Invalid request")
+        );
+        return ResponseEntity.ok(studentService.createStudent(studentRequest, image, userId));
     }
 
     @PutMapping(path = "/{studentId}")
@@ -84,7 +92,12 @@ public class StudentController {
             @CurrentUser String userId,
             @RequestPart("data") String request,
             @RequestPart(value = "image", required = false) MultipartFile image)  {
-        return ResponseEntity.ok(studentService.updateStudentDetails(studentId, request, image, userId));
+        StudentRequest studentRequest = jsonUtils.parse(
+                request,
+                StudentRequest.class,
+                () -> new InvalidStudentDataException("Invalid request")
+        );
+        return ResponseEntity.ok(studentService.updateStudentDetails(studentId, studentRequest, image, userId));
     }
 
     @PutMapping(path = "/{studentId}/communication")
@@ -94,7 +107,12 @@ public class StudentController {
             @CurrentUser String userId,
             @RequestBody String request
             )  {
-        return ResponseEntity.ok(studentService.updateStudentCommunication(studentId, request, userId));
+        StudentCommunicationRequest studentCommunicationRequest = jsonUtils.parse(
+                request,
+                StudentCommunicationRequest.class,
+                () -> new InvalidStudentDataException("Invalid request")
+        );
+        return ResponseEntity.ok(studentService.updateStudentCommunication(studentId, studentCommunicationRequest, userId));
     }
 
     @PutMapping(path = "/{studentId}/challenge")
@@ -104,6 +122,11 @@ public class StudentController {
             @CurrentUser String userId,
             @RequestBody String request
     )  {
-        return ResponseEntity.ok(studentService.updateStudentChallenge(studentId, request, userId));
+        StudentChallengeRequest studentChallengeRequest = jsonUtils.parse(
+                request,
+                StudentChallengeRequest.class,
+                () -> new InvalidStudentDataException("Invalid request")
+        );
+        return ResponseEntity.ok(studentService.updateStudentChallenge(studentId, studentChallengeRequest, userId));
     }
 }

@@ -91,12 +91,7 @@ public class StudentService {
     }
 
     @Transactional
-    public StudentDTO createStudent(String request, MultipartFile image, String userId)  {
-        StudentRequest studentRequest = jsonUtils.parse(
-                request,
-                StudentRequest.class,
-                () -> new InvalidStudentDataException("Invalid request")
-        );
+    public StudentDTO createStudent(StudentRequest studentRequest, MultipartFile image, String userId)  {
         User user = userRepository.findByUserId(userId).orElseThrow(() -> new UserNotAuthorizedException("Unauthorized access"));
         validateStudentRequest(studentRequest);
         Student student = extractStudent(studentRequest, user);
@@ -108,12 +103,7 @@ public class StudentService {
     }
 
     @Transactional
-    public StudentDTO updateStudentDetails(String studentId, String request, MultipartFile image, String userId)  {
-        StudentRequest studentRequest = jsonUtils.parse(
-                request,
-                StudentRequest.class,
-                () -> new InvalidStudentDataException("Invalid request")
-        );
+    public StudentDTO updateStudentDetails(String studentId, StudentRequest studentRequest, MultipartFile image, String userId)  {
         Student student = getAuthorisedStudent(studentId, userId);
         fileStorageService.swapImage(image, student);
         applyDetailUpdates(student, studentRequest);
@@ -121,12 +111,7 @@ public class StudentService {
     }
 
     @Transactional
-    public StudentDTO updateStudentCommunication(String studentId, String request, String userId)  {
-        StudentCommunicationRequest studentCommunicationRequest = jsonUtils.parse(
-                request,
-                StudentCommunicationRequest.class,
-                () -> new InvalidStudentDataException("Invalid request")
-        );
+    public StudentDTO updateStudentCommunication(String studentId, StudentCommunicationRequest studentCommunicationRequest, String userId)  {
         Student student = getAuthorisedStudent(studentId, userId);
         student.setCommunicationDetails(studentCommunicationRequest.getCommunicationDetails());
         studentRepository.save(student);
@@ -134,12 +119,7 @@ public class StudentService {
     }
 
     @Transactional
-    public StudentDTO updateStudentChallenge(String studentId, String request, String userId)  {
-        StudentChallengeRequest studentChallengeRequest = jsonUtils.parse(
-                request,
-                StudentChallengeRequest.class,
-                () -> new InvalidStudentDataException("Invalid request")
-        );
+    public StudentDTO updateStudentChallenge(String studentId, StudentChallengeRequest studentChallengeRequest, String userId)  {
         Student student = getAuthorisedStudent(studentId, userId);
         student.setChallengesDetails(studentChallengeRequest.getChallengesDetails());
         studentRepository.save(student);
