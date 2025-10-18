@@ -54,9 +54,7 @@ public class DictionaryServiceTests {
             "Description"
     );
 
-    private void commonPostStubs(DictionaryPostRequest request, String json, Student student) {
-            when(jsonUtils.parse(eq(json), eq(DictionaryPostRequest.class), any()))
-                    .thenReturn(request);
+    private void commonPostStubs(Student student) {
             when(studentService.getAuthorisedStudent("abc", "userId"))
                     .thenReturn(student);
             when(categoryRepository.findByLabel(CommunicationCategoryLabel.PAIN))
@@ -64,9 +62,7 @@ public class DictionaryServiceTests {
             when(dictionaryRepository.save(any())).thenReturn(new DictionaryEntry());
     }
 
-    private void commonPutStubs(DictionaryPutRequest request, String json) {
-        when(jsonUtils.parse(eq(json), eq(DictionaryPutRequest.class), any()))
-                .thenReturn(request);
+    private void commonPutStubs() {
         when(studentService.studentBelongsToUser("abc", "userId"))
                 .thenReturn(true);
         when(categoryRepository.findByLabel(CommunicationCategoryLabel.PAIN))
@@ -129,13 +125,12 @@ public class DictionaryServiceTests {
     @Test
     void addDictionaryEntry_whenNoImage_savesEntry()  {
         DictionaryPostRequest request = DictionaryTestFactory.createDictionaryPostRequest();
-        String json = "json-placeholder";
 
         Student student = new Student();
-        commonPostStubs(request, json, student);
+        commonPostStubs(student);
 
 
-        DictionaryEntry result = dictionaryService.addDictionaryEntry(json, null, "userId");
+        DictionaryEntry result = dictionaryService.addDictionaryEntry(request, null, "userId");
         assertEquals(student, result.getStudent());
         verify(fileStorageService, times(0)).storeImage(any());
         verify(dictionaryRepository).save(result);
@@ -143,15 +138,14 @@ public class DictionaryServiceTests {
     @Test
     void addDictionaryEntry_whenImage_savesEntry() {
         DictionaryPostRequest request = DictionaryTestFactory.createDictionaryPostRequest();
-        String json = "json-placeholder";
         MultipartFile image = mock(MultipartFile.class);
         Student student = new Student();
-        commonPostStubs(request, json, student);
+        commonPostStubs(student);
         doCallRealMethod().when(fileStorageService).swapImage(any(), any());
         when(fileStorageService.storeImage(image)).thenReturn("new_url");
 
 
-        DictionaryEntry result = dictionaryService.addDictionaryEntry(json, image, "userId");
+        DictionaryEntry result = dictionaryService.addDictionaryEntry(request, image, "userId");
         verify(fileStorageService).swapImage(eq(image), any());
 
         assertEquals(student, result.getStudent());
@@ -165,12 +159,12 @@ public class DictionaryServiceTests {
         String json = "json-placeholder";
         MultipartFile image = mock(MultipartFile.class);
         Student student = new Student();
-        commonPostStubs(request, json, student);
+        commonPostStubs(student);
         doCallRealMethod().when(fileStorageService).swapImage(any(), any());
         when(fileStorageService.storeImage(image)).thenThrow(FileStorageException.class);
 
 
-        DictionaryEntry result = dictionaryService.addDictionaryEntry(json, image, "userId");
+        DictionaryEntry result = dictionaryService.addDictionaryEntry(request, image, "userId");
         verify(fileStorageService).swapImage(eq(image), any());
 
         assertEquals(student, result.getStudent());
@@ -180,10 +174,9 @@ public class DictionaryServiceTests {
     @Test
     void updateDictionaryEntry_whenGivenValidDataWithoutImage_savesEntry() {
         DictionaryPutRequest request = DictionaryTestFactory.createDictionaryPutRequest();
-        String json = "json-placeholder";
-        commonPutStubs(request, json);
+        commonPutStubs();
 
-        DictionaryEntry result = dictionaryService.updateDictionaryEntry(json, null, "userId");
+        DictionaryEntry result = dictionaryService.updateDictionaryEntry(request, null, "userId");
         verify(dictionaryRepository).save(result);
         assertEquals("New Description", result.getDescription());
         verify(fileStorageService, times(0)).storeImage(any());
@@ -192,13 +185,12 @@ public class DictionaryServiceTests {
     @Test
     void updateDictionaryEntry_whenGivenValidDataWithImage_savesEntry() {
         DictionaryPutRequest request = DictionaryTestFactory.createDictionaryPutRequest();
-        String json = "json-placeholder";
         MultipartFile image = mock(MultipartFile.class);
-        commonPutStubs(request, json);
+        commonPutStubs();
         doCallRealMethod().when(fileStorageService).swapImage(any(), any());
         when(fileStorageService.storeImage(image)).thenReturn("new_url");
 
-        DictionaryEntry result = dictionaryService.updateDictionaryEntry(json, image, "userId");
+        DictionaryEntry result = dictionaryService.updateDictionaryEntry(request, image, "userId");
         verify(dictionaryRepository).save(result);
         verify(fileStorageService).swapImage(eq(image), any());
         assertEquals("New Description", result.getDescription());
@@ -208,43 +200,35 @@ public class DictionaryServiceTests {
 
     @Test
     void updateDictionaryEntry_whenGivenInvalidData_throwsError() {
-        String json = "json-placeholder";
-        when(jsonUtils.parse(eq(json), any(), any())).thenThrow(InvalidDictionaryDataException.class);
-        assertThrows(InvalidDictionaryDataException.class, () -> dictionaryService.updateDictionaryEntry(json, null, "userId"));
+        DictionaryPutRequest request = new DictionaryPutRequest();
+        assertThrows(InvalidDictionaryDataException.class, () -> dictionaryService.updateDictionaryEntry(request, null, "userId"));
     }
 
     @Test
     void updateDictionaryEntry_whenEntryDoesntExist_throwsError() {
         DictionaryPutRequest request = DictionaryTestFactory.createDictionaryPutRequest();
-        String json = "json-placeholder";
-        when(jsonUtils.parse(eq(json), eq(DictionaryPutRequest.class), any()))
-                .thenReturn(request);
         when(studentService.studentBelongsToUser("abc", "userId"))
                 .thenReturn(true);
         when(dictionaryRepository.findById(1L)).thenThrow(ResourceNotFoundException.class);
-        assertThrows(ResourceNotFoundException.class, () -> dictionaryService.updateDictionaryEntry(json, null, "userId"));
+        assertThrows(ResourceNotFoundException.class, () -> dictionaryService.updateDictionaryEntry(request, null, "userId"));
     }
 
     @Test
     void updateDictionaryEntry_whenUserNotAuthorized_throwsError() {
         DictionaryPutRequest request = DictionaryTestFactory.createDictionaryPutRequest();
-        String json = "json-placeholder";
-        when(jsonUtils.parse(eq(json), eq(DictionaryPutRequest.class), any()))
-                .thenReturn(request);
         when(studentService.studentBelongsToUser("abc", "userId"))
                 .thenReturn(false);
-        assertThrows(UserNotAuthorizedException.class, () -> dictionaryService.updateDictionaryEntry(json, null, "userId"));
+        assertThrows(UserNotAuthorizedException.class, () -> dictionaryService.updateDictionaryEntry(request, null, "userId"));
     }
 
     @Test
     void updateDictionaryEntry_whenImageDoesntSave_stillSavesEntry() {
         DictionaryPutRequest request = DictionaryTestFactory.createDictionaryPutRequest();
-        String json = "json-placeholder";
         MultipartFile image = mock(MultipartFile.class);
-        commonPutStubs(request, json);
+        commonPutStubs();
         doCallRealMethod().when(fileStorageService).swapImage(any(), any());
         doThrow(FileStorageException.class).when(fileStorageService).storeImage(any());
-        DictionaryEntry result = dictionaryService.updateDictionaryEntry(json, image, "userId");
+        DictionaryEntry result = dictionaryService.updateDictionaryEntry(request, image, "userId");
         verify(dictionaryRepository).save(result);
         verify(fileStorageService).swapImage(eq(image), any() );
         assertEquals("New Description", result.getDescription());
@@ -262,7 +246,7 @@ public class DictionaryServiceTests {
         when(dictionaryRepository.existsById(123L)).thenReturn(true);
         when(dictionaryRepository.getReferenceById(123L)).thenReturn(entry);
         when(studentService.studentBelongsToUser("123", "userId")).thenReturn(true);
-        dictionaryService.deleteDictionaryEntry("123", "userId");
+        dictionaryService.deleteDictionaryEntry(123L, "userId");
         verify(dictionaryRepository).deleteById(123L);
         verify(fileStorageService).deleteImage("./example.png");
     }
@@ -275,7 +259,7 @@ public class DictionaryServiceTests {
         student.setStudentId("123");
         entry.setStudent(student);
         when(dictionaryRepository.existsById(123L)).thenReturn(false);
-        assertThrows(ResourceNotFoundException.class, () -> dictionaryService.deleteDictionaryEntry("123", "userId"));
+        assertThrows(ResourceNotFoundException.class, () -> dictionaryService.deleteDictionaryEntry(123L, "userId"));
     }
 
     @Test
@@ -287,6 +271,6 @@ public class DictionaryServiceTests {
         when(dictionaryRepository.existsById(123L)).thenReturn(true);
         when(dictionaryRepository.getReferenceById(123L)).thenReturn(entry);
         when(studentService.studentBelongsToUser("123", "userId")).thenReturn(false);
-        assertThrows(UserNotAuthorizedException.class, () -> dictionaryService.deleteDictionaryEntry("123", "userId"));
+        assertThrows(UserNotAuthorizedException.class, () -> dictionaryService.deleteDictionaryEntry(123L, "userId"));
     }
 }

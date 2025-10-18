@@ -2,8 +2,12 @@ package com.niallantony.deulaubaba.web;
 
 import com.niallantony.deulaubaba.domain.DictionaryEntry;
 import com.niallantony.deulaubaba.dto.dictionary.DictionaryListingsResponse;
+import com.niallantony.deulaubaba.dto.dictionary.DictionaryPostRequest;
+import com.niallantony.deulaubaba.dto.dictionary.DictionaryPutRequest;
+import com.niallantony.deulaubaba.exceptions.InvalidDictionaryDataException;
 import com.niallantony.deulaubaba.security.CurrentUser;
 import com.niallantony.deulaubaba.services.DictionaryService;
+import com.niallantony.deulaubaba.utils.JsonUtils;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
@@ -11,17 +15,18 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
-// TODO: Move JSONUTILS into Controller layer
 @RestController
 @Slf4j
 @RequestMapping(path = "/dictionary", produces = "application/json")
 public class DictionaryController {
 
     private final DictionaryService dictionaryService;
+    private final JsonUtils jsonUtils;
 
     @Autowired
-    public DictionaryController(DictionaryService dictionaryService) {
+    public DictionaryController(DictionaryService dictionaryService, JsonUtils jsonUtils) {
         this.dictionaryService = dictionaryService;
+        this.jsonUtils = jsonUtils;
     }
 
     @GetMapping
@@ -38,20 +43,30 @@ public class DictionaryController {
 
     @PostMapping
     public ResponseEntity<DictionaryEntry> addDictionary(
-            @RequestPart("data") String dictionaryEntry,
+            @RequestPart("data") String data,
             @RequestPart(value = "image", required = false)MultipartFile imageFile,
             @CurrentUser String userId
     )  {
-        DictionaryEntry entry = dictionaryService.addDictionaryEntry(dictionaryEntry, imageFile, userId);
+        DictionaryPostRequest request = jsonUtils.parse(
+                data,
+                DictionaryPostRequest.class,
+                () -> new InvalidDictionaryDataException("Entry data not valid")
+        );
+        DictionaryEntry entry = dictionaryService.addDictionaryEntry(request, imageFile, userId);
         return ResponseEntity.status(HttpStatus.CREATED).body(entry);
     }
 
     @PutMapping
     public ResponseEntity<?> updateDictionary(
-            @RequestPart("data") String request,
+            @RequestPart("data") String data,
             @RequestPart(value = "image", required = false) MultipartFile image,
             @CurrentUser String userId
     )  {
+        DictionaryPutRequest request = jsonUtils.parse(
+                data,
+                DictionaryPutRequest.class,
+                () -> new InvalidDictionaryDataException("Entry data not valid")
+        );
         DictionaryEntry entry = dictionaryService.updateDictionaryEntry(request, image, userId);
         return ResponseEntity.ok(entry);
     }
@@ -61,8 +76,13 @@ public class DictionaryController {
             @PathVariable String id,
             @CurrentUser String userId
     ) {
-        dictionaryService.deleteDictionaryEntry(id, userId);
-        return ResponseEntity.noContent().build();
+        try {
+            Long longId = Long.parseLong(id);
+            dictionaryService.deleteDictionaryEntry(longId, userId);
+            return ResponseEntity.noContent().build();
+        } catch (NumberFormatException e) {
+            throw new InvalidDictionaryDataException("Entry Id not valid");
+        }
     }
 
 }

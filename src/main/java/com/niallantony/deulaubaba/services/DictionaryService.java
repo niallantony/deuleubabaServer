@@ -73,12 +73,7 @@ public class DictionaryService {
     }
 
     @Transactional
-    public DictionaryEntry addDictionaryEntry(String data, MultipartFile imageFile, String userId) {
-        DictionaryPostRequest dictionaryPostRequest = jsonUtils.parse(
-                data,
-                DictionaryPostRequest.class,
-                () -> new InvalidDictionaryDataException("Entry data not valid")
-        );
+    public DictionaryEntry addDictionaryEntry(DictionaryPostRequest dictionaryPostRequest, MultipartFile imageFile, String userId) {
         validateDictionaryRequest(dictionaryPostRequest);
         Student student = studentService.getAuthorisedStudent(dictionaryPostRequest.getStudentId(), userId);
         DictionaryEntry entry = new DictionaryEntry();
@@ -90,12 +85,7 @@ public class DictionaryService {
     }
 
     @Transactional
-    public DictionaryEntry updateDictionaryEntry(String data, MultipartFile image, String userId) {
-        DictionaryPutRequest dictionaryPutRequest = jsonUtils.parse(
-                data,
-                DictionaryPutRequest.class,
-                () -> new InvalidDictionaryDataException("Entry data not valid")
-        );
+    public DictionaryEntry updateDictionaryEntry(DictionaryPutRequest dictionaryPutRequest, MultipartFile image, String userId) {
         if (dictionaryPutRequest.getId() == null) {
             throw new InvalidDictionaryDataException("Entry data not valid");
         }
@@ -112,8 +102,7 @@ public class DictionaryService {
     }
 
     @Transactional
-    public void deleteDictionaryEntry(String id, String userId) {
-        Long longId = Long.parseLong(id);
+    public void deleteDictionaryEntry(Long longId, String userId) {
         if (!dictionaryRepository.existsById(longId)) {
             throw new ResourceNotFoundException("Dictionary not found");
         }
