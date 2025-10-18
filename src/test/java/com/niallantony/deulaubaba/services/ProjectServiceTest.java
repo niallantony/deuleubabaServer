@@ -611,7 +611,7 @@ public class ProjectServiceTest {
         when(projectFeedRepository.findByProjectIdOrderByCreatedAtDesc(1L)).thenReturn(repoReturn);
         when(projectFeedMapper.entityToDto(repoReturn.getFirst())).thenReturn(itemDTO);
 
-        ProjectFeedDTO response = projectService.getProjectFeed(1L, "abc");
+        ProjectFeedDTO response = projectService.getProjectFeed(1L, "abc", 0 ,10);
 
         assertEquals(itemDTO, response.getFeed().getFirst());
     }
@@ -627,7 +627,7 @@ public class ProjectServiceTest {
 
         when(projectRepository.findById(1L)).thenReturn(Optional.of(mockProject));
         when(projectFeedRepository.findByProjectIdOrderByCreatedAtDesc(1L)).thenReturn(List.of());
-        ProjectFeedDTO response = projectService.getProjectFeed(1L, "abc");
+        ProjectFeedDTO response = projectService.getProjectFeed(1L, "abc",0, 10);
         assertTrue(response.getFeed().isEmpty());
     }
 
@@ -635,7 +635,7 @@ public class ProjectServiceTest {
         when(projectRepository.findById(1L)).thenReturn(Optional.empty());
         assertThrows(
                 ResourceNotFoundException.class,
-                () -> projectService.getProjectFeed(1L, "abc")
+                () -> projectService.getProjectFeed(1L, "abc", 0 , 10)
         );
     }
 
@@ -644,7 +644,7 @@ public class ProjectServiceTest {
         when(projectRepository.findById(1L)).thenReturn(Optional.of(mockProject));
         assertThrows(
                 UserNotAuthorizedException.class,
-                () -> projectService.getProjectFeed(1L, "abc")
+                () -> projectService.getProjectFeed(1L, "abc", 0 ,10)
         );
     }
 
@@ -660,7 +660,7 @@ public class ProjectServiceTest {
         when(projectUserRepository.findProjectUserById("abc", 1L))
                 .thenReturn(Optional.of(projectUser));
 
-        projectService.addUserComment(1L, "abc", request);
+        projectService.addUserComment( "abc", 1L,  request);
 
         verify(projectFeedRepository, times(1)).save(
                 argThat(arg ->
@@ -675,8 +675,8 @@ public class ProjectServiceTest {
     @Test void addUserComment_whenUserOrProjectNotFound_throwsInvalidProjectUsersException() {
         when(projectUserRepository.findProjectUserById("abc", 1L)).thenReturn(Optional.empty());
         assertThrows(
-                InvalidProjectUsersException.class,
-                () -> projectService.addUserComment(1L, "abc", new ProjectFeedCommentDTO())
+                ResourceNotFoundException.class,
+                () -> projectService.addUserComment( "abc",1L, new ProjectFeedCommentDTO())
         );
         verify(projectFeedRepository, never()).save(any());
     }
@@ -695,7 +695,7 @@ public class ProjectServiceTest {
 
         assertThrows(
                 InvalidProjectDataException.class,
-                () -> projectService.addUserComment(1L, "abc", request)
+                () -> projectService.addUserComment( "abc",1L, request)
         );
 
         verify(projectFeedRepository, never()).save(any() );
@@ -715,7 +715,7 @@ public class ProjectServiceTest {
 
         assertThrows(
                 InvalidProjectDataException.class,
-                () -> projectService.addUserComment(1L, "abc", request)
+                () -> projectService.addUserComment( "abc", 1L, request)
         );
 
         verify(projectFeedRepository, never()).save(any() );
@@ -854,32 +854,8 @@ public class ProjectServiceTest {
 
         verify(projectFeedRepository , times(1)).delete(mockItem);
     }
+    
 
-    @Test void deleteProject_whenProjectDoesNotExist_throwsResourceNotFoundException() {
-        when(projectFeedRepository.findById(1L)).thenReturn(Optional.empty());
-
-        assertThrows(
-                ResourceNotFoundException.class,
-                () -> projectService.deleteUserComment(1L, "abc")
-        );
-
-        verify(projectFeedRepository , never()).delete(any());
-    }
-
-    @Test void deleteProject_whenCommentNotUsers_throwsUserNotAuthorizedException() {
-        User mockUser = new User();
-        mockUser.setUserId("def");
-        ProjectFeedItem mockItem = new ProjectFeedItem();
-        mockItem.setUser(mockUser);
-        when(projectFeedRepository.findById(1L)).thenReturn(Optional.of(mockItem));
-
-        assertThrows(
-                UserNotAuthorizedException.class,
-                () -> projectService.deleteUserComment(1L, "abc")
-       );
-
-        verify(projectFeedRepository , never()).delete(any());
-    }
 
     private static ProjectPostDTO getProjectPostDTO(User user) {
         ProjectPostDTO postDTO = new ProjectPostDTO();

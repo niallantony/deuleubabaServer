@@ -7,6 +7,7 @@ import com.niallantony.deulaubaba.services.ProjectService;
 import com.niallantony.deulaubaba.utils.JsonUtils;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.parameters.P;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 import org.springframework.web.servlet.support.ServletUriComponentsBuilder;
@@ -56,11 +57,13 @@ public class ProjectController {
     @GetMapping(path = "/{project_id}/feed")
     public ResponseEntity<ProjectFeedDTO> getProjectFeed(
             @CurrentUser String id,
-            @PathVariable String project_id
+            @PathVariable String project_id,
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "10") int size
     ) {
         try {
             Long projectId = Long.parseLong(project_id);
-            return ResponseEntity.ok(projectService.getProjectFeed(projectId, id));
+            return ResponseEntity.ok(projectService.getProjectFeed(projectId, id, page, size));
         } catch (NumberFormatException e) {
             throw new InvalidProjectDataException("Invalid project id: " + project_id);
         }
@@ -166,6 +169,45 @@ public class ProjectController {
             return ResponseEntity.ok(response);
         } catch (NumberFormatException e) {
             throw new InvalidProjectDataException("Invalid project_id: " + project_id);
+        }
+
+    }
+    @PostMapping(path = "/{project_id}/comment")
+    public ResponseEntity<?> addComment(
+            @CurrentUser String user_id,
+            @PathVariable String project_id,
+            @RequestBody String data
+    ) {
+        try {
+            Long longProjectId = Long.parseLong(project_id);
+            ProjectFeedCommentDTO request = jsonUtils.parse(
+                    data,
+                    ProjectFeedCommentDTO.class,
+                    () -> new InvalidProjectDataException("Invalid request")
+            );
+            projectService.addUserComment(user_id, longProjectId, request);
+            return ResponseEntity.noContent()
+                                 .location(
+                                         URI.create(ServletUriComponentsBuilder.fromCurrentContextPath().path("/project").toUriString() + "/" + project_id)
+                                 )
+                                 .build();
+
+        } catch (NumberFormatException e) {
+            throw new InvalidProjectDataException("Invalid project_id: " + project_id);
+        }
+    }
+
+    @DeleteMapping(path = "/comment/{comment_id}")
+    public ResponseEntity<?> deleteComment(
+            @CurrentUser String user_id,
+            @PathVariable String comment_id
+    ) {
+        try {
+            Long longCommentId = Long.parseLong(comment_id);
+            projectService.deleteComment(user_id, longCommentId);
+            return ResponseEntity.noContent().build();
+        } catch (NumberFormatException e) {
+            throw new InvalidProjectDataException("Invalid comment_id: " + comment_id);
         }
     }
 }

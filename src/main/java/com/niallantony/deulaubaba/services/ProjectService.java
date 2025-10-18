@@ -8,7 +8,10 @@ import com.niallantony.deulaubaba.mapper.ProjectFeedMapper;
 import com.niallantony.deulaubaba.mapper.ProjectMapper;
 import lombok.extern.slf4j.Slf4j;
 import org.jetbrains.annotations.NotNull;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.time.LocalDate;
@@ -86,21 +89,23 @@ public class ProjectService {
         return createCollections(project);
     }
 
-    public ProjectFeedDTO getProjectFeed(Long project_id, String user_id) {
+    public ProjectFeedDTO getProjectFeed(Long project_id, String user_id, int page, int size) {
         getAuthorizedProject(project_id, user_id);
+        Pageable pageable = PageRequest.of(page, size);
         List<ProjectFeedItemDTO> feedItems = projectFeedRepository
-                .findByProjectIdOrderByCreatedAtDesc(project_id)
+                .findByProjectIdOrderByCreatedAtDesc(project_id, pageable)
                 .stream()
                 .map(projectFeedMapper::entityToDto)
                 .toList();
         ProjectFeedDTO response = new ProjectFeedDTO();
         response.setFeed(feedItems);
         return response;
+
     }
 
-    public void addUserComment(Long project_id, String user_id, ProjectFeedCommentDTO request) {
+    public void addUserComment(String user_id, Long project_id, ProjectFeedCommentDTO request) {
         ProjectUser projectUser = projectUserRepository.findProjectUserById(user_id, project_id)
-                .orElseThrow(() -> new InvalidProjectUsersException("Invalid request"));
+                .orElseThrow(() -> new ResourceNotFoundException("Invalid request"));
         ProjectFeedItem comment = new ProjectFeedItem();
         if (request.getBody() == null || request.getBody().trim().isEmpty()) {
             throw new InvalidProjectDataException("Comment is empty");
@@ -113,12 +118,16 @@ public class ProjectService {
         projectFeedRepository.save(comment);
     }
 
+    @Transactional
     public void deleteUserComment(Long comment_id, String user_id) {
         ProjectFeedItem comment = projectFeedRepository.findById(comment_id).orElseThrow(
                 () -> new ResourceNotFoundException("Comment not found")
         );
 
-        if (!comment.getUser().getUserId().equals(user_id)) {
+        if (
+                !comment.getUser().getUserId().equals(user_id)
+                && !comment.getProject().getCreatedBy().getUserId().equals(user_id)
+        ) {
             throw new UserNotAuthorizedException("Unauthorized access");
         }
 
@@ -228,6 +237,24 @@ public class ProjectService {
         projectRepository.delete(project);
     }
 
+    public void deleteComment(String user_id, Long comment_id) {
+        ProjectFeedItem comment = projectFeedRepository.findById(comment_id).orElseThrow(() ->
+                new ResourceNotFoundException("Comment not found")
+        );
+        if (comment.getType() == ProjectFeedItemType.EVENT || comment.getType() == ProjectFeedItemType.NEW_USER) {
+            throw new CommentDeletionNotPossibleException("Feed item cannot be deleted");
+
+        }
+        if (
+                !comment.getUser().getUserId().equals(user_id) &&
+                        !comment.getProject().getCreatedBy().getUserId().equals(user_id)
+        ) {
+            throw new UserNotAuthorizedException("Unauthorized access");
+        }
+        projectFeedRepository.delete(comment);
+
+    }
+
     public ProjectAddUserResponseDTO addUsersToProject(String user_id, Long project_id, ProjectAddUserRequestDTO request) {
         Project project = getCreatedProject(user_id, project_id);
         List<User> users = userRepository.findByIds(request.getToAdd());
@@ -237,10 +264,12 @@ public class ProjectService {
                      .filter(user -> user.getUserId() != null)
                      .noneMatch(user -> user.getUserId().equals(name))
         ).toList();
+        List <User> newUsers = users.stream().filter(user ->
+                project.getUsers().stream().noneMatch(current -> current.getUser().equals(user))
+        ).toList();
 
-        users.stream().filter(user ->
-                     project.getUsers().stream().noneMatch(current -> current.getUser().equals(user)) )
-             .forEach(user -> {
+
+         newUsers.forEach(user -> {
                  ProjectUser projectUser = new ProjectUser();
                  projectUser.setProject(project);
                  projectUser.setUser(user);
@@ -248,7 +277,7 @@ public class ProjectService {
              });
 
         projectRepository.save(project);
-        project.getUsers().forEach(user -> addNewUserFeedMessage(project, user.getUser()));
+        newUsers.forEach(user -> addNewUserFeedMessage(project, user));
         return new ProjectAddUserResponseDTO(notFound);
     }
 

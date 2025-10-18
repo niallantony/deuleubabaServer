@@ -2,12 +2,8 @@ package com.niallantony.deulaubaba.web;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.niallantony.deulaubaba.data.*;
-import com.niallantony.deulaubaba.domain.CommunicationCategoryLabel;
-import com.niallantony.deulaubaba.domain.Project;
-import com.niallantony.deulaubaba.domain.ProjectUser;
-import com.niallantony.deulaubaba.dto.project.ProjectAddUserRequestDTO;
-import com.niallantony.deulaubaba.dto.project.ProjectDetailsPatchDTO;
-import com.niallantony.deulaubaba.dto.project.ProjectPostDTO;
+import com.niallantony.deulaubaba.domain.*;
+import com.niallantony.deulaubaba.dto.project.*;
 import com.niallantony.deulaubaba.exceptions.FileStorageException;
 import com.niallantony.deulaubaba.services.FileStorageService;
 import com.niallantony.deulaubaba.util.ProjectTestFactory;
@@ -75,6 +71,8 @@ public class ProjectControllerTests {
             .withPassword("sa");
     @Autowired
     private ProjectUserRepository projectUserRepository;
+    @Autowired
+    private ProjectFeedRepository projectFeedRepository;
 
     @BeforeAll
     public static void setUp() { postgreSQLContainer.start(); }
@@ -872,7 +870,282 @@ public class ProjectControllerTests {
         mvc.perform(get("/project/1/feed")
                 .with(jwt()))
                 .andExpect(status().isOk())
+                .andExpect(jsonPath("$.feed.length()").value(3))
                 .andDo(r -> System.out.println(r.getResponse().getContentAsString()));
     }
 
+    @SqlMergeMode(SqlMergeMode.MergeMode.MERGE)
+    @Sql({
+            "/fixtures/student_and_user.sql",
+    })
+    @Test
+    public void getProjectFeed_withInvalidId_returns404(@Autowired MockMvc mvc) throws Exception {
+        mvc.perform(get("/project/1/feed")
+                   .with(jwt()))
+           .andExpect(status().isNotFound())
+            .andExpect(jsonPath("$.message").value("Project not found"))
+           .andDo(r -> System.out.println(r.getResponse().getContentAsString()));
+    }
+
+    @SqlMergeMode(SqlMergeMode.MergeMode.MERGE)
+    @Sql({
+            "/fixtures/student_and_user.sql",
+            "/fixtures/project_unrelated.sql",
+    })
+    @Test
+    public void getProjectFeed_withUnauthorizedUser_returns401(@Autowired MockMvc mvc) throws Exception {
+        mvc.perform(get("/project/1/feed")
+                   .with(jwt()))
+           .andExpect(status().isUnauthorized())
+            .andExpect(jsonPath("$.message").value("Unauthorized access"))
+           .andDo(r -> System.out.println(r.getResponse().getContentAsString()));
+    }
+
+    @Test
+    public void getProjectFeed_withMalformedId_returns400(@Autowired MockMvc mvc) throws Exception {
+        mvc.perform(get("/project/a/feed")
+                   .with(jwt()))
+           .andExpect(status().isBadRequest())
+           .andExpect(jsonPath("$.message").value("Invalid project id: a"))
+           .andDo(r -> System.out.println(r.getResponse().getContentAsString()));
+    }
+
+    @Test
+    @SqlMergeMode(SqlMergeMode.MergeMode.MERGE)
+    @Sql({
+            "/fixtures/student_and_user.sql",
+            "/fixtures/project.sql"
+    })
+    public void addComment_withValidRequest_addsComment(@Autowired MockMvc mvc) throws Exception {
+        String redirect = ServletUriComponentsBuilder.fromCurrentContextPath().path("/project").toUriString() + "/1";
+        ProjectFeedCommentDTO commentDTO = new ProjectFeedCommentDTO("New Comment");
+        String json = objectMapper.writeValueAsString(commentDTO);
+        mvc.perform(post("/project/1/comment")
+                .with(jwt())
+                .content(json))
+                .andExpect(status().isNoContent())
+                .andExpect(redirectedUrl(redirect));
+
+        List<ProjectFeedItem> feed = projectFeedRepository.findByProjectIdOrderByCreatedAtDesc(1L);
+        assertAll(() -> {
+            assertEquals(1, feed.size());
+            assertEquals("New Comment", feed.getFirst().getBody());
+            assertEquals(1L, feed.getFirst().getProject().getId());
+            assertEquals("user", feed.getFirst().getUser().getUserId());
+            assertEquals(ProjectFeedItemType.COMMENT, feed.getFirst().getType());
+            assertNotNull(feed.getFirst().getCreatedAt());
+        });
+
+    }
+
+    @Test
+    @SqlMergeMode(SqlMergeMode.MergeMode.MERGE)
+    @Sql({
+            "/fixtures/student_and_user.sql",
+            "/fixtures/project.sql"
+    })
+    public void addComment_withInvalidRequest_throws400(@Autowired MockMvc mvc) throws Exception {
+        String json = "json_placeholder";
+        mvc.perform(post("/project/1/comment")
+                   .with(jwt())
+                   .content(json))
+           .andExpect(status().isBadRequest())
+           .andExpect(jsonPath("$.message").value("Invalid request"))
+           .andDo(r -> System.out.println(r.getResponse().getContentAsString()));
+
+        List<ProjectFeedItem> feed = projectFeedRepository.findByProjectIdOrderByCreatedAtDesc(1L);
+        assertTrue(feed.isEmpty());
+
+    }
+
+    @SqlMergeMode(SqlMergeMode.MergeMode.MERGE)
+    @Sql({
+            "/fixtures/student_and_user.sql",
+            "/fixtures/project_unrelated.sql"
+    })
+    @Test
+    public void addComment_whenNotInvolvedInProject_throws404(@Autowired MockMvc mvc) throws Exception {
+        ProjectFeedCommentDTO commentDTO = new ProjectFeedCommentDTO("New Comment");
+        String json = objectMapper.writeValueAsString(commentDTO);
+        mvc.perform(post("/project/1/comment")
+                   .with(jwt())
+                   .content(json))
+           .andExpect(status().isNotFound())
+           .andExpect(jsonPath("$.message").value("Invalid request"))
+           .andDo(r -> System.out.println(r.getResponse().getContentAsString()));
+
+        List<ProjectFeedItem> feed = projectFeedRepository.findByProjectIdOrderByCreatedAtDesc(1L);
+        assertTrue(feed.isEmpty());
+    }
+
+    @SqlMergeMode(SqlMergeMode.MergeMode.MERGE)
+    @Sql({
+            "/fixtures/student_and_user.sql",
+    })
+    @Test
+    public void addComment_onNonExistentProject_throws404(@Autowired MockMvc mvc) throws Exception {
+        ProjectFeedCommentDTO commentDTO = new ProjectFeedCommentDTO("New Comment");
+        String json = objectMapper.writeValueAsString(commentDTO);
+        mvc.perform(post("/project/1/comment")
+                   .with(jwt())
+                   .content(json))
+           .andExpect(status().isNotFound())
+           .andExpect(jsonPath("$.message").value("Invalid request"))
+           .andDo(r -> System.out.println(r.getResponse().getContentAsString()));
+
+    }
+
+    @Test
+    @SqlMergeMode(SqlMergeMode.MergeMode.MERGE)
+    @Sql({"/fixtures/student_and_user.sql"})
+    public void createProject_whenSuccessful_updatesFeedAppropriately(@Autowired MockMvc mvc) throws Exception {
+        ProjectPostDTO postDTO = ProjectTestFactory.getProjectPostDTOWithUser("user1");
+        String json = objectMapper.writeValueAsString(postDTO);
+        String redirect = ServletUriComponentsBuilder.fromCurrentContextPath().path("/project").toUriString() + "/1";
+        mvc.perform(multipart("/project")
+                   .file("data", json.getBytes())
+                   .with(jwt()))
+           .andExpect(status().isCreated())
+           .andDo((r) -> System.out.println(r.getResponse().getContentAsString()));
+        List<Project> projects = projectRepository.findAll().stream().toList();
+        List<ProjectFeedItem> feed = projectFeedRepository.findByProjectIdOrderByCreatedAtDesc(projects.getFirst()
+                                                                                                       .getId());
+        assertAll(() -> {
+            assertTrue(feed.stream().anyMatch(item -> item.getBody().equals("Project created")));
+            assertTrue(feed.stream().anyMatch(item -> item.getBody().equals("New user added: teacher")));
+            assertEquals(2, feed.size());
+        });
+    }
+
+    @Test
+    @SqlMergeMode(SqlMergeMode.MergeMode.MERGE)
+    @Sql({
+            "/fixtures/student_and_user.sql",
+            "/fixtures/project.sql",
+            "/fixtures/user_another.sql"
+    })
+    public void addUsersToProject_whenSuccessful_updatesFeedAppropriately(@Autowired MockMvc mvc) throws Exception {
+        ProjectAddUserRequestDTO request = new ProjectAddUserRequestDTO(List.of("user2"));
+        String json = objectMapper.writeValueAsString(request);
+        mvc.perform(patch("/project/1/add-user")
+                   .with(jwt())
+                   .content(json))
+           .andExpect(status().isOk())
+           .andExpect(jsonPath("$.notFound.length()").value(0))
+           .andDo((r) -> System.out.println(r.getResponse().getContentAsString()));
+
+        List<ProjectFeedItem> feed = projectFeedRepository.findByProjectIdOrderByCreatedAtDesc(1L);
+        feed.forEach(item ->
+                System.out.println(item.getBody()));
+        assertEquals(1, feed.size());
+        assertEquals("New user added: teacher", feed.getFirst().getBody());
+    }
+
+    @Test
+    @SqlMergeMode(SqlMergeMode.MergeMode.MERGE)
+    @Sql({
+            "/fixtures/student_and_user.sql",
+            "/fixtures/project.sql"
+    })
+    public void patchProjectDetails_whenSuccessful_updatesFeedAppropriately(@Autowired MockMvc mvc) throws Exception {
+        ProjectDetailsPatchDTO projectDetailsPatchDTO = new ProjectDetailsPatchDTO();
+        projectDetailsPatchDTO.setCategories(Set.of(CommunicationCategoryLabel.PAIN));
+        projectDetailsPatchDTO.setDescription("new description");
+        projectDetailsPatchDTO.setObjective("new objective");
+        projectDetailsPatchDTO.setStartedOn(LocalDate.of(2020,1,1));
+        String json = objectMapper.writeValueAsString(projectDetailsPatchDTO);
+        MockMultipartFile data = new MockMultipartFile("data", "data.json", "application/json", json.getBytes());
+
+        mvc.perform(multipart(HttpMethod.PATCH, "/project/1")
+                   .file(data)
+                   .with(jwt()))
+           .andExpect(status().isNoContent())
+           .andDo((r) -> System.out.println(r.getResponse().getRedirectedUrl()));
+
+        List<ProjectFeedItem> feed = projectFeedRepository.findByProjectIdOrderByCreatedAtDesc(1L);
+        assertAll(() -> {
+            assertEquals(1, feed.size());
+            assertEquals("Project updated", feed.getFirst().getBody());
+
+        });
+
+    }
+
+    @Test
+    @SqlMergeMode(SqlMergeMode.MergeMode.MERGE)
+    @Sql({
+            "/fixtures/student_and_user.sql",
+            "/fixtures/project_completed.sql",
+            "/fixtures/project_feed_items.sql"
+    })
+    public void deleteUserComment_withValidRequestAsOP_deletesComment(@Autowired MockMvc mvc) throws Exception {
+        mvc.perform(delete("/project/comment/1")
+                   .with(jwt()))
+           .andExpect(status().isNoContent());
+
+        List<ProjectFeedItem> feed = projectFeedRepository.findByProjectIdOrderByCreatedAtDesc(1L);
+        assertEquals(2, feed.size());
+        assertTrue(feed.stream().noneMatch(item -> item.getId().equals(1L)));
+    }
+
+    @Test
+    @SqlMergeMode(SqlMergeMode.MergeMode.MERGE)
+    @Sql({
+            "/fixtures/student_and_user.sql",
+            "/fixtures/user_another.sql",
+            "/fixtures/project.sql",
+            "/fixtures/project_feed_items_another_user.sql"
+    })
+    public void deleteUserComment_asProjectCreator_deletesComment(@Autowired MockMvc mvc) throws Exception {
+        mvc.perform(delete("/project/comment/1")
+                   .with(jwt()))
+           .andExpect(status().isNoContent());
+
+        List<ProjectFeedItem> feed = projectFeedRepository.findByProjectIdOrderByCreatedAtDesc(1L);
+        assertEquals(2, feed.size());
+        assertTrue(feed.stream().noneMatch(item -> item.getId().equals(1L)));
+    }
+
+    @Test
+    @SqlMergeMode(SqlMergeMode.MergeMode.MERGE)
+    @Sql({
+            "/fixtures/student_and_user.sql",
+            "/fixtures/project.sql",
+            "/fixtures/project_feed_items.sql"
+    })
+    public void deleteUserComment_whenReferringToSystemEvent_doesNotDeleteComment(@Autowired MockMvc mvc) throws Exception {
+        mvc.perform(delete("/project/comment/3")
+                   .with(jwt()))
+           .andExpect(status().isForbidden());
+
+        List<ProjectFeedItem> feed = projectFeedRepository.findByProjectIdOrderByCreatedAtDesc(1L);
+        assertEquals(3, feed.size());
+        assertTrue(feed.stream().anyMatch(item -> item.getId().equals(3L)));
+    }
+
+    @Test
+    @SqlMergeMode(SqlMergeMode.MergeMode.MERGE)
+    @Sql({
+            "/fixtures/student_and_user.sql",
+            "/fixtures/project.sql",
+    })
+    public void deleteUserComment_withInvalidRequest_throws404(@Autowired MockMvc mvc) throws Exception {
+        mvc.perform(delete("/project/comment/3")
+                   .with(jwt()))
+           .andExpect(status().isNotFound());
+    }
+
+    @Test
+    @SqlMergeMode(SqlMergeMode.MergeMode.MERGE)
+    @Sql({
+            "/fixtures/student_and_user.sql",
+            "/fixtures/project_unowned.sql",
+            "/fixtures/project_feed_items_another_user.sql"
+    })
+    public void deleteUserComment_asOtherThanCommentCreatorOrProjectCreator_throws401(@Autowired MockMvc mvc) throws Exception {
+        mvc.perform(delete("/project/comment/1")
+                   .with(jwt()))
+           .andExpect(status().isUnauthorized());
+
+    }
 }

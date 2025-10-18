@@ -1,5 +1,6 @@
 package com.niallantony.deulaubaba.exceptions;
 
+import com.github.dockerjava.api.exception.ConflictException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.ExceptionHandler;
@@ -13,6 +14,11 @@ public class GlobalExceptionHandler {
     @ExceptionHandler(InvalidProjectUsersException.class)
     public ResponseEntity<?> handleInvalidProjectUsersException(InvalidProjectUsersException ex) {
         return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(Map.of("message", ex.getMessage()));
+    }
+
+    @ExceptionHandler(CommentDeletionNotPossibleException.class)
+    public ResponseEntity<?> handleCommentDeletionNotPossibleException(CommentDeletionNotPossibleException ex) {
+        return ResponseEntity.status(HttpStatus.FORBIDDEN).body(Map.of("message", ex.getMessage()));
     }
 
     @ExceptionHandler(ResourceNotFoundException.class)
