@@ -4,12 +4,18 @@ import com.niallantony.deulaubaba.data.*;
 import com.niallantony.deulaubaba.domain.*;
 import com.niallantony.deulaubaba.dto.project.*;
 import com.niallantony.deulaubaba.exceptions.*;
+import com.niallantony.deulaubaba.mapper.ProjectFeedMapper;
 import com.niallantony.deulaubaba.mapper.ProjectMapper;
 import lombok.extern.slf4j.Slf4j;
+import org.jetbrains.annotations.NotNull;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Objects;
@@ -22,11 +28,13 @@ public class ProjectService {
 
     private final ProjectRepository projectRepository;
     private final ProjectMapper projectMapper;
+    private final ProjectFeedMapper projectFeedMapper;
     private final UserRepository userRepository;
     private final StudentRepository studentRepository;
     private final FileStorageService fileStorageService;
     private final CommunicationCategoryRepository communicationCategoryRepository;
     private final ProjectUserRepository projectUserRepository;
+    private final ProjectFeedRepository projectFeedRepository;
 
     public ProjectService(
             ProjectRepository projectRepository,
@@ -35,7 +43,9 @@ public class ProjectService {
             StudentRepository studentRepository,
             FileStorageService fileStorageService,
             CommunicationCategoryRepository communicationCategoryRepository,
-            ProjectUserRepository projectUserRepository
+            ProjectUserRepository projectUserRepository,
+            ProjectFeedMapper projectFeedMapper,
+            ProjectFeedRepository projectFeedRepository
     ) {
         this.projectRepository = projectRepository;
         this.projectMapper = projectMapper;
@@ -44,16 +54,12 @@ public class ProjectService {
         this.fileStorageService = fileStorageService;
         this.communicationCategoryRepository = communicationCategoryRepository;
         this.projectUserRepository = projectUserRepository;
+        this.projectFeedRepository = projectFeedRepository;
+        this.projectFeedMapper = projectFeedMapper;
     }
 
-    public ProjectDTO getProject(String project_id, String user_id) {
-        Long longProjectId = Long.parseLong(project_id);
-        Project project = projectRepository.findById(longProjectId).orElseThrow(
-                () -> new ResourceNotFoundException("Project not found")
-        );
-        if (!userAssignedToProject(user_id, project)) {
-            throw new UserNotAuthorizedException("Unauthorized access");
-        }
+    public ProjectDTO getProject(Long project_id, String user_id) {
+        Project project = getAuthorizedProject(project_id, user_id);
         ProjectDTO projectDTO = projectMapper.entityToDto(project);
         if (project.getCreatedBy().getUserId().equals(user_id)) {
            projectDTO.isOwnProject(true);
@@ -83,6 +89,51 @@ public class ProjectService {
         return createCollections(project);
     }
 
+    public ProjectFeedDTO getProjectFeed(Long project_id, String user_id, int page, int size) {
+        getAuthorizedProject(project_id, user_id);
+        Pageable pageable = PageRequest.of(page, size);
+        List<ProjectFeedItemDTO> feedItems = projectFeedRepository
+                .findByProjectIdOrderByCreatedAtDesc(project_id, pageable)
+                .stream()
+                .map(projectFeedMapper::entityToDto)
+                .toList();
+        ProjectFeedDTO response = new ProjectFeedDTO();
+        response.setFeed(feedItems);
+        return response;
+
+    }
+
+    public void addUserComment(String user_id, Long project_id, ProjectFeedCommentDTO request) {
+        ProjectUser projectUser = projectUserRepository.findProjectUserById(user_id, project_id)
+                .orElseThrow(() -> new ResourceNotFoundException("Invalid request"));
+        ProjectFeedItem comment = new ProjectFeedItem();
+        if (request.getBody() == null || request.getBody().trim().isEmpty()) {
+            throw new InvalidProjectDataException("Comment is empty");
+        }
+        comment.setProject(projectUser.getProject());
+        comment.setUser(projectUser.getUser());
+        comment.setBody(request.getBody());
+        comment.setType(ProjectFeedItemType.COMMENT);
+        comment.setCreatedAt(LocalDateTime.now());
+        projectFeedRepository.save(comment);
+    }
+
+    @Transactional
+    public void deleteUserComment(Long comment_id, String user_id) {
+        ProjectFeedItem comment = projectFeedRepository.findById(comment_id).orElseThrow(
+                () -> new ResourceNotFoundException("Comment not found")
+        );
+
+        if (
+                !comment.getUser().getUserId().equals(user_id)
+                && !comment.getProject().getCreatedBy().getUserId().equals(user_id)
+        ) {
+            throw new UserNotAuthorizedException("Unauthorized access");
+        }
+
+        projectFeedRepository.delete(comment);
+    }
+
     public ProjectDTO createProject(ProjectPostDTO request, MultipartFile image, String user_id) {
         User user = getUserOrThrow(user_id);
         Student student = getStudentOrThrow(request.getStudentId());
@@ -100,6 +151,10 @@ public class ProjectService {
         projectRepository.save(project);
         ProjectDTO projectDTO = projectMapper.entityToDto(project);
         projectDTO.isOwnProject(true);
+        addSystemEventMessage(project, "Project created");
+        projectUsers.forEach(pu ->
+                addNewUserFeedMessage(project, pu.getUser())
+        );
         return projectDTO;
     }
 
@@ -114,6 +169,7 @@ public class ProjectService {
         validatePatch(request);
         applyDetailChanges(project, request);
         projectRepository.save(project);
+        addSystemEventMessage(project, "Project updated");
     }
 
     private void validatePatch(ProjectDetailsPatchDTO request) {
@@ -132,14 +188,8 @@ public class ProjectService {
         project.setCategories(getCategories(request.getCategories()));
     }
 
-    public void changeCompletedStatus(String user_id, String project_id, boolean completed)  {
-        long longProjectId;
-        try {
-            longProjectId = Long.parseLong(project_id);
-        } catch (NumberFormatException e) {
-            throw new InvalidProjectDataException("Invalid project ID");
-        }
-        ProjectUser relation = projectUserRepository.findProjectUserById(user_id, longProjectId).orElseThrow(
+    public void changeCompletedStatus(String user_id, Long project_id, boolean completed)  {
+        ProjectUser relation = projectUserRepository.findProjectUserById(user_id, project_id).orElseThrow(
                 () -> new ResourceNotFoundException("Project user not found")
         );
         if (relation.getIsCompleted() == completed) {
@@ -152,7 +202,7 @@ public class ProjectService {
             relation.setCompletedOn(null);
         }
         projectUserRepository.save(relation);
-        checkProjectStatus(longProjectId);
+        checkProjectStatus(project_id);
     }
 
     public void checkProjectStatus(Long project_id) {
@@ -176,15 +226,7 @@ public class ProjectService {
     }
 
     public void deleteProject(String user_id, Long project_id) {
-        Project project = projectRepository.findById(project_id).orElseThrow(
-                () -> new ResourceNotFoundException("Project not found")
-        );
-        if (
-                project.getCreatedBy() == null ||
-                !project.getCreatedBy().getUserId().equals(user_id)
-        ) {
-            throw new UserNotAuthorizedException("Unauthorized access");
-        }
+        Project project = getCreatedProject(user_id, project_id);
         if (project.getImgsrc() != null) {
             try {
                 fileStorageService.deleteImage(project.getImgsrc());
@@ -195,13 +237,26 @@ public class ProjectService {
         projectRepository.delete(project);
     }
 
-    public ProjectAddUserResponseDTO addUsersToProject(String user_id, Long project_id, ProjectAddUserRequestDTO request) {
-        Project project = projectRepository.findById(project_id).orElseThrow(
-                () -> new ResourceNotFoundException("Project not found")
+    public void deleteComment(String user_id, Long comment_id) {
+        ProjectFeedItem comment = projectFeedRepository.findById(comment_id).orElseThrow(() ->
+                new ResourceNotFoundException("Comment not found")
         );
-        if (project.getCreatedBy() == null || !project.getCreatedBy().getUserId().equals(user_id)) {
+        if (comment.getType() == ProjectFeedItemType.EVENT || comment.getType() == ProjectFeedItemType.NEW_USER) {
+            throw new CommentDeletionNotPossibleException("Feed item cannot be deleted");
+
+        }
+        if (
+                !comment.getUser().getUserId().equals(user_id) &&
+                        !comment.getProject().getCreatedBy().getUserId().equals(user_id)
+        ) {
             throw new UserNotAuthorizedException("Unauthorized access");
         }
+        projectFeedRepository.delete(comment);
+
+    }
+
+    public ProjectAddUserResponseDTO addUsersToProject(String user_id, Long project_id, ProjectAddUserRequestDTO request) {
+        Project project = getCreatedProject(user_id, project_id);
         List<User> users = userRepository.findByIds(request.getToAdd());
 
         List<String> notFound = request.getToAdd().stream().filter( name ->
@@ -209,10 +264,12 @@ public class ProjectService {
                      .filter(user -> user.getUserId() != null)
                      .noneMatch(user -> user.getUserId().equals(name))
         ).toList();
+        List <User> newUsers = users.stream().filter(user ->
+                project.getUsers().stream().noneMatch(current -> current.getUser().equals(user))
+        ).toList();
 
-        users.stream().filter(user ->
-                     project.getUsers().stream().noneMatch(current -> current.getUser().equals(user)) )
-             .forEach(user -> {
+
+         newUsers.forEach(user -> {
                  ProjectUser projectUser = new ProjectUser();
                  projectUser.setProject(project);
                  projectUser.setUser(user);
@@ -220,13 +277,24 @@ public class ProjectService {
              });
 
         projectRepository.save(project);
+        newUsers.forEach(user -> addNewUserFeedMessage(project, user));
         return new ProjectAddUserResponseDTO(notFound);
     }
 
+    private @NotNull Project getCreatedProject(String user_id, Long project_id) {
+        Project project = projectRepository.findById(project_id).orElseThrow(
+                () -> new ResourceNotFoundException("Project not found")
+        );
+        if (project.getCreatedBy() == null || !project.getCreatedBy().getUserId().equals(user_id)) {
+            throw new UserNotAuthorizedException("Unauthorized access");
+        }
+        return project;
+    }
+
     private Set<ProjectUser> projectUsersFromPost(ProjectPostDTO post) {
-        return post.getUsernames().stream().map(userRepository::findByUsername)
-                .map(userOptional -> {
-                    User user = userOptional.orElseThrow(() -> new ResourceNotFoundException("User not found"));
+        Set<User> users = userRepository.findAllByUsernames(post.getUsernames());
+        return users.stream()
+                .map(user -> {
                     ProjectUser projectUser = new ProjectUser();
                     projectUser.setUser(user);
                     return projectUser;
@@ -264,6 +332,25 @@ public class ProjectService {
 
     }
 
+    private void addNewUserFeedMessage(Project project, User user) {
+        ProjectFeedItem comment = new ProjectFeedItem();
+        comment.setProject(project);
+        comment.setUser(user);
+        comment.setBody("New user added: " + user.getUserType());
+        comment.setType(ProjectFeedItemType.NEW_USER);
+        comment.setCreatedAt(LocalDateTime.now());
+        projectFeedRepository.save(comment);
+    }
+
+    private void addSystemEventMessage(Project project, String eventBody) {
+        ProjectFeedItem comment = new ProjectFeedItem();
+        comment.setProject(project);
+        comment.setBody(eventBody);
+        comment.setType(ProjectFeedItemType.EVENT);
+        comment.setCreatedAt(LocalDateTime.now());
+        projectFeedRepository.save(comment);
+    }
+
     private ProjectCollectionsDTO createCollections(Set<ProjectPreviewDTO> projects) {
         ProjectCollectionsDTO projectCollectionsDTO = new ProjectCollectionsDTO();
         for (ProjectPreviewDTO project : projects) {
@@ -285,5 +372,15 @@ public class ProjectService {
         return project.getUsers().stream()
                 .filter(projectUser -> projectUser.getUser() != null)
                 .anyMatch(projectUser -> projectUser.getUser().getUserId().equals(user_id));
+    }
+
+    private Project getAuthorizedProject(Long project_id, String user_id) {
+        Project project = projectRepository.findById(project_id).orElseThrow(
+                () -> new ResourceNotFoundException("Project not found")
+        );
+        if (!userAssignedToProject(user_id, project)) {
+            throw new UserNotAuthorizedException("Unauthorized access");
+        }
+        return project;
     }
 }

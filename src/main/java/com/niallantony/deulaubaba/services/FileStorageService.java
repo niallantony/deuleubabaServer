@@ -54,7 +54,7 @@ public class FileStorageService {
         try {
             newUri = storeImage(image);
         } catch (FileStorageException e) {
-            log.warn("Could not store image" + oldUri, e);
+            log.warn("Could not store image " + oldUri, e);
             return;
         }
         if (oldUri != null && !oldUri.isEmpty()) {

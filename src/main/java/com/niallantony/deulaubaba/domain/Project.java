@@ -8,7 +8,9 @@ import lombok.EqualsAndHashCode;
 import lombok.ToString;
 
 import java.time.LocalDate;
+import java.util.ArrayList;
 import java.util.HashSet;
+import java.util.List;
 import java.util.Set;
 
 @Data
@@ -70,6 +72,9 @@ public class Project extends HasImage{
     @JoinColumn(name = "created_by", referencedColumnName = "userId")
     @JsonBackReference
     private User createdBy;
+
+    @OneToMany(fetch = FetchType.LAZY, mappedBy = "project", cascade = CascadeType.ALL, orphanRemoval = true)
+    private List<ProjectFeedItem> feed = new ArrayList<>();
 
     public void setUsers(Set<ProjectUser> users) {
         this.users = users;

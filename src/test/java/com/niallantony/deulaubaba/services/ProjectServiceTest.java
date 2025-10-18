@@ -4,6 +4,7 @@ import com.niallantony.deulaubaba.data.*;
 import com.niallantony.deulaubaba.domain.*;
 import com.niallantony.deulaubaba.dto.project.*;
 import com.niallantony.deulaubaba.exceptions.*;
+import com.niallantony.deulaubaba.mapper.ProjectFeedMapper;
 import com.niallantony.deulaubaba.mapper.ProjectMapper;
 import com.niallantony.deulaubaba.util.ProjectTestFactory;
 import org.jetbrains.annotations.NotNull;
@@ -12,6 +13,7 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.mock.web.MockMultipartFile;
 import org.springframework.web.multipart.MultipartFile;
 
@@ -30,6 +32,9 @@ public class ProjectServiceTest {
     private ProjectMapper projectMapper;
 
     @Mock
+    private ProjectFeedMapper projectFeedMapper;
+
+    @Mock
     private UserRepository userRepository;
 
     @Mock
@@ -43,6 +48,9 @@ public class ProjectServiceTest {
 
     @Mock
     private CommunicationCategoryRepository communicationCategoryRepository;
+
+    @Mock
+    private ProjectFeedRepository projectFeedRepository;
 
     @InjectMocks
     private ProjectService projectService;
@@ -59,7 +67,7 @@ public class ProjectServiceTest {
         when(projectRepository.findById(1L)).thenReturn(Optional.of(persistedProject));
         when(projectMapper.entityToDto(persistedProject)).thenReturn(expectedProject);
 
-        ProjectDTO response = projectService.getProject("1", "abc");
+        ProjectDTO response = projectService.getProject(1L, "abc");
         verify(projectRepository, times(1)).findById(1L);
         verify(projectMapper, times(1)).entityToDto(persistedProject);
         assertEquals(expectedProject, response);
@@ -68,7 +76,7 @@ public class ProjectServiceTest {
     @Test
     public void getProject_whenGivenInvalidId_throwsResourceNotFoundException() {
         when(projectRepository.findById(1L)).thenReturn(Optional.empty());
-        assertThrows(ResourceNotFoundException.class, () -> projectService.getProject("1", "abc"));
+        assertThrows(ResourceNotFoundException.class, () -> projectService.getProject(1L, "abc"));
     }
 
     @Test
@@ -76,7 +84,7 @@ public class ProjectServiceTest {
         Project persistedProject = new Project();
 
         when(projectRepository.findById(1L)).thenReturn(Optional.of(persistedProject));
-        assertThrows(UserNotAuthorizedException.class, () -> projectService.getProject("1", "abc"));
+        assertThrows(UserNotAuthorizedException.class, () -> projectService.getProject(1L, "abc"));
     }
 
     @Test
@@ -163,7 +171,7 @@ public class ProjectServiceTest {
         Project createdproject = new Project();
         when(userRepository.findByUserId("abc")).thenReturn(Optional.of(user));
         when(studentRepository.findById("123")).thenReturn(Optional.of(student));
-        when(userRepository.findByUsername("user1")).thenReturn(Optional.of(user));
+        when(userRepository.findAllByUsernames(Set.of("user1"))).thenReturn(Set.of(user));
         when(projectMapper.entityToDto(any(Project.class))).thenReturn(projectDTO);
         when(projectMapper.requestToEntity(postDTO)).thenReturn(createdproject);
         when(communicationCategoryRepository.findAll()).thenReturn(new ArrayList<>());
@@ -188,7 +196,7 @@ public class ProjectServiceTest {
         doCallRealMethod().when(fileStorageService).swapImage(any(), any());
         when(userRepository.findByUserId("abc")).thenReturn(Optional.of(user));
         when(studentRepository.findById("123")).thenReturn(Optional.of(student));
-        when(userRepository.findByUsername("user1")).thenReturn(Optional.of(user));
+        when(userRepository.findAllByUsernames(Set.of("user1"))).thenReturn(Set.of(user));
         when(projectMapper.entityToDto(any(Project.class))).thenReturn(projectDTO);
         when(projectMapper.requestToEntity(postDTO)).thenReturn(createdproject);
         when(fileStorageService.storeImage(image)).thenReturn("new_url");
@@ -243,7 +251,7 @@ public class ProjectServiceTest {
         doCallRealMethod().when(fileStorageService).swapImage(any(),any());
         when(userRepository.findByUserId("abc")).thenReturn(Optional.of(user));
         when(studentRepository.findById("123")).thenReturn(Optional.of(student));
-        when(userRepository.findByUsername("user1")).thenReturn(Optional.of(user));
+        when(userRepository.findAllByUsernames(Set.of("user1"))).thenReturn(Set.of(user));
         when(projectMapper.entityToDto(any(Project.class))).thenReturn(projectDTO);
         when(projectMapper.requestToEntity(postDTO)).thenReturn(createdproject);
         when(fileStorageService.storeImage(image)).thenThrow(FileStorageException.class);
@@ -270,8 +278,7 @@ public class ProjectServiceTest {
         Project createdproject = new Project();
         when(userRepository.findByUserId("abc")).thenReturn(Optional.of(user));
         when(studentRepository.findById("123")).thenReturn(Optional.of(student));
-        when(userRepository.findByUsername("user1")).thenReturn(Optional.of(user));
-        when(userRepository.findByUsername("user2")).thenReturn(Optional.of(user2));
+        when(userRepository.findAllByUsernames(Set.of("user1", "user2"))).thenReturn(Set.of(user, user2));
         when(projectMapper.entityToDto(any(Project.class))).thenReturn(projectDTO);
         when(projectMapper.requestToEntity(postDTO)).thenReturn(createdproject);
         when(communicationCategoryRepository.findAll()).thenReturn(new ArrayList<>());
@@ -303,8 +310,8 @@ public class ProjectServiceTest {
         when(projectUserRepository.findProjectUserById("abc", 2L)).thenReturn(Optional.of(completedProjectUser));
         when(projectUserRepository.findAllProjectUsersByProjectId(1L)).thenReturn(List.of(projectUser));
         when(projectUserRepository.findAllProjectUsersByProjectId(2L)).thenReturn(List.of(completedProjectUser));
-        projectService.changeCompletedStatus("abc", "1", true);
-        projectService.changeCompletedStatus("abc", "2", false);
+        projectService.changeCompletedStatus("abc", 1L, true);
+        projectService.changeCompletedStatus("abc", 2L, false);
         assertTrue(projectUser.getIsCompleted());
         assertNotNull(projectUser.getCompletedOn());
         assertNull(completedProjectUser.getCompletedOn());
@@ -320,8 +327,8 @@ public class ProjectServiceTest {
         completedProjectUser.setCompletedOn(date);
         when(projectUserRepository.findProjectUserById("abc", 1L)).thenReturn(Optional.of(projectUser));
         when(projectUserRepository.findProjectUserById("abc", 2L)).thenReturn(Optional.of(completedProjectUser));
-        projectService.changeCompletedStatus("abc", "1", false);
-        projectService.changeCompletedStatus("abc", "2", true);
+        projectService.changeCompletedStatus("abc", 1L, false);
+        projectService.changeCompletedStatus("abc", 2L, true);
         assertTrue(completedProjectUser.getIsCompleted());
         assertFalse(projectUser.getIsCompleted());
         assertEquals(date, completedProjectUser.getCompletedOn());
@@ -332,17 +339,9 @@ public class ProjectServiceTest {
         when(projectUserRepository.findProjectUserById("abc", 1L)).thenReturn(Optional.empty());
         ResourceNotFoundException exception = assertThrows(
                 ResourceNotFoundException.class,
-                () -> projectService.changeCompletedStatus("abc", "1", true)
+                () -> projectService.changeCompletedStatus("abc", 1L, true)
         );
         assertEquals("Project user not found", exception.getMessage());
-    }
-
-    @Test void updateProjectStatus_withMalformedProjectId_throws400() {
-        InvalidProjectDataException exception = assertThrows(
-                InvalidProjectDataException.class,
-                () -> projectService.changeCompletedStatus("abc", "a", false)
-        );
-        assertEquals("Invalid project ID", exception.getMessage());
     }
 
     @Test void checkProjectStatus_whenAllStudentsDone_changesProjectStatus() {
@@ -596,6 +595,287 @@ public class ProjectServiceTest {
                 ResourceNotFoundException.class,
                 () -> projectService.addUsersToProject("abc", 1L, new ProjectAddUserRequestDTO(List.of("def")))
         );
+    }
+
+    @Test void getProjectFeed_whenValidRequest_returnsProjectFeed() {
+        Project mockProject = new Project();
+        User mockUser = new User();
+        mockUser.setUserId("abc");
+        ProjectUser projectUser = new ProjectUser();
+        projectUser.setUser(mockUser);
+        projectUser.setProject(mockProject);
+        mockProject.getUsers().add(projectUser);
+        List<ProjectFeedItem> repoReturn = List.of(new ProjectFeedItem());
+        ProjectFeedItemDTO itemDTO = new ProjectFeedItemDTO();
+
+        when(projectRepository.findById(1L)).thenReturn(Optional.of(mockProject));
+        when(projectFeedRepository.findByProjectIdOrderByCreatedAtDesc(1L, PageRequest.of(0, 10))).thenReturn(repoReturn);
+        when(projectFeedMapper.entityToDto(repoReturn.getFirst())).thenReturn(itemDTO);
+
+        ProjectFeedDTO response = projectService.getProjectFeed(1L, "abc", 0 ,10);
+
+        assertEquals(itemDTO, response.getFeed().getFirst());
+    }
+
+    @Test void getProjectFeed_whenNoFeedItems_returnsEmptyList() {
+        Project mockProject = new Project();
+        User mockUser = new User();
+        mockUser.setUserId("abc");
+        ProjectUser projectUser = new ProjectUser();
+        projectUser.setUser(mockUser);
+        projectUser.setProject(mockProject);
+        mockProject.getUsers().add(projectUser);
+
+        when(projectRepository.findById(1L)).thenReturn(Optional.of(mockProject));
+        when(projectFeedRepository.findByProjectIdOrderByCreatedAtDesc(1L, PageRequest.of(0, 10))).thenReturn(List.of());
+        ProjectFeedDTO response = projectService.getProjectFeed(1L, "abc",0, 10);
+        assertTrue(response.getFeed().isEmpty());
+    }
+
+    @Test void getProjectFeed_whenProjectNotFound_throwsResourceNotFoundException() {
+        when(projectRepository.findById(1L)).thenReturn(Optional.empty());
+        assertThrows(
+                ResourceNotFoundException.class,
+                () -> projectService.getProjectFeed(1L, "abc", 0 , 10)
+        );
+    }
+
+    @Test void getProjectFeed_whenUnauthorizedUser_throwsUnauthorizedUserException() {
+        Project mockProject = new Project();
+        when(projectRepository.findById(1L)).thenReturn(Optional.of(mockProject));
+        assertThrows(
+                UserNotAuthorizedException.class,
+                () -> projectService.getProjectFeed(1L, "abc", 0 ,10)
+        );
+    }
+
+    @Test void getProjectFeed_whenRequestingNextPage_returnsFeed() {
+        Project mockProject = new Project();
+        User mockUser = new User();
+        mockUser.setUserId("abc");
+        ProjectUser projectUser = new ProjectUser();
+        projectUser.setUser(mockUser);
+        projectUser.setProject(mockProject);
+        mockProject.getUsers().add(projectUser);
+        List<ProjectFeedItem> repoReturn = List.of(new ProjectFeedItem());
+        ProjectFeedItemDTO itemDTO = new ProjectFeedItemDTO();
+
+        when(projectRepository.findById(1L)).thenReturn(Optional.of(mockProject));
+        when(projectFeedRepository.findByProjectIdOrderByCreatedAtDesc(1L, PageRequest.of(1, 10))).thenReturn(repoReturn);
+        when(projectFeedMapper.entityToDto(repoReturn.getFirst())).thenReturn(itemDTO);
+
+        ProjectFeedDTO response = projectService.getProjectFeed(1L, "abc", 1 ,10);
+
+        assertEquals(itemDTO, response.getFeed().getFirst());
+
+    }
+
+
+    @Test void addUserComment_withValidRequest_addsAComment() {
+        Project mockProject = new Project();
+        User mockUser = new User();
+        ProjectUser projectUser = new ProjectUser();
+        projectUser.setUser(mockUser);
+        projectUser.setProject(mockProject);
+
+        ProjectFeedCommentDTO request = new ProjectFeedCommentDTO("Comment");
+
+        when(projectUserRepository.findProjectUserById("abc", 1L))
+                .thenReturn(Optional.of(projectUser));
+
+        projectService.addUserComment( "abc", 1L,  request);
+
+        verify(projectFeedRepository, times(1)).save(
+                argThat(arg ->
+                        arg.getProject().equals(mockProject) &&
+                                arg.getUser().equals(mockUser) &&
+                                arg.getType().equals(ProjectFeedItemType.COMMENT) &&
+                                arg.getBody().equals("Comment")
+                )
+        );
+    }
+
+    @Test void addUserComment_whenUserOrProjectNotFound_throwsInvalidProjectUsersException() {
+        when(projectUserRepository.findProjectUserById("abc", 1L)).thenReturn(Optional.empty());
+        assertThrows(
+                ResourceNotFoundException.class,
+                () -> projectService.addUserComment( "abc",1L, new ProjectFeedCommentDTO())
+        );
+        verify(projectFeedRepository, never()).save(any());
+    }
+
+    @Test void addUserComment_whenBodyIsEmpty_returnsInvalidProjectDataException() {
+        Project mockProject = new Project();
+        User mockUser = new User();
+        ProjectUser projectUser = new ProjectUser();
+        projectUser.setUser(mockUser);
+        projectUser.setProject(mockProject);
+
+        ProjectFeedCommentDTO request = new ProjectFeedCommentDTO("");
+
+        when(projectUserRepository.findProjectUserById("abc", 1L))
+                .thenReturn(Optional.of(projectUser));
+
+        assertThrows(
+                InvalidProjectDataException.class,
+                () -> projectService.addUserComment( "abc",1L, request)
+        );
+
+        verify(projectFeedRepository, never()).save(any() );
+    }
+
+    @Test void addUserComment_whenBodyIsWhitespace_returnsInvalidProjectDataException() {
+        Project mockProject = new Project();
+        User mockUser = new User();
+        ProjectUser projectUser = new ProjectUser();
+        projectUser.setUser(mockUser);
+        projectUser.setProject(mockProject);
+
+        ProjectFeedCommentDTO request = new ProjectFeedCommentDTO("  ");
+
+        when(projectUserRepository.findProjectUserById("abc", 1L))
+                .thenReturn(Optional.of(projectUser));
+
+        assertThrows(
+                InvalidProjectDataException.class,
+                () -> projectService.addUserComment( "abc", 1L, request)
+        );
+
+        verify(projectFeedRepository, never()).save(any() );
+    }
+
+    @Test void addUsers_whenSuccessful_addsNewFeedItemsForEachUser() {
+        User mockCreator = new User();
+        mockCreator.setUserId("abc");
+        Project mockProject = new Project();
+        mockProject.setCreatedBy(mockCreator);
+        User mockNewUser = new User();
+        mockNewUser.setUserId("def");
+        mockNewUser.setUserType("Teacher");
+        User mockNewUser2 = new User();
+        mockNewUser2.setUserId("ghi");
+        mockNewUser2.setUserType("Parent");
+
+        when(projectRepository.findById(1L)).thenReturn(Optional.of(mockProject));
+        when(userRepository.findByIds(List.of("def", "ghi", "jkl"))).thenReturn(List.of(mockNewUser, mockNewUser2));
+
+        ProjectAddUserResponseDTO response = projectService
+                .addUsersToProject(
+                        "abc",
+                        1L, new ProjectAddUserRequestDTO(List.of("def", "ghi", "jkl"))
+                );
+        assertEquals(1, response.getNotFound().size());
+        verify(projectFeedRepository ,times(2)).save(argThat(req ->
+                (req.getUser().equals(mockNewUser) ||
+                        req.getUser().equals(mockNewUser2)) &&
+                        (req.getBody().equals("New user added: Teacher") ||
+                                req.getBody().equals("New user added: Parent"))
+        ));
+    }
+
+    @Test void addUsers_whenUnsuccessful_doesNotAddFeedItems() {
+        User mockCreator = new User();
+        mockCreator.setUserId("abc");
+        Project mockProject = new Project();
+        mockProject.setCreatedBy(mockCreator);
+        User mockNewUser = new User();
+        mockNewUser.setUserId("def");
+        mockNewUser.setUserType("Teacher");
+
+        when(projectRepository.findById(1L)).thenReturn(Optional.of(mockProject));
+        when(userRepository.findByIds(List.of("def"))).thenReturn(List.of(mockNewUser));
+
+        doThrow(RuntimeException.class).when(projectRepository).save(any());
+
+        assertThrows(
+                RuntimeException.class,
+                () -> projectService.addUsersToProject("abc", 1L, new ProjectAddUserRequestDTO(List.of("def")))
+        );
+        verify(projectFeedRepository , never()).save(any());
+    }
+
+    @Test void createProject_whenSuccessful_addsAppropriateFeedItems() {
+        User user = new User();
+        user.setUsername("user1");
+        user.setUserType("Teacher");
+        Student student = new Student();
+        student.getUsers().add(user);
+        ProjectPostDTO postDTO = getProjectPostDTO(user);
+        ProjectDTO projectDTO = new ProjectDTO();
+        Project createdproject = new Project();
+        when(userRepository.findByUserId("abc")).thenReturn(Optional.of(user));
+        when(studentRepository.findById("123")).thenReturn(Optional.of(student));
+        when(userRepository.findAllByUsernames(Set.of("user1"))).thenReturn(Set.of(user));
+        when(projectMapper.entityToDto(any(Project.class))).thenReturn(projectDTO);
+        when(projectMapper.requestToEntity(postDTO)).thenReturn(createdproject);
+        when(communicationCategoryRepository.findAll()).thenReturn(new ArrayList<>());
+
+        projectService.createProject(postDTO, null, "abc");
+        verify(projectFeedRepository , times(2)).save(argThat(req ->
+                req.getBody().equals("Project created") || req.getBody().equals("New user added: Teacher")
+                ));
+    }
+
+    @Test void patchProjectDetails_whenSuccessful_addsSystemEventFeedItem() {
+        Project mockProject = new Project();
+        CommunicationCategory pain = new CommunicationCategory();
+        pain.setLabel(CommunicationCategoryLabel.PAIN);
+        ProjectDetailsPatchDTO projectDetailsPatchDTO = new ProjectDetailsPatchDTO();
+        projectDetailsPatchDTO.setCategories(Set.of(CommunicationCategoryLabel.PAIN));
+        projectDetailsPatchDTO.setDescription("description");
+        projectDetailsPatchDTO.setObjective("objective");
+        projectDetailsPatchDTO.setStartedOn(LocalDate.of(2000,1,1));
+        User mockUser = new User();
+        mockUser.setUserId("abc");
+        mockProject.setCreatedBy(mockUser);
+        when(projectRepository.findById(1L)).thenReturn(Optional.of(mockProject));
+        when(communicationCategoryRepository.findAll()).thenReturn(List.of(pain));
+        doCallRealMethod().when(fileStorageService).swapImage(any(), any());
+
+        projectService.patchProjectDetails("abc", 1L, projectDetailsPatchDTO, null );
+
+        verify(projectFeedRepository , times(1)).save(argThat(req ->
+                req.getBody().equals("Project updated") &&
+                req.getType().equals(ProjectFeedItemType.EVENT) &&
+                req.getCreatedAt() != null
+                )
+        );
+    }
+
+    @Test void patchProjectDetails_whenUnsuccessful_doesNotAddNewSystemEventFeedItem() {
+        Project mockProject = new Project();
+        CommunicationCategory pain = new CommunicationCategory();
+        pain.setLabel(CommunicationCategoryLabel.PAIN);
+        ProjectDetailsPatchDTO projectDetailsPatchDTO = new ProjectDetailsPatchDTO();
+        projectDetailsPatchDTO.setCategories(Set.of(CommunicationCategoryLabel.PAIN));
+        projectDetailsPatchDTO.setDescription("description");
+        projectDetailsPatchDTO.setObjective("objective");
+        projectDetailsPatchDTO.setStartedOn(LocalDate.of(2000,1,1));
+        User mockUser = new User();
+        mockUser.setUserId("abc");
+        mockProject.setCreatedBy(mockUser);
+        when(projectRepository.findById(1L)).thenReturn(Optional.of(mockProject));
+        when(communicationCategoryRepository.findAll()).thenReturn(List.of(pain));
+        doThrow(RuntimeException.class).when(projectRepository).save(any());
+
+        assertThrows(
+                RuntimeException.class,
+                () -> projectService.patchProjectDetails("abc", 1L, projectDetailsPatchDTO, null )
+        );
+
+        verify(projectFeedRepository , never()).save(any());
+    }
+
+    @Test void deleteProject_whenProjectExists_deletesProject() {
+        User mockUser = new User();
+        mockUser.setUserId("abc");
+        ProjectFeedItem mockItem = new ProjectFeedItem();
+        mockItem.setUser(mockUser);
+        when(projectFeedRepository.findById(1L)).thenReturn(Optional.of(mockItem));
+
+        projectService.deleteUserComment(1L, "abc");
+
+        verify(projectFeedRepository , times(1)).delete(mockItem);
     }
 
     private static ProjectPostDTO getProjectPostDTO(User user) {
