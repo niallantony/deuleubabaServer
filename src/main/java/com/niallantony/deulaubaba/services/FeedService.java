@@ -4,6 +4,7 @@ import com.niallantony.deulaubaba.data.StudentFeedRepository;
 import com.niallantony.deulaubaba.domain.Student;
 import com.niallantony.deulaubaba.domain.StudentFeedItem;
 import com.niallantony.deulaubaba.dto.feed.FeedDTO;
+import com.niallantony.deulaubaba.exceptions.BadPageRequestException;
 import com.niallantony.deulaubaba.mapper.StudentFeedMapper;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
@@ -28,11 +29,14 @@ public class FeedService {
 
     public FeedDTO getFeed(String user_id, String student_id, int page, int size) {
         Student student = studentService.getAuthorisedStudent(student_id, user_id);
-        Pageable pageable = PageRequest.of(page, size);
-
-        List<StudentFeedItem> feedItems = studentFeedRepository.findAllByStudentOrderByCreatedAtDesc(student, pageable);
-        FeedDTO feedDTO = new FeedDTO();
-        feedDTO.setFeed(feedItems.stream().map(studentFeedMapper::entityToDto).toList());
-        return feedDTO;
+        try {
+            Pageable pageable = PageRequest.of(page, size);
+            List<StudentFeedItem> feedItems = studentFeedRepository.findAllByStudentOrderByCreatedAtDesc(student, pageable);
+            FeedDTO feedDTO = new FeedDTO();
+            feedDTO.setFeed(feedItems.stream().map(studentFeedMapper::entityToDto).toList());
+            return feedDTO;
+        } catch (IllegalArgumentException e) {
+            throw new BadPageRequestException(e.getMessage());
+        }
     }
 }
