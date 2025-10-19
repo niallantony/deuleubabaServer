@@ -11,7 +11,7 @@ import org.mapstruct.Mapper;
 public interface StudentFeedMapper {
     FeedItemDTO entityToDto(StudentFeedItem feed);
 
-    default UserAvatar entityToAvatar(User user) {
+    default UserAvatar userToUserAvatar(User user) {
         if (user == null) return null;
         return new UserAvatar(
                 user.getUsername(),
