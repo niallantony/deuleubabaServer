@@ -7,7 +7,7 @@ import com.niallantony.deulaubaba.dto.user.UserAvatar;
 import org.mapstruct.Mapper;
 
 
-@Mapper
+@Mapper(componentModel = "spring")
 public interface StudentFeedMapper {
     FeedItemDTO entityToDto(StudentFeedItem feed);
 
