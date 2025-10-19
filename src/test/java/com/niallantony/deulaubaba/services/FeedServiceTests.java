@@ -1,11 +1,18 @@
 package com.niallantony.deulaubaba.services;
 
 import com.niallantony.deulaubaba.data.StudentFeedRepository;
+import com.niallantony.deulaubaba.data.StudentRepository;
+import com.niallantony.deulaubaba.data.UserRepository;
 import com.niallantony.deulaubaba.domain.Student;
+import com.niallantony.deulaubaba.domain.StudentFeedEmotion;
 import com.niallantony.deulaubaba.domain.StudentFeedItem;
+import com.niallantony.deulaubaba.domain.User;
 import com.niallantony.deulaubaba.dto.feed.FeedDTO;
 import com.niallantony.deulaubaba.dto.feed.FeedItemDTO;
+import com.niallantony.deulaubaba.dto.feed.FeedPostDTO;
 import com.niallantony.deulaubaba.exceptions.BadPageRequestException;
+import com.niallantony.deulaubaba.exceptions.InvalidCommentPostException;
+import com.niallantony.deulaubaba.exceptions.ResourceNotFoundException;
 import com.niallantony.deulaubaba.exceptions.UserNotAuthorizedException;
 import com.niallantony.deulaubaba.mapper.StudentFeedMapper;
 import org.junit.jupiter.api.Test;
@@ -16,9 +23,11 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.data.domain.PageRequest;
 
 import java.util.List;
+import java.util.Optional;
 
 import static org.junit.jupiter.api.Assertions.*;
-import static org.mockito.Mockito.when;
+import static org.mockito.ArgumentMatchers.argThat;
+import static org.mockito.Mockito.*;
 
 @ExtendWith(MockitoExtension.class)
 public class FeedServiceTests {
@@ -27,6 +36,12 @@ public class FeedServiceTests {
 
     @Mock
     StudentFeedRepository studentFeedRepository;
+
+    @Mock
+    StudentRepository studentRepository;
+
+    @Mock
+    UserRepository userRepository;
 
     @Mock
     StudentFeedMapper studentFeedMapper;
@@ -86,7 +101,105 @@ public class FeedServiceTests {
                 BadPageRequestException.class,
                 () -> feedService.getFeed("abc", "123", 1, 0)
         );
-
     }
+
+    @Test
+    public void postComment_withValidComment_savesAComment() {
+        FeedPostDTO request = new FeedPostDTO();
+        request.setBody("Comment");
+        request.getEmotions().add(StudentFeedEmotion.QUIET);
+        Student student = new Student();
+        User author = new User();
+        student.getUsers().add(author);
+
+        when(studentRepository.findById("123")).thenReturn(Optional.of(student));
+        when(userRepository.findByUserId("abc")).thenReturn(Optional.of(author));
+
+        feedService.postComment("abc", "123", request);
+
+        verify(studentFeedRepository).save(argThat(req ->
+            req.getEmotions().contains(StudentFeedEmotion.QUIET) &&
+                    req.getUser().equals(author) &&
+                    req.getStudent().equals(student) &&
+                    req.getBody().equals("Comment") &&
+                    req.getCreatedAt() != null
+        ));
+    }
+
+    @Test
+    public void postComment_withEmptyBody_doesNotSaveComment() {
+        FeedPostDTO request = new FeedPostDTO();
+        request.getEmotions().add(StudentFeedEmotion.QUIET);
+        Student student = new Student();
+        User author = new User();
+        student.getUsers().add(author);
+
+        assertThrows(
+                InvalidCommentPostException.class,
+                () -> feedService.postComment("abc", "123", request)
+        );
+        verify(studentFeedRepository, never()).save(any());
+    }
+
+    @Test
+    public void postComment_withWhitespaceBody_doesNotSaveComment() {
+        FeedPostDTO request = new FeedPostDTO();
+        request.setBody("  ");
+        request.getEmotions().add(StudentFeedEmotion.QUIET);
+        Student student = new Student();
+        User author = new User();
+        student.getUsers().add(author);
+
+        assertThrows(
+                InvalidCommentPostException.class,
+                () -> feedService.postComment("abc", "123", request)
+        );
+        verify(studentFeedRepository, never()).save(any());
+    }
+
+    @Test
+    public void postComment_asUnauthorizedUser_throwsException() {
+        FeedPostDTO request = new FeedPostDTO();
+        request.setBody("Comment");
+        Student student = new Student();
+        User author = new User();
+
+        when(studentRepository.findById("123")).thenReturn(Optional.of(student));
+        when(userRepository.findByUserId("abc")).thenReturn(Optional.of(author));
+
+        assertThrows(
+                UserNotAuthorizedException.class,
+                () -> feedService.postComment("abc", "123", request)
+        );
+    }
+
+    @Test
+    public void postComment_forNonExistentUser_throwsException() {
+        FeedPostDTO request = new FeedPostDTO();
+        request.setBody("Comment");
+        Student student = new Student();
+
+        when(studentRepository.findById("123")).thenReturn(Optional.of(student));
+        when(userRepository.findByUserId("abc")).thenReturn(Optional.empty());
+
+        assertThrows(
+                ResourceNotFoundException.class,
+                () -> feedService.postComment("abc", "123", request)
+        );
+    }
+
+    @Test
+    public void postComment_forNonExistentStudent_throwsException() {
+        FeedPostDTO request = new FeedPostDTO();
+        request.setBody("Comment");
+
+        when(studentRepository.findById("123")).thenReturn(Optional.empty());
+
+        assertThrows(
+                ResourceNotFoundException.class,
+                () -> feedService.postComment("abc", "123", request)
+        );
+    }
+
 
 }
