@@ -28,8 +28,7 @@ import java.util.List;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.jwt;
-import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
-import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 
 @Testcontainers
@@ -253,5 +252,48 @@ public class FeedControllerTests {
         List<StudentFeedItem> feed = studentFeedRepository.findAllByStudentIdOrderByCreatedAtDesc("abc");
         assertEquals(0, feed.size());
 
+    }
+
+    @Test
+    @SqlMergeMode(SqlMergeMode.MergeMode.MERGE)
+    @Sql({
+            "/fixtures/student_and_user.sql",
+            "/fixtures/student_feed.sql"
+    })
+    public void deleteComment_withValidRequest_deletesComment(@Autowired MockMvc mvc) throws Exception {
+        mvc.perform(delete("/feed/1")
+                .with(jwt()))
+                .andExpect(status().isNoContent());
+
+        List<StudentFeedItem> feed = studentFeedRepository.findAllByStudentIdOrderByCreatedAtDesc("abc");
+        assertEquals(0, feed.size());
+
+    }
+
+    @Test
+    @SqlMergeMode(SqlMergeMode.MergeMode.MERGE)
+    @Sql({
+            "/fixtures/student_and_user.sql",
+    })
+    public void deleteComment_whenCommentDoesNotExist_throws404(@Autowired MockMvc mvc) throws Exception {
+        mvc.perform(delete("/feed/1")
+                   .with(jwt()))
+           .andExpect(status().isNotFound());
+    }
+
+    @Test
+    @SqlMergeMode(SqlMergeMode.MergeMode.MERGE)
+    @Sql({
+            "/fixtures/student_and_user.sql",
+            "/fixtures/user_another.sql",
+            "/fixtures/student_feed_unowned.sql"
+    })
+    public void deleteComment_whenUserNotAuthorized_returns401(@Autowired MockMvc mvc) throws Exception {
+        mvc.perform(delete("/feed/1")
+                   .with(jwt()))
+           .andExpect(status().isUnauthorized());
+
+        List<StudentFeedItem> feed = studentFeedRepository.findAllByStudentIdOrderByCreatedAtDesc("abc");
+        assertEquals(1, feed.size());
     }
 }

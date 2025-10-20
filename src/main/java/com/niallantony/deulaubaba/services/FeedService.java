@@ -76,4 +76,14 @@ public class FeedService {
 
         studentFeedRepository.save(feedItem);
     }
+
+    public void deleteComment(String user_id, Long comment_id) {
+        StudentFeedItem comment = studentFeedRepository.findById(comment_id).orElseThrow(
+                () -> new ResourceNotFoundException("Comment not found")
+        );
+        if (comment.getUser() == null || !comment.getUser().getUserId().equals(user_id)) {
+            throw new UserNotAuthorizedException("Unauthorized access");
+        }
+        studentFeedRepository.delete(comment);
+    }
 }

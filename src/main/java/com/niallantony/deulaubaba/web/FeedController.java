@@ -51,4 +51,18 @@ public class FeedController {
                              .build();
     }
 
+    @DeleteMapping(path = "/{comment_id}")
+    public ResponseEntity<?> deleteComment(
+            @CurrentUser String userId,
+            @PathVariable("comment_id") String id
+    ) {
+        try {
+            Long longId = Long.parseLong(id);
+            feedService.deleteComment(userId, longId);
+            return ResponseEntity.noContent().build();
+        } catch (NumberFormatException e) {
+            throw new InvalidCommentPostException("Invalid comment ID");
+        }
+    }
+
 }

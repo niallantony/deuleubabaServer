@@ -201,5 +201,39 @@ public class FeedServiceTests {
         );
     }
 
+    @Test
+    public void deleteComment_withValidRequest_deletesComment() {
+        User user = new User();
+        user.setUserId("abc");
+        StudentFeedItem item = new StudentFeedItem();
+        item.setUser(user);
+        when(studentFeedRepository.findById(1L)).thenReturn(Optional.of(item));
+
+        feedService.deleteComment("abc", 1L);
+
+        verify(studentFeedRepository).delete(item);
+    }
+
+    @Test
+    public void deleteComment_whenCommentDoesNotExist_throwsException() {
+        when(studentFeedRepository.findById(1L)).thenReturn(Optional.empty());
+        assertThrows(
+               ResourceNotFoundException.class,
+                () -> feedService.deleteComment("abc", 1L)
+        );
+        verify(studentFeedRepository, never()).delete(any());
+    }
+
+    @Test
+    public void deleteComment_whenUserNotAuthorized_throwsException() {
+        StudentFeedItem item = new StudentFeedItem();
+        when(studentFeedRepository.findById(1L)).thenReturn(Optional.of(item));
+        assertThrows(
+                UserNotAuthorizedException.class,
+                () -> feedService.deleteComment("abc", 1L)
+        );
+        verify(studentFeedRepository, never()).delete(item);
+    }
+
 
 }
