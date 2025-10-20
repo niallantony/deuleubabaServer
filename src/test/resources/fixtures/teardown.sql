@@ -1,3 +1,5 @@
+DELETE FROM student_feed_emotions;
+DELETE FROM student_feed_item;
 DELETE FROM project_feed_item;
 DELETE FROM project_user;
 DELETE FROM project_communication_category;
@@ -7,6 +9,7 @@ DELETE FROM project;
 DELETE FROM dictionary_entry;
 DELETE FROM student;
 DELETE FROM app_user;
+ALTER SEQUENCE student_feed_item_id_seq RESTART;
 ALTER SEQUENCE project_feed_item_id_seq RESTART ;
 ALTER SEQUENCE dictionary_entry_id_seq RESTART;
 ALTER SEQUENCE project_seq RESTART;
