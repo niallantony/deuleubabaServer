@@ -50,6 +50,7 @@ public class FileStorageService {
             return;
         }
         String oldUri = entity.getImage();
+        String bucketId = entity.getBucketId();
         String newUri;
         try {
             newUri = storeImage(image);

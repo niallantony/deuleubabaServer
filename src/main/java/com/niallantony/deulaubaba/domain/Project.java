@@ -18,6 +18,8 @@ import java.util.Set;
 @EqualsAndHashCode(onlyExplicitlyIncluded = true, callSuper = false)
 @ToString(exclude = {"users", "student", "createdBy"})
 public class Project extends HasImage{
+
+    // Sequence is confusing - fix this (originally implemented due to testing issues)
     @Id
     @SequenceGenerator(
             name="project_seq_gen",
@@ -90,4 +92,10 @@ public class Project extends HasImage{
     public void setImage(String image) {
         imgsrc = image;
     }
+
+    @Override
+    public String getBucketId() {
+        return student.getStudentId();
+    }
+
 }

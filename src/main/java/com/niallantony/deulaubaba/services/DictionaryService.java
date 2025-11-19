@@ -28,7 +28,6 @@ public class DictionaryService {
     private static final Logger log = LoggerFactory.getLogger(DictionaryService.class);
     private final DictionaryRepository dictionaryRepository;
     private final CommunicationCategoryRepository communicationCategoryRepository;
-    private final JsonUtils jsonUtils;
     private final FileStorageService fileStorageService;
     private final StudentService studentService;
     private final DictionaryMapper dictionaryMapper;
@@ -38,12 +37,10 @@ public class DictionaryService {
             CommunicationCategoryRepository communicationCategoryRepository,
             FileStorageService fileStorageService,
             StudentService studentService,
-            DictionaryMapper dictionaryMapper,
-            JsonUtils jsonUtils
+            DictionaryMapper dictionaryMapper
     ) {
         this.dictionaryRepository = dictionaryRepository;
         this.communicationCategoryRepository = communicationCategoryRepository;
-        this.jsonUtils = jsonUtils;
         this.fileStorageService = fileStorageService;
         this.studentService = studentService;
         this.dictionaryMapper = dictionaryMapper;

@@ -50,4 +50,9 @@ public class DictionaryEntry extends HasImage{
     public void setImage(String image) {
         imgsrc = image;
     }
+
+    @Override
+    public String getBucketId() {
+        return student.getStudentId();
+    }
 }
