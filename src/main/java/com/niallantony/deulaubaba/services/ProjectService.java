@@ -151,7 +151,7 @@ public class ProjectService {
         projectRepository.save(project);
         ProjectDTO projectDTO = projectMapper.entityToDto(project);
         projectDTO.isOwnProject(true);
-        addSystemEventMessage(project, "Project created");
+        addSystemEventMessage(project, "프로젝트 등록되었다");
         projectUsers.forEach(pu ->
                 addNewUserFeedMessage(project, pu.getUser())
         );
@@ -218,6 +218,7 @@ public class ProjectService {
             project.setCompleted(true);
             project.setCompletedOn(projectUsers.getFirst().getCompletedOn());
             projectRepository.save(project);
+            addSystemEventMessage(project, "프로젝트 완료되었다");
         } else if (projectUsers.stream().anyMatch(user -> !user.getIsCompleted()) && project.getCompleted()){
             project.setCompleted(false);
             project.setCompletedOn(null);
@@ -257,12 +258,12 @@ public class ProjectService {
 
     public ProjectAddUserResponseDTO addUsersToProject(String user_id, Long project_id, ProjectAddUserRequestDTO request) {
         Project project = getCreatedProject(user_id, project_id);
-        List<User> users = userRepository.findByIds(request.getToAdd());
+        Set<User> users = userRepository.findAllByUsernames(request.getToAdd());
 
         List<String> notFound = request.getToAdd().stream().filter( name ->
                 users.stream()
-                     .filter(user -> user.getUserId() != null)
-                     .noneMatch(user -> user.getUserId().equals(name))
+                     .filter(user -> user.getUsername() != null)
+                     .noneMatch(user -> user.getUsername().equals(name))
         ).toList();
         List <User> newUsers = users.stream().filter(user ->
                 project.getUsers().stream().noneMatch(current -> current.getUser().equals(user))
