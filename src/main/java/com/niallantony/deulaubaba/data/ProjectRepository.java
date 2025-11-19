@@ -14,14 +14,14 @@ public interface ProjectRepository extends JpaRepository<Project, Long> {
 
     @Query(
             "SELECT new com.niallantony.deulaubaba.dto.project.ProjectPreviewDTO(" +
-                    "p.id, p.completed, p.description, p.objective, p.imgsrc, p.startedOn) " +
+                    "p.id, p.completed, p.description, p.objective, p.imgsrc, p.startedOn, p.completedOn) " +
                     "FROM Project p JOIN p.users u WHERE u.user = :user"
     )
     Set<ProjectPreviewDTO> findAllProjectsByUserId(@Param("user") User user) ;
 
     @Query(
             "SELECT new com.niallantony.deulaubaba.dto.project.ProjectPreviewDTO(" +
-                    "p.id, p.completed, p.description, p.objective, p.imgsrc, p.startedOn) " +
+                    "p.id, p.completed, p.description, p.objective, p.imgsrc, p.startedOn, p.completedOn) " +
                     "FROM Project p JOIN p.users u WHERE u.user = :user AND p.student = :student"
     )
     Set<ProjectPreviewDTO> findAllProjectsByStudentId(@Param("user") User user, @Param("student") Student student);

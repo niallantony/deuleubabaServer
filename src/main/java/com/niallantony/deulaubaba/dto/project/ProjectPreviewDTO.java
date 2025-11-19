@@ -3,6 +3,7 @@ package com.niallantony.deulaubaba.dto.project;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
+import org.springframework.cglib.core.Local;
 
 import java.time.LocalDate;
 
@@ -16,4 +17,5 @@ public class ProjectPreviewDTO {
     private String objective;
     private String imgsrc;
     private LocalDate startedOn;
+    private LocalDate completedOn;
 }
