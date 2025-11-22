@@ -4,31 +4,38 @@ import com.niallantony.deulaubaba.domain.Project;
 import com.niallantony.deulaubaba.domain.ProjectUser;
 import com.niallantony.deulaubaba.dto.project.ProjectDTO;
 import com.niallantony.deulaubaba.dto.project.ProjectPostDTO;
+import com.niallantony.deulaubaba.dto.project.ProjectPreviewDTO;
 import com.niallantony.deulaubaba.dto.project.ProjectUserStatusDTO;
 import com.niallantony.deulaubaba.dto.user.UserAvatar;
+import com.niallantony.deulaubaba.services.FileStorageService;
 import org.mapstruct.Mapper;
 import org.mapstruct.Mapping;
+import org.springframework.beans.factory.annotation.Autowired;
 
 import java.util.Set;
 import java.util.stream.Collectors;
 
-// TODO: Implement projectUser to DTO - then refactor the set method to use this
 @Mapper(componentModel = "spring")
-public interface ProjectMapper {
+public abstract class ProjectMapper {
+    @Autowired
+    FileStorageService fileStorageService;
+
     @Mapping(source = "users", target = "userStatuses")
-    ProjectDTO entityToDto(Project project);
+    public abstract ProjectDTO entityToDto(Project project);
+
+    public abstract ProjectPreviewDTO entityToPreviewDTO(Project project);
 
     @Mapping(target = "categories", ignore = true)
-    Project requestToEntity(ProjectPostDTO project);
+    public abstract Project requestToEntity(ProjectPostDTO project);
 
-    ProjectUserStatusDTO projectUserToProjectUserStatus(ProjectUser projectUser);
+    public abstract ProjectUserStatusDTO projectUserToProjectUserStatus(ProjectUser projectUser);
 
-    default Set<ProjectUserStatusDTO> projectUserToProjectUserStatus(Set<ProjectUser> projectUsers) {
+    protected Set<ProjectUserStatusDTO> projectUserToProjectUserStatus(Set<ProjectUser> projectUsers) {
         if (projectUsers.isEmpty()) return null;
         return projectUsers.stream().map((user) -> new ProjectUserStatusDTO(
                 new UserAvatar(
                         user.getUser().getUsername(),
-                        user.getUser().getImagesrc(),
+                        fileStorageService.generateSignedURL(user.getUser()),
                         user.getUser().getUserType()
                 ),
                 user.getIsCompleted(),

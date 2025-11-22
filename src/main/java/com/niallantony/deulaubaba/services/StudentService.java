@@ -18,6 +18,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Random;
 import java.util.Set;
@@ -29,21 +30,18 @@ public class StudentService {
     private final UserRepository userRepository;
     private final FileStorageService fileStorageService;
     private final StudentMapper studentMapper;
-    private final JsonUtils jsonUtils;
 
     @Autowired
     public StudentService(
             StudentRepository studentRepository,
             UserRepository userRepository,
             FileStorageService fileStorageService,
-            StudentMapper studentMapper,
-            JsonUtils jsonUtils
+            StudentMapper studentMapper
     ) {
         this.studentRepository = studentRepository;
         this.userRepository = userRepository;
         this.fileStorageService = fileStorageService;
         this.studentMapper = studentMapper;
-        this.jsonUtils = jsonUtils;
     }
 
     public StudentIdAvatar getStudentPreviewById(String id)  {
@@ -55,7 +53,9 @@ public class StudentService {
     public StudentDTO getStudentById(String id)  {
         Student student = studentRepository.findById(id.toLowerCase())
                 .orElseThrow(() -> new ResourceNotFoundException("Student not found " + id));
-        return studentMapper.toDTO(student);
+        StudentDTO dto = studentMapper.toDTO(student);
+        dto.setImagesrc(fileStorageService.generateSignedURL(student));
+        return dto;
     }
 
     public List<UserAvatar> getStudentTeam(String id)  {
@@ -66,17 +66,17 @@ public class StudentService {
         return users.stream()
                .map(user -> new UserAvatar(
                        user.getUsername(),
-                       user.getImagesrc(),
+                       fileStorageService.generateSignedURL(user),
                        user.getUserType()
                )).toList();
     }
 
     public List<StudentIdAvatar> getStudents(String id)  {
-        List<StudentIdAvatar> students = studentRepository.findAllOfUserId(id);
+        List<Student> students = studentRepository.findAllOfUserId(id);
         if (students.isEmpty()) {
             throw new ResourceNotFoundException("Students not found");
         }
-        return students;
+        return students.stream().map(this::getStudentIdAvatar).toList();
     }
 
     private Student extractStudent(StudentRequest studentRequest, User user) {
@@ -152,7 +152,7 @@ public class StudentService {
         return new StudentIdAvatar(
                 student.getStudentId(),
                 student.getName(),
-                student.getImagesrc()
+                fileStorageService.generateSignedURL(student)
         );
     }
 

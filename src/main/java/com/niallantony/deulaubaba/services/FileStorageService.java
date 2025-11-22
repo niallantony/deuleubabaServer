@@ -1,5 +1,8 @@
 package com.niallantony.deulaubaba.services;
 
+import com.google.auth.ServiceAccountSigner;
+import com.google.auth.oauth2.ServiceAccountCredentials;
+import com.google.cloud.storage.*;
 import com.niallantony.deulaubaba.domain.HasImage;
 import com.niallantony.deulaubaba.exceptions.FileStorageException;
 import lombok.extern.slf4j.Slf4j;
@@ -7,22 +10,48 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
 
+import java.io.FileInputStream;
 import java.io.IOException;
+import java.net.URI;
+import java.net.URL;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.util.Collection;
+import java.util.List;
 import java.util.UUID;
+import java.util.concurrent.TimeUnit;
+import java.util.stream.Stream;
 
 @Slf4j
 @Service
 public class FileStorageService {
     private final Path uploadDirectory;
+    private static final Storage storage;
+    private static ServiceAccountSigner serviceAccountSigner;
+    private static final Collection<String> scope = List.of(String.valueOf("cloud_platform"));
+
+    static {
+        try (FileInputStream serviceAccountFile = new FileInputStream(System.getenv("GOOGLE_APPLICATION_CREDENTIAL"))) {
+            ServiceAccountCredentials credentials = ServiceAccountCredentials.fromStream(serviceAccountFile);
+            storage = StorageOptions.newBuilder().setCredentials(credentials).setProjectId("deulaubaba").build().getService();
+        } catch (IOException e) {
+            throw new RuntimeException("Failed to load GOOGLE_APPLICATION_CREDENTIAL", e);
+        }
+    }
 
     public FileStorageService(@Value("${upload.dir:uploads}") String uploadDirectory) {
         this.uploadDirectory = Paths.get(uploadDirectory);
     }
 
-    public String storeImage(MultipartFile image) throws FileStorageException {
+    public String generateSignedURL(HasImage entity) throws FileStorageException {
+        if (entity == null || entity.getImage() == null) return "";
+        BlobInfo blobInfo = BlobInfo.newBuilder(BlobId.of(entity.getBucketId(), entity.getImage())).build();
+        return storage.signUrl(blobInfo, 15, TimeUnit.MINUTES, Storage.SignUrlOption.signWith(serviceAccountSigner)).toString();
+    }
+
+    // TODO: Refactor tests to make this private
+    private String storeImage(MultipartFile image) throws FileStorageException {
         try {
             String filename = UUID.randomUUID() + "-" + image.getOriginalFilename();
             Path path = uploadDirectory.resolve(filename);
@@ -34,14 +63,48 @@ public class FileStorageService {
         }
     }
 
-    public void deleteImage(String oldAvatar) {
-        if (oldAvatar != null && !oldAvatar.isEmpty()) {
-            Path oldPath = uploadDirectory.resolve(oldAvatar);
-            try {
-                Files.deleteIfExists(oldPath);
-            } catch (IOException e) {
-                throw new FileStorageException("Could not delete image" + oldAvatar, e);
+    // TODO: Refactor tests
+    public void deleteImage(String oldId, String bucketName) {
+        try {
+            Blob blob = storage.get(bucketName, oldId);
+            if (blob != null) {
+                BlobId blobId = blob.getBlobId();
+                storage.delete(blobId);
             }
+        } catch (StorageException e) {
+            throw new FileStorageException("Could not delete image" + oldId, e);
+        }
+    }
+
+    public String storeImageGoogleCloud(MultipartFile image, String bucketname) throws FileStorageException {
+        try {
+            String filename = UUID.randomUUID() + "-" + image.getOriginalFilename();
+            BlobId blobId = BlobId.of(bucketname, filename);
+            BlobInfo blobInfo = BlobInfo.newBuilder(blobId).setContentType("image/jpeg").build();
+            Blob blob = storage.create(blobInfo, image.getBytes());
+            return filename;
+        } catch (IOException e) {
+            throw new FileStorageException("Could not store image" + image.getOriginalFilename(), e);
+        }
+    }
+
+    public void getBucketOrCreate(String bucketName ) throws FileStorageException {
+        Bucket bucket = storage.get(bucketName);
+        if (bucket == null) {
+            try {
+                bucket = createBucket(bucketName);
+            } catch (FileStorageException e) {
+                throw new FileStorageException("Could not create bucket: " + bucketName, e);
+            }
+        }
+    };
+
+    public Bucket createBucket(String bucketName) {
+        try {
+            return storage.create(BucketInfo.of(bucketName));
+        } catch (StorageException e) {
+            throw new FileStorageException("Could not create bucket " + bucketName, e);
+
         }
     }
 
@@ -49,24 +112,25 @@ public class FileStorageService {
         if (image == null || entity == null || image.isEmpty()) {
             return;
         }
-        String oldUri = entity.getImage();
+        String oldId = entity.getImage();
         String bucketId = entity.getBucketId();
-        String newUri;
+        String newId;
         try {
-            newUri = storeImage(image);
+            getBucketOrCreate(bucketId);
+            newId = storeImageGoogleCloud(image, bucketId);
         } catch (FileStorageException e) {
-            log.warn("Could not store image " + oldUri, e);
+            log.warn("Could not store image " + oldId, e);
             return;
         }
-        if (oldUri != null && !oldUri.isEmpty()) {
+        if (oldId != null && !oldId.isEmpty()) {
            try {
-               deleteImage(oldUri);
+               deleteImage(oldId, entity.getBucketId());
            } catch (FileStorageException e) {
-               log.warn("Could not delete image{}", oldUri, e);
+               log.warn("Could not delete image{}", oldId, e);
            }
         }
-        if (newUri != null && !newUri.isEmpty()) {
-            entity.setImage(newUri);
+        if (newId != null && !newId.isEmpty()) {
+            entity.setImage(newId);
         }
     }
 

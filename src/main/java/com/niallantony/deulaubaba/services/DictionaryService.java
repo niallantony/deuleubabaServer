@@ -12,7 +12,6 @@ import com.niallantony.deulaubaba.exceptions.InvalidDictionaryDataException;
 import com.niallantony.deulaubaba.exceptions.ResourceNotFoundException;
 import com.niallantony.deulaubaba.exceptions.UserNotAuthorizedException;
 import com.niallantony.deulaubaba.mapper.DictionaryMapper;
-import com.niallantony.deulaubaba.utils.JsonUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
@@ -56,7 +55,11 @@ public class DictionaryService {
        }
        Set<ExpressionType> types = getExpressionTypes(listings);
        List<DictionaryEntryDTO> listingsDTO = listings.stream()
-                                                      .map(dictionaryMapper::entityToDto)
+                                                      .map(listing -> {
+                                                          DictionaryEntryDTO dto = dictionaryMapper.entityToDto(listing);
+                                                          dto.setImgsrc(fileStorageService.generateSignedURL(listing));
+                                                          return dto;
+                                                      })
                                                       .toList();
        response.setListings(listingsDTO);
        response.setExpressiontypes(types);
@@ -109,7 +112,7 @@ public class DictionaryService {
         }
         if (entry.getImgsrc() != null) {
             try {
-                fileStorageService.deleteImage(entry.getImgsrc());
+                fileStorageService.deleteImage(entry.getImgsrc(), entry.getBucketId());
             } catch (FileStorageException e) {
                 log.warn("Image wasn't deleted");
                 log.warn(entry.getImgsrc());

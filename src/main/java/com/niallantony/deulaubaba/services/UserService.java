@@ -45,7 +45,9 @@ public class UserService {
 
     public UserDTO getUser(String userId) {
         User user = getUserOrThrow(userId);
-        return userMapper.toDTO(user);
+        UserDTO dto = userMapper.toDTO(user);
+        dto.setImagesrc(fileStorageService.generateSignedURL(user));
+        return dto;
     }
 
 

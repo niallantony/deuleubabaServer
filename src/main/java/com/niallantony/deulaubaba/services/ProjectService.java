@@ -61,6 +61,7 @@ public class ProjectService {
     public ProjectDTO getProject(Long project_id, String user_id) {
         Project project = getAuthorizedProject(project_id, user_id);
         ProjectDTO projectDTO = projectMapper.entityToDto(project);
+        projectDTO.setImgsrc(fileStorageService.generateSignedURL(project).toString());
         if (project.getCreatedBy().getUserId().equals(user_id)) {
            projectDTO.isOwnProject(true);
         }
@@ -69,11 +70,8 @@ public class ProjectService {
 
     public ProjectCollectionsDTO getProjectsOfUser(String user_id) {
         User user = getUserOrThrow(user_id);
-        Set<ProjectPreviewDTO> projects = projectRepository.findAllProjectsByUserId(user);
-        if (projects.isEmpty()) {
-            throw new NoProjectsFoundException("No projects found");
-        }
-        return createCollections(projects);
+        Set<Project> projects = projectRepository.findAllProjectsByUserId(user);
+        return getProjectCollectionsDTO(projects);
     }
 
     public ProjectCollectionsDTO getProjectsOfStudent(String user_id, String student_id) {
@@ -82,11 +80,21 @@ public class ProjectService {
         if (!student.getUsers().contains(user)) {
             throw new UserNotAuthorizedException("Unauthorized access");
         }
-        Set<ProjectPreviewDTO> project = projectRepository.findAllProjectsByStudentId(user, student);
-        if (project.isEmpty()) {
+        Set<Project> projects = projectRepository.findAllProjectsByStudentId(user, student);
+        return getProjectCollectionsDTO(projects);
+    }
+
+    @NotNull
+    private ProjectCollectionsDTO getProjectCollectionsDTO(Set<Project> projects) {
+        if (projects.isEmpty()) {
             throw new NoProjectsFoundException("No projects found");
         }
-        return createCollections(project);
+        Set<ProjectPreviewDTO> previews = projects.stream().map(project -> {
+            ProjectPreviewDTO dto = projectMapper.entityToPreviewDTO(project);
+            dto.setImgsrc(fileStorageService.generateSignedURL(project));
+            return dto;
+        }).collect(Collectors.toSet());
+        return createCollections(previews);
     }
 
     public ProjectFeedDTO getProjectFeed(Long project_id, String user_id, int page, int size) {
@@ -95,7 +103,13 @@ public class ProjectService {
         List<ProjectFeedItemDTO> feedItems = projectFeedRepository
                 .findByProjectIdOrderByCreatedAtDesc(project_id, pageable)
                 .stream()
-                .map(projectFeedMapper::entityToDto)
+                .map(item -> {
+                    ProjectFeedItemDTO dto = projectFeedMapper.entityToDto(item);
+                    if (dto.getUser() != null) {
+                        dto.getUser().setImagesrc(fileStorageService.generateSignedURL(item.getUser()));
+                    }
+                    return dto;
+                })
                 .toList();
         ProjectFeedDTO response = new ProjectFeedDTO();
         response.setFeed(feedItems);
@@ -123,7 +137,6 @@ public class ProjectService {
         ProjectFeedItem comment = projectFeedRepository.findById(comment_id).orElseThrow(
                 () -> new ResourceNotFoundException("Comment not found")
         );
-
         if (
                 !comment.getUser().getUserId().equals(user_id)
                 && !comment.getProject().getCreatedBy().getUserId().equals(user_id)
@@ -169,7 +182,7 @@ public class ProjectService {
         validatePatch(request);
         applyDetailChanges(project, request);
         projectRepository.save(project);
-        addSystemEventMessage(project, "Project updated");
+        addSystemEventMessage(project, "프로젝트 업데이트 되었습니다");
     }
 
     private void validatePatch(ProjectDetailsPatchDTO request) {
@@ -230,7 +243,7 @@ public class ProjectService {
         Project project = getCreatedProject(user_id, project_id);
         if (project.getImgsrc() != null) {
             try {
-                fileStorageService.deleteImage(project.getImgsrc());
+                fileStorageService.deleteImage(project.getImgsrc(), project.getBucketId());
             } catch (FileStorageException e) {
                 log.warn("Image not deleted: {}", project.getImgsrc(), e);
             }

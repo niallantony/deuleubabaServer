@@ -62,4 +62,9 @@ public class User extends HasImage{
     public void setImage(String image) {
         imagesrc = image;
     }
+
+    @Override
+    public String getBucketId() {
+        return username.toLowerCase();
+    }
 }

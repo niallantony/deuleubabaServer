@@ -7,6 +7,7 @@ import com.niallantony.deulaubaba.domain.Student;
 import com.niallantony.deulaubaba.domain.StudentFeedItem;
 import com.niallantony.deulaubaba.domain.User;
 import com.niallantony.deulaubaba.dto.feed.FeedDTO;
+import com.niallantony.deulaubaba.dto.feed.FeedItemDTO;
 import com.niallantony.deulaubaba.dto.feed.FeedPostDTO;
 import com.niallantony.deulaubaba.exceptions.BadPageRequestException;
 import com.niallantony.deulaubaba.exceptions.InvalidCommentPostException;
@@ -28,17 +29,20 @@ public class FeedService {
     private final StudentFeedMapper studentFeedMapper;
     private final StudentRepository studentRepository;
     private final UserRepository userRepository;
+    private final FileStorageService fileStorageService;
 
     public FeedService(StudentService studentService, StudentFeedRepository studentFeedRepository,
                        StudentFeedMapper studentFeedMapper,
                        StudentRepository studentRepository,
-                       UserRepository userRepository
+                       UserRepository userRepository,
+                       FileStorageService fileStorageService
     ) {
         this.studentService = studentService;
         this.studentFeedRepository = studentFeedRepository;
         this.studentFeedMapper = studentFeedMapper;
         this.studentRepository = studentRepository;
         this.userRepository = userRepository;
+        this.fileStorageService = fileStorageService;
     }
 
     public FeedDTO getFeed(String user_id, String student_id, int page, int size) {
@@ -47,7 +51,11 @@ public class FeedService {
             Pageable pageable = PageRequest.of(page, size);
             List<StudentFeedItem> feedItems = studentFeedRepository.findAllByStudentOrderByCreatedAtDesc(student, pageable);
             FeedDTO feedDTO = new FeedDTO();
-            feedDTO.setFeed(feedItems.stream().map(studentFeedMapper::entityToDto).toList());
+            feedDTO.setFeed(feedItems.stream().map(item -> {
+                FeedItemDTO dto = studentFeedMapper.entityToDto(item);
+                dto.getUser().setImagesrc(fileStorageService.generateSignedURL(item.getUser()));
+                return dto;
+            }).toList());
             return feedDTO;
         } catch (IllegalArgumentException e) {
             throw new BadPageRequestException(e.getMessage());
