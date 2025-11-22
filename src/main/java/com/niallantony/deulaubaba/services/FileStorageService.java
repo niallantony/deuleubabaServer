@@ -1,6 +1,5 @@
 package com.niallantony.deulaubaba.services;
 
-import com.google.auth.ServiceAccountSigner;
 import com.google.auth.oauth2.ServiceAccountCredentials;
 import com.google.cloud.storage.*;
 import com.niallantony.deulaubaba.domain.HasImage;
@@ -12,24 +11,16 @@ import org.springframework.web.multipart.MultipartFile;
 
 import java.io.FileInputStream;
 import java.io.IOException;
-import java.net.URI;
-import java.net.URL;
-import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
-import java.util.Collection;
-import java.util.List;
 import java.util.UUID;
 import java.util.concurrent.TimeUnit;
-import java.util.stream.Stream;
 
 @Slf4j
 @Service
 public class FileStorageService {
     private final Path uploadDirectory;
     private static final Storage storage;
-    private static ServiceAccountSigner serviceAccountSigner;
-    private static final Collection<String> scope = List.of(String.valueOf("cloud_platform"));
 
     static {
         try (FileInputStream serviceAccountFile = new FileInputStream(System.getenv("GOOGLE_APPLICATION_CREDENTIAL"))) {
@@ -47,21 +38,9 @@ public class FileStorageService {
     public String generateSignedURL(HasImage entity) throws FileStorageException {
         if (entity == null || entity.getImage() == null) return "";
         BlobInfo blobInfo = BlobInfo.newBuilder(BlobId.of(entity.getBucketId(), entity.getImage())).build();
-        return storage.signUrl(blobInfo, 15, TimeUnit.MINUTES, Storage.SignUrlOption.signWith(serviceAccountSigner)).toString();
+        return storage.signUrl(blobInfo, 15, TimeUnit.MINUTES).toString();
     }
 
-    // TODO: Refactor tests to make this private
-    private String storeImage(MultipartFile image) throws FileStorageException {
-        try {
-            String filename = UUID.randomUUID() + "-" + image.getOriginalFilename();
-            Path path = uploadDirectory.resolve(filename);
-            Files.createDirectories(path.getParent());
-            image.transferTo(path);
-            return filename;
-        } catch (IOException e) {
-            throw new FileStorageException("Could not store image" + image.getOriginalFilename(), e);
-        }
-    }
 
     // TODO: Refactor tests
     public void deleteImage(String oldId, String bucketName) {
@@ -81,7 +60,7 @@ public class FileStorageService {
             String filename = UUID.randomUUID() + "-" + image.getOriginalFilename();
             BlobId blobId = BlobId.of(bucketname, filename);
             BlobInfo blobInfo = BlobInfo.newBuilder(blobId).setContentType("image/jpeg").build();
-            Blob blob = storage.create(blobInfo, image.getBytes());
+            storage.create(blobInfo, image.getBytes());
             return filename;
         } catch (IOException e) {
             throw new FileStorageException("Could not store image" + image.getOriginalFilename(), e);
@@ -92,16 +71,16 @@ public class FileStorageService {
         Bucket bucket = storage.get(bucketName);
         if (bucket == null) {
             try {
-                bucket = createBucket(bucketName);
+                createBucket(bucketName);
             } catch (FileStorageException e) {
                 throw new FileStorageException("Could not create bucket: " + bucketName, e);
             }
         }
-    };
+    }
 
-    public Bucket createBucket(String bucketName) {
+    public void createBucket(String bucketName) {
         try {
-            return storage.create(BucketInfo.of(bucketName));
+            storage.create(BucketInfo.of(bucketName));
         } catch (StorageException e) {
             throw new FileStorageException("Could not create bucket " + bucketName, e);
 
