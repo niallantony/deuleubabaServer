@@ -80,7 +80,7 @@ public class FileStorageService {
 
     public void createBucket(String bucketName) {
         try {
-            storage.create(BucketInfo.of(bucketName));
+            storage.create(BucketInfo.newBuilder(bucketName).setLocation("ASIA-NORTHEAST3").build());
         } catch (StorageException e) {
             throw new FileStorageException("Could not create bucket " + bucketName, e);
 
