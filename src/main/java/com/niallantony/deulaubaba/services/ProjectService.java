@@ -61,7 +61,7 @@ public class ProjectService {
     public ProjectDTO getProject(Long project_id, String user_id) {
         Project project = getAuthorizedProject(project_id, user_id);
         ProjectDTO projectDTO = projectMapper.entityToDto(project);
-        projectDTO.setImgsrc(fileStorageService.generateSignedURL(project).toString());
+        projectDTO.setImgsrc(fileStorageService.generateSignedURL(project));
         if (project.getCreatedBy().getUserId().equals(user_id)) {
            projectDTO.isOwnProject(true);
         }

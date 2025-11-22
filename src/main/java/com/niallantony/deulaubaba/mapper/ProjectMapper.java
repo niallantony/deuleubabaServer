@@ -28,8 +28,6 @@ public abstract class ProjectMapper {
     @Mapping(target = "categories", ignore = true)
     public abstract Project requestToEntity(ProjectPostDTO project);
 
-    public abstract ProjectUserStatusDTO projectUserToProjectUserStatus(ProjectUser projectUser);
-
     protected Set<ProjectUserStatusDTO> projectUserToProjectUserStatus(Set<ProjectUser> projectUsers) {
         if (projectUsers.isEmpty()) return null;
         return projectUsers.stream().map((user) -> new ProjectUserStatusDTO(

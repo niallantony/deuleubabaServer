@@ -11,7 +11,6 @@ import java.util.Set;
 
 public interface UserRepository extends JpaRepository<User, String> {
     Optional<User> findByUserId(String userId);
-    Optional<User> findByUsername(String username);
 
     @Query(
             "SELECT u FROM User u WHERE u.userId IN :ids"

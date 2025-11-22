@@ -3,7 +3,6 @@ package com.niallantony.deulaubaba.data;
 import com.niallantony.deulaubaba.domain.Project;
 import com.niallantony.deulaubaba.domain.Student;
 import com.niallantony.deulaubaba.domain.User;
-import com.niallantony.deulaubaba.dto.project.ProjectPreviewDTO;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;

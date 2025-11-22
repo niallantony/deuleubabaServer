@@ -11,14 +11,12 @@ import com.niallantony.deulaubaba.exceptions.InvalidStudentDataException;
 import com.niallantony.deulaubaba.exceptions.ResourceNotFoundException;
 import com.niallantony.deulaubaba.exceptions.UserNotAuthorizedException;
 import com.niallantony.deulaubaba.mapper.StudentMapper;
-import com.niallantony.deulaubaba.utils.JsonUtils;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
 
-import java.util.ArrayList;
 import java.util.List;
 import java.util.Random;
 import java.util.Set;

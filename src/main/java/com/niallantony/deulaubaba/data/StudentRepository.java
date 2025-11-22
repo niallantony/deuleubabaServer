@@ -1,7 +1,6 @@
 package com.niallantony.deulaubaba.data;
 
 import com.niallantony.deulaubaba.domain.Student;
-import com.niallantony.deulaubaba.dto.student.StudentIdAvatar;
 import org.jetbrains.annotations.NotNull;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.CrudRepository;
