@@ -1,38 +1,24 @@
 package com.niallantony.deulaubaba.services;
 
-import com.google.auth.oauth2.ServiceAccountCredentials;
 import com.google.cloud.storage.*;
 import com.niallantony.deulaubaba.domain.HasImage;
 import com.niallantony.deulaubaba.exceptions.FileStorageException;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
 
-import java.io.FileInputStream;
 import java.io.IOException;
-import java.nio.file.Path;
-import java.nio.file.Paths;
 import java.util.UUID;
 import java.util.concurrent.TimeUnit;
 
 @Slf4j
 @Service
 public class FileStorageService {
-    private final Path uploadDirectory;
-    private static final Storage storage;
+    private final Storage storage;
 
-    static {
-        try (FileInputStream serviceAccountFile = new FileInputStream(System.getenv("GOOGLE_APPLICATION_CREDENTIAL"))) {
-            ServiceAccountCredentials credentials = ServiceAccountCredentials.fromStream(serviceAccountFile);
-            storage = StorageOptions.newBuilder().setCredentials(credentials).setProjectId("deulaubaba").build().getService();
-        } catch (IOException e) {
-            throw new RuntimeException("Failed to load GOOGLE_APPLICATION_CREDENTIAL", e);
-        }
-    }
 
-    public FileStorageService(@Value("${upload.dir:uploads}") String uploadDirectory) {
-        this.uploadDirectory = Paths.get(uploadDirectory);
+    public FileStorageService(Storage storage) {
+        this.storage = storage;
     }
 
     public String generateSignedURL(HasImage entity) throws FileStorageException {
@@ -42,7 +28,6 @@ public class FileStorageService {
     }
 
 
-    // TODO: Refactor tests
     public void deleteImage(String oldId, String bucketName) {
         try {
             Blob blob = storage.get(bucketName, oldId);

@@ -6,6 +6,7 @@ import com.niallantony.deulaubaba.dto.project.*;
 import com.niallantony.deulaubaba.exceptions.*;
 import com.niallantony.deulaubaba.mapper.ProjectFeedMapper;
 import com.niallantony.deulaubaba.mapper.ProjectMapper;
+import com.niallantony.deulaubaba.mapper.ProjectMapperImpl;
 import com.niallantony.deulaubaba.util.ProjectTestFactory;
 import org.jetbrains.annotations.NotNull;
 import org.junit.jupiter.api.Test;
@@ -29,7 +30,7 @@ public class ProjectServiceTest {
     private ProjectRepository projectRepository;
 
     @Mock
-    private ProjectMapper projectMapper;
+    private ProjectMapperImpl projectMapper;
 
     @Mock
     private ProjectFeedMapper projectFeedMapper;
@@ -89,10 +90,12 @@ public class ProjectServiceTest {
 
     @Test
     public void getAllProjectsOfUser_whenGivenValidId_returnsAllProjects() {
-        Set<ProjectPreviewDTO> projects = getProjectPreviewDTOS();
+        Set<Project> projects = getSampleProjects();
         User user = new User();
         when(userRepository.findByUserId("abc")).thenReturn(Optional.of(user));
         when(projectRepository.findAllProjectsByUserId(user)).thenReturn(projects);
+        doCallRealMethod().when(projectMapper).entityToPreviewDTO(any());
+        when(fileStorageService.generateSignedURL(any())).thenReturn("image.jpg");
 
         ProjectCollectionsDTO response = projectService.getProjectsOfUser("abc");
         verify(projectRepository, times(1)).findAllProjectsByUserId(user);
@@ -104,7 +107,7 @@ public class ProjectServiceTest {
     @Test
     public void getAllProjectsOfUser_whenProjectsEmpty_throwsNoProjectFoundException() {
         User user = new User();
-        Set<ProjectPreviewDTO> projects = new HashSet<>();
+        Set<Project> projects = new HashSet<>();
         when(userRepository.findByUserId("abc")).thenReturn(Optional.of(user));
         when(projectRepository.findAllProjectsByUserId(user)).thenReturn(projects);
         assertThrows(NoProjectsFoundException.class, () -> projectService.getProjectsOfUser("abc"));
@@ -118,13 +121,15 @@ public class ProjectServiceTest {
 
     @Test
     public void getAllProjectsOfStudent_whenGivenValidId_returnsAllProjects() {
-        Set<ProjectPreviewDTO> projects = getProjectPreviewDTOS();
+        Set<Project> projects = getSampleProjects();
         User user = new User();
         Student student = new Student();
         student.getUsers().add(user);
         when(userRepository.findByUserId("abc")).thenReturn(Optional.of(user));
         when(studentRepository.findById("123")).thenReturn(Optional.of(student));
         when(projectRepository.findAllProjectsByStudentId(user, student)).thenReturn(projects);
+        doCallRealMethod().when(projectMapper).entityToPreviewDTO(any());
+        when(fileStorageService.generateSignedURL(any())).thenReturn("image.jpg");
 
         ProjectCollectionsDTO response = projectService.getProjectsOfStudent("abc", "123");
         verify(projectRepository, times(1)).findAllProjectsByStudentId(user,student);
@@ -150,7 +155,7 @@ public class ProjectServiceTest {
     }
 
     @Test void getAllProjectsOfStudent_whenStudentHasNoProjects_throwsNoProjectFoundException() {
-        Set<ProjectPreviewDTO> projects = new HashSet<>();
+        Set<Project> projects = new HashSet<>();
         User user = new User();
         Student student = new Student();
         student.getUsers().add(user);
@@ -199,14 +204,12 @@ public class ProjectServiceTest {
         when(userRepository.findAllByUsernames(Set.of("user1"))).thenReturn(Set.of(user));
         when(projectMapper.entityToDto(any(Project.class))).thenReturn(projectDTO);
         when(projectMapper.requestToEntity(postDTO)).thenReturn(createdproject);
-        when(fileStorageService.storeImage(image)).thenReturn("new_url");
         when(communicationCategoryRepository.findAll()).thenReturn(new ArrayList<>());
 
         ProjectDTO result = projectService.createProject(postDTO, image, "abc");
         assertEquals(projectDTO, result);
         verify(projectRepository, times(1)).save(any(Project.class));
-        verify(fileStorageService, times(1)).storeImage(image);
-        assertEquals("new_url", createdproject.getImgsrc());
+        verify(fileStorageService, atLeastOnce()).swapImage(eq(image), any());
     }
 
     @Test void createProject_whenStudentIsMissing_throwsResourceNotFoundException() {
@@ -254,12 +257,10 @@ public class ProjectServiceTest {
         when(userRepository.findAllByUsernames(Set.of("user1"))).thenReturn(Set.of(user));
         when(projectMapper.entityToDto(any(Project.class))).thenReturn(projectDTO);
         when(projectMapper.requestToEntity(postDTO)).thenReturn(createdproject);
-        when(fileStorageService.storeImage(image)).thenThrow(FileStorageException.class);
 
         ProjectDTO result = projectService.createProject(postDTO, image, "abc");
         assertEquals(projectDTO, result);
         verify(projectRepository, times(1)).save(any(Project.class));
-        verify(fileStorageService, times(1)).storeImage(image);
         assertNull(createdproject.getImgsrc());
     }
 
@@ -428,14 +429,15 @@ public class ProjectServiceTest {
         MultipartFile image = new MockMultipartFile("image", "image", "image/jpg", "image".getBytes());
         mockUser.setUserId("abc");
         mockProject.setCreatedBy(mockUser);
+        Student mockStudent = new Student();
+        mockStudent.setStudentId("123");
+        mockProject.setStudent(mockStudent);
         when(projectRepository.findById(1L)).thenReturn(Optional.of(mockProject));
-        when(fileStorageService.storeImage(image)).thenReturn("new_url");
         when(communicationCategoryRepository.findAll()).thenReturn(List.of(pain));
-        doCallRealMethod().when(fileStorageService).swapImage(any(), any());
 
         projectService.patchProjectDetails("abc", 1L, projectDetailsPatchDTO, image );
 
-        assertEquals("new_url", mockProject.getImgsrc());
+        verify(fileStorageService, atLeastOnce()).swapImage(any(), any());
         assertEquals("description", mockProject.getDescription());
         assertEquals("objective", mockProject.getObjective());
         assertEquals(LocalDate.of(2000,1,1), mockProject.getStartedOn());
@@ -504,12 +506,15 @@ public class ProjectServiceTest {
         User mockUser = new User();
         mockUser.setUserId("abc");
         mockProject.setCreatedBy(mockUser);
+        Student student = new Student();
+        student.setStudentId("123");
+        mockProject.setStudent(student);
 
         when(projectRepository.findById(1L)).thenReturn(Optional.of(mockProject));
 
         projectService.deleteProject("abc", 1L);
 
-        verify(fileStorageService, times(1)).deleteImage("example.png");
+        verify(fileStorageService, times(1)).deleteImage(eq("example.png"),eq("123"));
         verify(projectRepository, times(1)).delete(mockProject);
     }
 
@@ -535,26 +540,30 @@ public class ProjectServiceTest {
         User mockUser = new User();
         mockUser.setUserId("abc");
         mockProject.setCreatedBy(mockUser);
+        Student student = new Student();
+        student.setStudentId("123");
+        mockProject.setStudent(student);
 
         when(projectRepository.findById(1L)).thenReturn(Optional.of(mockProject));
-        doThrow(FileStorageException.class).when(fileStorageService).deleteImage(any());
+        doThrow(FileStorageException.class).when(fileStorageService).deleteImage(any(), any());
 
         projectService.deleteProject("abc", 1L);
 
-        verify(fileStorageService, times(1)).deleteImage("example.png");
+        verify(fileStorageService, times(1)).deleteImage(eq("example.png"), eq("123"));
         verify(projectRepository, times(1)).delete(mockProject);
     }
 
     @Test void addUser_whenValidRequest_addsUsersToProject() {
         User mockCreator = new User();
+        mockCreator.setUsername("abc");
         mockCreator.setUserId("abc");
         Project mockProject = new Project();
         mockProject.setCreatedBy(mockCreator);
         User mockNewUser = new User();
-        mockNewUser.setUserId("def");
+        mockNewUser.setUsername("def");
 
         when(projectRepository.findById(1L)).thenReturn(Optional.of(mockProject));
-        when(userRepository.findByIds(List.of("def"))).thenReturn(List.of(mockNewUser));
+        when(userRepository.findAllByUsernames(List.of("def"))).thenReturn(Set.of(mockNewUser));
 
         ProjectAddUserResponseDTO response = projectService.addUsersToProject("abc", 1L, new ProjectAddUserRequestDTO(List.of("def")));
 
@@ -564,12 +573,13 @@ public class ProjectServiceTest {
 
     @Test void addUser_whenUsersToProjectNotFound_returnsNotFound() {
         User mockCreator = new User();
+        mockCreator.setUsername("abc");
         mockCreator.setUserId("abc");
         Project mockProject = new Project();
         mockProject.setCreatedBy(mockCreator);
 
         when(projectRepository.findById(1L)).thenReturn(Optional.of(mockProject));
-        when(userRepository.findByIds(List.of("def"))).thenReturn(new ArrayList<>());
+        when(userRepository.findAllByUsernames(List.of("def"))).thenReturn(new HashSet<>());
 
         ProjectAddUserResponseDTO response = projectService.addUsersToProject("abc", 1L, new ProjectAddUserRequestDTO(List.of("def")));
 
@@ -746,18 +756,19 @@ public class ProjectServiceTest {
 
     @Test void addUsers_whenSuccessful_addsNewFeedItemsForEachUser() {
         User mockCreator = new User();
+        mockCreator.setUsername("abc");
         mockCreator.setUserId("abc");
         Project mockProject = new Project();
         mockProject.setCreatedBy(mockCreator);
         User mockNewUser = new User();
-        mockNewUser.setUserId("def");
+        mockNewUser.setUsername("def");
         mockNewUser.setUserType("Teacher");
         User mockNewUser2 = new User();
-        mockNewUser2.setUserId("ghi");
+        mockNewUser2.setUsername("ghi");
         mockNewUser2.setUserType("Parent");
 
         when(projectRepository.findById(1L)).thenReturn(Optional.of(mockProject));
-        when(userRepository.findByIds(List.of("def", "ghi", "jkl"))).thenReturn(List.of(mockNewUser, mockNewUser2));
+        when(userRepository.findAllByUsernames(List.of("def", "ghi", "jkl"))).thenReturn(Set.of(mockNewUser, mockNewUser2));
 
         ProjectAddUserResponseDTO response = projectService
                 .addUsersToProject(
@@ -776,14 +787,15 @@ public class ProjectServiceTest {
     @Test void addUsers_whenUnsuccessful_doesNotAddFeedItems() {
         User mockCreator = new User();
         mockCreator.setUserId("abc");
+        mockCreator.setUsername("abc");
         Project mockProject = new Project();
         mockProject.setCreatedBy(mockCreator);
         User mockNewUser = new User();
-        mockNewUser.setUserId("def");
+        mockNewUser.setUsername("def");
         mockNewUser.setUserType("Teacher");
 
         when(projectRepository.findById(1L)).thenReturn(Optional.of(mockProject));
-        when(userRepository.findByIds(List.of("def"))).thenReturn(List.of(mockNewUser));
+        when(userRepository.findAllByUsernames(List.of("def"))).thenReturn(Set.of(mockNewUser));
 
         doThrow(RuntimeException.class).when(projectRepository).save(any());
 
@@ -812,7 +824,7 @@ public class ProjectServiceTest {
 
         projectService.createProject(postDTO, null, "abc");
         verify(projectFeedRepository , times(2)).save(argThat(req ->
-                req.getBody().equals("Project created") || req.getBody().equals("New user added: Teacher")
+                req.getBody().equals("프로젝트 등록되었다") || req.getBody().equals("New user added: Teacher")
                 ));
     }
 
@@ -835,7 +847,7 @@ public class ProjectServiceTest {
         projectService.patchProjectDetails("abc", 1L, projectDetailsPatchDTO, null );
 
         verify(projectFeedRepository , times(1)).save(argThat(req ->
-                req.getBody().equals("Project updated") &&
+                req.getBody().equals("프로젝트 업데이트 되었습니다") &&
                 req.getType().equals(ProjectFeedItemType.EVENT) &&
                 req.getCreatedAt() != null
                 )
@@ -888,18 +900,18 @@ public class ProjectServiceTest {
         return postDTO;
     }
 
-    private static @NotNull Set<ProjectPreviewDTO> getProjectPreviewDTOS() {
+    private static @NotNull Set<Project> getSampleProjects() {
         LocalDate today = LocalDate.now();
-        ProjectPreviewDTO persistedProject = new ProjectPreviewDTO();
+        Project persistedProject = new Project();
         persistedProject.setId(1L);
         persistedProject.setCompleted(true);
-        ProjectPreviewDTO persistedProject2 = new ProjectPreviewDTO();
+        Project persistedProject2 = new Project();
         persistedProject2.setId(2L);
         persistedProject2.setStartedOn(today.plusDays(30));
-        ProjectPreviewDTO persistedProject3 = new ProjectPreviewDTO();
+        Project persistedProject3 = new Project();
         persistedProject3.setId(3L);
         persistedProject3.setStartedOn(today.minusDays(30));
-        Set<ProjectPreviewDTO> projects = new HashSet<>();
+        Set<Project> projects = new HashSet<>();
         projects.add(persistedProject);
         projects.add(persistedProject2);
         projects.add(persistedProject3);

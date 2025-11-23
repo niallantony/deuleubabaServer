@@ -7,7 +7,6 @@ import com.niallantony.deulaubaba.dto.dictionary.DictionaryEntryDTO;
 import com.niallantony.deulaubaba.dto.dictionary.DictionaryListingsResponse;
 import com.niallantony.deulaubaba.dto.dictionary.DictionaryPostRequest;
 import com.niallantony.deulaubaba.dto.dictionary.DictionaryPutRequest;
-import com.niallantony.deulaubaba.exceptions.FileStorageException;
 import com.niallantony.deulaubaba.exceptions.InvalidDictionaryDataException;
 import com.niallantony.deulaubaba.exceptions.ResourceNotFoundException;
 import com.niallantony.deulaubaba.exceptions.UserNotAuthorizedException;
@@ -132,7 +131,6 @@ public class DictionaryServiceTests {
 
         DictionaryEntry result = dictionaryService.addDictionaryEntry(request, null, "userId");
         assertEquals(student, result.getStudent());
-        verify(fileStorageService, times(0)).storeImage(any());
         verify(dictionaryRepository).save(result);
     }
     @Test
@@ -141,15 +139,12 @@ public class DictionaryServiceTests {
         MultipartFile image = mock(MultipartFile.class);
         Student student = new Student();
         commonPostStubs(student);
-        doCallRealMethod().when(fileStorageService).swapImage(any(), any());
-        when(fileStorageService.storeImage(image)).thenReturn("new_url");
 
 
         DictionaryEntry result = dictionaryService.addDictionaryEntry(request, image, "userId");
         verify(fileStorageService).swapImage(eq(image), any());
 
         assertEquals(student, result.getStudent());
-        assertEquals("new_url", result.getImgsrc());
         verify(dictionaryRepository).save(result);
     }
 
@@ -161,7 +156,6 @@ public class DictionaryServiceTests {
         Student student = new Student();
         commonPostStubs(student);
         doCallRealMethod().when(fileStorageService).swapImage(any(), any());
-        when(fileStorageService.storeImage(image)).thenThrow(FileStorageException.class);
 
 
         DictionaryEntry result = dictionaryService.addDictionaryEntry(request, image, "userId");
@@ -176,10 +170,11 @@ public class DictionaryServiceTests {
         DictionaryPutRequest request = DictionaryTestFactory.createDictionaryPutRequest();
         commonPutStubs();
 
-        DictionaryEntry result = dictionaryService.updateDictionaryEntry(request, null, "userId");
-        verify(dictionaryRepository).save(result);
-        assertEquals("New Description", result.getDescription());
-        verify(fileStorageService, times(0)).storeImage(any());
+        dictionaryService.updateDictionaryEntry(request, null, "userId");
+        verify(dictionaryRepository).save(argThat(arg ->
+                arg.getDescription().equals(request.getDescription()) &&
+                        arg.getTitle().equals(request.getTitle())
+        ));
     }
 
     @Test
@@ -187,15 +182,12 @@ public class DictionaryServiceTests {
         DictionaryPutRequest request = DictionaryTestFactory.createDictionaryPutRequest();
         MultipartFile image = mock(MultipartFile.class);
         commonPutStubs();
-        doCallRealMethod().when(fileStorageService).swapImage(any(), any());
-        when(fileStorageService.storeImage(image)).thenReturn("new_url");
-
-        DictionaryEntry result = dictionaryService.updateDictionaryEntry(request, image, "userId");
-        verify(dictionaryRepository).save(result);
-        verify(fileStorageService).swapImage(eq(image), any());
-        assertEquals("New Description", result.getDescription());
-        verify(fileStorageService).deleteImage("./example.png");
-        assertEquals("new_url", result.getImgsrc());
+        dictionaryService.updateDictionaryEntry(request, image, "userId");
+        verify(dictionaryRepository).save(argThat(arg ->
+                arg.getDescription().equals(request.getDescription()) &&
+                        arg.getTitle().equals(request.getTitle())
+        ));
+        verify(fileStorageService, times(1)).swapImage(eq(image), any());
     }
 
     @Test
@@ -222,21 +214,6 @@ public class DictionaryServiceTests {
     }
 
     @Test
-    void updateDictionaryEntry_whenImageDoesntSave_stillSavesEntry() {
-        DictionaryPutRequest request = DictionaryTestFactory.createDictionaryPutRequest();
-        MultipartFile image = mock(MultipartFile.class);
-        commonPutStubs();
-        doCallRealMethod().when(fileStorageService).swapImage(any(), any());
-        doThrow(FileStorageException.class).when(fileStorageService).storeImage(any());
-        DictionaryEntry result = dictionaryService.updateDictionaryEntry(request, image, "userId");
-        verify(dictionaryRepository).save(result);
-        verify(fileStorageService).swapImage(eq(image), any() );
-        assertEquals("New Description", result.getDescription());
-        verifyNoMoreInteractions(fileStorageService);
-        assertEquals("./example.png", result.getImgsrc());
-    }
-
-    @Test
     void deleteDictionaryEntry_whenGivenValidData_deletesEntry() {
         DictionaryEntry entry = new DictionaryEntry();
         Student student = new Student();
@@ -248,7 +225,7 @@ public class DictionaryServiceTests {
         when(studentService.studentBelongsToUser("123", "userId")).thenReturn(true);
         dictionaryService.deleteDictionaryEntry(123L, "userId");
         verify(dictionaryRepository).deleteById(123L);
-        verify(fileStorageService).deleteImage("./example.png");
+        verify(fileStorageService).deleteImage(eq("./example.png"),any());
     }
 
 

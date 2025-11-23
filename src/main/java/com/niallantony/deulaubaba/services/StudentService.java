@@ -101,27 +101,24 @@ public class StudentService {
     }
 
     @Transactional
-    public StudentDTO updateStudentDetails(String studentId, StudentRequest studentRequest, MultipartFile image, String userId)  {
+    public void updateStudentDetails(String studentId, StudentRequest studentRequest, MultipartFile image, String userId)  {
         Student student = getAuthorisedStudent(studentId, userId);
         fileStorageService.swapImage(image, student);
         applyDetailUpdates(student, studentRequest);
-        return studentMapper.toDTO(student);
     }
 
     @Transactional
-    public StudentDTO updateStudentCommunication(String studentId, StudentCommunicationRequest studentCommunicationRequest, String userId)  {
+    public void updateStudentCommunication(String studentId, StudentCommunicationRequest studentCommunicationRequest, String userId)  {
         Student student = getAuthorisedStudent(studentId, userId);
         student.setCommunicationDetails(studentCommunicationRequest.getCommunicationDetails());
         studentRepository.save(student);
-        return studentMapper.toDTO(student);
     }
 
     @Transactional
-    public StudentDTO updateStudentChallenge(String studentId, StudentChallengeRequest studentChallengeRequest, String userId)  {
+    public void updateStudentChallenge(String studentId, StudentChallengeRequest studentChallengeRequest, String userId)  {
         Student student = getAuthorisedStudent(studentId, userId);
         student.setChallengesDetails(studentChallengeRequest.getChallengesDetails());
         studentRepository.save(student);
-        return studentMapper.toDTO(student);
     }
 
     @Transactional

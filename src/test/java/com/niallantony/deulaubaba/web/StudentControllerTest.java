@@ -92,6 +92,7 @@ class StudentControllerTest {
             "/fixtures/student.sql"
     })
     public void getStudentPreview_withValidStudentId_ReturnsStudentIdAvatar(@Autowired MockMvc mvc) throws Exception {
+        when(fileStorageService.generateSignedURL(any())).thenReturn("./example.jpg");
         mvc.perform(get("/student/preview")
                 .with(jwt())
                 .param("id", "ABC"))
@@ -255,8 +256,6 @@ class StudentControllerTest {
     @Test
     @Sql("/fixtures/user.sql")
     public void createStudent_withImage_returnsStudentDTOWithImageURI(@Autowired MockMvc mvc) throws Exception {
-        doCallRealMethod().when(fileStorageService).swapImage(any(),any());
-        when(fileStorageService.storeImage(any())).thenReturn("new-image.jpg");
         StudentRequest student = StudentTestFactory.createStudentRequest("user");
         String request = objectMapper.writeValueAsString(student);
         MockMultipartFile data = new MockMultipartFile("data", "student.json", "application/json", request.getBytes());
@@ -273,7 +272,6 @@ class StudentControllerTest {
         String body = res.getResponse().getContentAsString();
         String imageSrc = objectMapper.readTree(body).get("imagesrc").asText();
         verify(fileStorageService, times(1)).swapImage(any(), any());
-        assertEquals("new-image.jpg", imageSrc);
 
     }
 
@@ -317,8 +315,7 @@ class StudentControllerTest {
                    .file(data)
                    .with(jwt())
                    .contentType(MediaType.MULTIPART_FORM_DATA))
-           .andExpect(status().isOk())
-           .andExpect(jsonPath("$.name").value(request.getName()))
+           .andExpect(status().isNoContent())
            .andDo((r) -> System.out.println(r.getResponse().getContentAsString()));
 
         Iterable<Student> students = studentRepository.findAll();
@@ -391,78 +388,24 @@ class StudentControllerTest {
 
     @Test
     @Sql("/fixtures/student_with_image_and_user.sql")
-    public void updateStudent_withImage_createsNewFileUri(@Autowired MockMvc mvc) throws Exception {
-        when(fileStorageService.storeImage(any())).thenReturn("new_image.jpg");
-        doCallRealMethod().when(fileStorageService).swapImage(any(),any());
+    public void updateStudent_withImage_callsSwapImage(@Autowired MockMvc mvc) throws Exception {
         StudentRequest request = StudentTestFactory.createStudentRequest("user");
         String json = objectMapper.writeValueAsString(request);
         MockMultipartFile data = new MockMultipartFile("data", "student.json", "application/json", json.getBytes());
         MockMultipartFile image = new MockMultipartFile("image", "new_image.jpg", "image/jpg", "new_image".getBytes());
+        when(fileStorageService.generateSignedURL(any())).thenReturn("new_image.jpg");
         mvc.perform(multipart(HttpMethod.PUT, "/student/abc")
                    .file(data)
                    .file(image)
                    .with(jwt())
                    .contentType(MediaType.MULTIPART_FORM_DATA))
-           .andExpect(status().isOk())
-                .andExpect(jsonPath("$.imagesrc").value("new_image.jpg"))
+           .andExpect(status().isNoContent())
            .andDo((r) -> System.out.println(r.getResponse().getContentAsString()));
 
         Iterable<Student> students = studentRepository.findAll();
         assertEquals(1, studentRepository.count());
-        assertEquals("new_image.jpg", students.iterator().next().getImagesrc());
-        verify(fileStorageService, times(1)).storeImage(any());
-        verify(fileStorageService, times(1)).deleteImage("example.jpg");
+        verify(fileStorageService, times(1)).swapImage(eq(image), any());
 
-    }
-
-    @Test
-    @Sql("/fixtures/student_with_image_and_user.sql")
-    public void updateStudent_whenImageUploadFails_keepsOriginalFile(@Autowired MockMvc mvc) throws Exception {
-        when(fileStorageService.storeImage(any())).thenThrow(FileStorageException.class);
-        StudentRequest request = StudentTestFactory.createStudentRequest("user");
-        String json = objectMapper.writeValueAsString(request);
-        MockMultipartFile data = new MockMultipartFile("data", "student.json", "application/json", json.getBytes());
-        MockMultipartFile image = new MockMultipartFile("image", "new_image.jpg", "image/jpg", "new_image".getBytes());
-        mvc.perform(multipart(HttpMethod.PUT, "/student/abc")
-                   .file(data)
-                   .file(image)
-                   .with(jwt())
-                   .contentType(MediaType.MULTIPART_FORM_DATA))
-           .andExpect(status().isOk())
-           .andExpect(jsonPath("$.imagesrc").value("example.jpg"))
-           .andDo((r) -> System.out.println(r.getResponse().getContentAsString()));
-
-        Iterable<Student> students = studentRepository.findAll();
-        assertEquals(1, studentRepository.count());
-        assertEquals("example.jpg", students.iterator().next().getImagesrc());
-        verify(fileStorageService, times(1)).swapImage(any(), any());
-        verifyNoMoreInteractions(fileStorageService);
-    }
-
-    // FOR NOW!
-    @Test
-    @Sql("/fixtures/student_with_image_and_user.sql")
-    public void updateStudent_whenFileDeletionFails_updatesFile(@Autowired MockMvc mvc) throws Exception {
-        when(fileStorageService.storeImage(any())).thenReturn("new_image.jpg");
-        doCallRealMethod().when(fileStorageService).swapImage(any(), any());
-        doThrow(FileStorageException.class).when(fileStorageService).deleteImage(any());
-        StudentRequest request = StudentTestFactory.createStudentRequest("user");
-        String json = objectMapper.writeValueAsString(request);
-        MockMultipartFile data = new MockMultipartFile("data", "student.json", "application/json", json.getBytes());
-        MockMultipartFile image = new MockMultipartFile("image", "new_image.jpg", "image/jpg", "new_image".getBytes());
-        mvc.perform(multipart(HttpMethod.PUT, "/student/abc")
-                   .file(data)
-                   .file(image)
-                   .with(jwt())
-                   .contentType(MediaType.MULTIPART_FORM_DATA))
-           .andExpect(status().isOk())
-           .andExpect(jsonPath("$.imagesrc").value("new_image.jpg"))
-           .andDo((r) -> System.out.println(r.getResponse().getContentAsString()));
-
-        Iterable<Student> students = studentRepository.findAll();
-        assertEquals(1, studentRepository.count());
-        assertEquals("new_image.jpg", students.iterator().next().getImagesrc());
-        verify(fileStorageService, times(1)).swapImage(any(), any());
     }
 
     @Test
@@ -474,8 +417,7 @@ class StudentControllerTest {
                 .with(jwt())
                    .content(json)
                 .contentType("application/json"))
-                .andExpect(status().isOk())
-                .andExpect(jsonPath("$.communicationDetails").value("Communication"))
+                .andExpect(status().isNoContent())
                 .andDo((r) -> System.out.println(r.getResponse().getContentAsString()));
 
         Student repo = studentRepository.findAll().iterator().next();
@@ -544,8 +486,7 @@ class StudentControllerTest {
                    .with(jwt())
                    .content(json)
                    .contentType("application/json"))
-           .andExpect(status().isOk())
-           .andExpect(jsonPath("$.challengesDetails").value("Challenge"))
+           .andExpect(status().isNoContent())
            .andDo((r) -> System.out.println(r.getResponse().getContentAsString()));
 
         Student repo = studentRepository.findAll().iterator().next();

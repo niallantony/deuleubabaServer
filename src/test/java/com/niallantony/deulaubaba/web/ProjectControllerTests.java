@@ -291,7 +291,6 @@ public class ProjectControllerTests {
     @SqlMergeMode(SqlMergeMode.MergeMode.MERGE)
     @Sql({"/fixtures/student_and_user.sql"})
     public void createProject_withImage_returnsCorrectResponse(@Autowired MockMvc mvc) throws Exception {
-        when(fileStorageService.storeImage(any())).thenReturn("new_image.jpg");
         doCallRealMethod().when(fileStorageService).swapImage(any(), any());
         ProjectPostDTO postDTO = ProjectTestFactory.getProjectPostDTOWithUser("user1");
         String json = objectMapper.writeValueAsString(postDTO);
@@ -301,7 +300,6 @@ public class ProjectControllerTests {
                    .file(image)
                    .with(jwt()))
            .andExpect(status().isCreated())
-           .andExpect(jsonPath("$.imgsrc").value("new_image.jpg"))
            .andDo((r) -> System.out.println(r.getResponse().getContentAsString()));
         List<Project> projects = projectRepository.findAll().stream().toList();
         assertEquals(1, projects.size());
@@ -489,7 +487,6 @@ public class ProjectControllerTests {
         String json = objectMapper.writeValueAsString(projectDetailsPatchDTO);
         MockMultipartFile data = new MockMultipartFile("data", "data.json", "application/json", json.getBytes());
         MockMultipartFile image = new MockMultipartFile("image", "new_image.jpg", "application/json", "image".getBytes());
-        when(fileStorageService.storeImage(image)).thenReturn("new_image.jpg");
         doCallRealMethod().when(fileStorageService).swapImage(any(), any());
 
         mvc.perform(multipart(HttpMethod.PATCH, "/project/1")
@@ -502,7 +499,6 @@ public class ProjectControllerTests {
 
         Project project = projectRepository.findById(1L).orElseThrow();
         assertAll(
-                () -> assertEquals("new_image.jpg", project.getImgsrc()),
                 () -> assertEquals(projectDetailsPatchDTO.getStartedOn(), project.getStartedOn()),
                 () -> assertEquals(projectDetailsPatchDTO.getDescription(), project.getDescription()),
                 () -> assertEquals(projectDetailsPatchDTO.getObjective(), project.getObjective()),
@@ -589,7 +585,6 @@ public class ProjectControllerTests {
         String json = objectMapper.writeValueAsString(projectDetailsPatchDTO);
         MockMultipartFile data = new MockMultipartFile("data", "data.json", "application/json", json.getBytes());
         MockMultipartFile image = new MockMultipartFile("image", "new_image.jpg", "application/json", "image".getBytes());
-        when(fileStorageService.storeImage(image)).thenThrow(FileStorageException.class);
         doCallRealMethod().when(fileStorageService).swapImage(any(), any());
 
         mvc.perform(multipart(HttpMethod.PATCH, "/project/1")
@@ -600,7 +595,6 @@ public class ProjectControllerTests {
            .andExpect(redirectedUrl(redirect))
            .andDo((r) -> System.out.println(r.getResponse().getRedirectedUrl()));
 
-        verify(fileStorageService, never()).deleteImage(any());
         Project project = projectRepository.findById(1L).orElseThrow();
         assertAll(
                 () -> assertEquals("example.jpg", project.getImgsrc()),
@@ -1010,7 +1004,7 @@ public class ProjectControllerTests {
         List<ProjectFeedItem> feed = projectFeedRepository.findByProjectIdOrderByCreatedAtDesc(projects.getFirst()
                                                                                                        .getId());
         assertAll(() -> {
-            assertTrue(feed.stream().anyMatch(item -> item.getBody().equals("Project created")));
+            assertTrue(feed.stream().anyMatch(item -> item.getBody().equals("프로젝트 등록되었다")));
             assertTrue(feed.stream().anyMatch(item -> item.getBody().equals("New user added: teacher")));
             assertEquals(2, feed.size());
         });
@@ -1064,7 +1058,7 @@ public class ProjectControllerTests {
         List<ProjectFeedItem> feed = projectFeedRepository.findByProjectIdOrderByCreatedAtDesc(1L);
         assertAll(() -> {
             assertEquals(1, feed.size());
-            assertEquals("Project updated", feed.getFirst().getBody());
+            assertEquals("프로젝트 업데이트 되었습니다", feed.getFirst().getBody());
 
         });
 

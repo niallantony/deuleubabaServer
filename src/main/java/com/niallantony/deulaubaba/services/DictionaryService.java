@@ -85,7 +85,7 @@ public class DictionaryService {
     }
 
     @Transactional
-    public DictionaryEntry updateDictionaryEntry(DictionaryPutRequest dictionaryPutRequest, MultipartFile image, String userId) {
+    public void updateDictionaryEntry(DictionaryPutRequest dictionaryPutRequest, MultipartFile image, String userId) {
         if (dictionaryPutRequest.getId() == null) {
             throw new InvalidDictionaryDataException("Entry data not valid");
         }
@@ -98,7 +98,6 @@ public class DictionaryService {
         fileStorageService.swapImage(image, entry);
         assignChanges(entry, dictionaryPutRequest);
         dictionaryRepository.save(entry);
-        return entry;
     }
 
     @Transactional

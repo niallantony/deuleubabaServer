@@ -13,7 +13,9 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
+import org.springframework.web.servlet.support.ServletUriComponentsBuilder;
 
+import java.net.URI;
 import java.util.List;
 
 @RestController
@@ -97,7 +99,12 @@ public class StudentController {
                 StudentRequest.class,
                 () -> new InvalidStudentDataException("Invalid request")
         );
-        return ResponseEntity.ok(studentService.updateStudentDetails(studentId, studentRequest, image, userId));
+        studentService.updateStudentDetails(studentId, studentRequest, image, userId);
+        return ResponseEntity.noContent()
+                             .location(
+                                     URI.create(ServletUriComponentsBuilder.fromCurrentContextPath().path("/student").toUriString() + "?id=" + studentId)
+                             )
+                             .build();
     }
 
     @PutMapping(path = "/{studentId}/communication")
@@ -112,7 +119,12 @@ public class StudentController {
                 StudentCommunicationRequest.class,
                 () -> new InvalidStudentDataException("Invalid request")
         );
-        return ResponseEntity.ok(studentService.updateStudentCommunication(studentId, studentCommunicationRequest, userId));
+        studentService.updateStudentCommunication(studentId, studentCommunicationRequest, userId);
+        return ResponseEntity.noContent()
+                             .location(
+                                     URI.create(ServletUriComponentsBuilder.fromCurrentContextPath().path("/student").toUriString() + "?id=" + studentId)
+                             )
+                             .build();
     }
 
     @PutMapping(path = "/{studentId}/challenge")
@@ -127,6 +139,11 @@ public class StudentController {
                 StudentChallengeRequest.class,
                 () -> new InvalidStudentDataException("Invalid request")
         );
-        return ResponseEntity.ok(studentService.updateStudentChallenge(studentId, studentChallengeRequest, userId));
+        studentService.updateStudentChallenge(studentId, studentChallengeRequest, userId);
+        return ResponseEntity.noContent()
+                             .location(
+                                     URI.create(ServletUriComponentsBuilder.fromCurrentContextPath().path("/student").toUriString() + "?id=" + studentId)
+                             )
+                             .build();
     }
 }

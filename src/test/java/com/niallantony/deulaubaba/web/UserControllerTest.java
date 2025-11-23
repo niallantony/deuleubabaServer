@@ -110,17 +110,12 @@ class UserControllerTest {
     }
 
     @Test
-    public void postUser_withValidDataAndNoImage_SavesUserAndReturnsDTO(@Autowired MockMvc mvc) throws Exception {
+    public void postUser_withValidDataAndNoImage_SavesUser(@Autowired MockMvc mvc) throws Exception {
         UserRequest request = UserTestFactory.createUserRequest();
         String body = objectMapper.writeValueAsString(request);
         MockMultipartFile data = new MockMultipartFile("data", "user.json", "application/json", body.getBytes());
         mvc.perform(multipart("/me").file(data).with(jwt()).contentType("multipart/form-data"))
-                .andExpect(status().isOk())
-                .andExpect(jsonPath("$.name").value(request.getName()))
-                .andExpect(jsonPath("$.email").value(request.getEmail()))
-                .andExpect(jsonPath("$.userType").value(request.getUserType()))
-                .andExpect(jsonPath("$.username").value(request.getUsername()))
-                .andExpect(jsonPath("$.role.name").value("ROLE_USER"))
+                .andExpect(status().isCreated())
                 .andDo((r) -> System.out.println(r.getResponse().getContentAsString()));
 
         List<User> users = userRepository.findAll();
@@ -135,27 +130,19 @@ class UserControllerTest {
         MockMultipartFile data = new MockMultipartFile("data", "user.json", "application/json", body.getBytes());
         MockMultipartFile image = new MockMultipartFile("image", "user.jpg", "image/jpg", "fake-image".getBytes(
                 StandardCharsets.UTF_8));
-        when(fileStorageService.storeImage(image)).thenReturn("user.jpg");
-        doCallRealMethod().when(fileStorageService).swapImage(any(), any());
         mvc.perform(multipart("/me")
                    .file(data)
                    .file(image)
                    .with(jwt())
                    .contentType("multipart/form-data"))
-           .andExpect(status().isOk())
-           .andExpect(jsonPath("$.name").value(request.getName()))
-           .andExpect(jsonPath("$.email").value(request.getEmail()))
-           .andExpect(jsonPath("$.userType").value(request.getUserType()))
-           .andExpect(jsonPath("$.username").value(request.getUsername()))
-           .andExpect(jsonPath("$.role.name").value("ROLE_USER"))
-           .andExpect(jsonPath("$.imagesrc").value("user.jpg"))
+           .andExpect(status().isCreated())
            .andDo((r) -> System.out.println(r.getResponse().getContentAsString()));
 
 
         List<User> users = userRepository.findAll();
         assertEquals(1, users.size());
         assertEquals(request.getUsername(), users.getFirst().getUsername());
-        verify(fileStorageService).storeImage(image);
+        verify(fileStorageService).swapImage(any(), any());
     }
 
     @Test

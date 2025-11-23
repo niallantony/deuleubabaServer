@@ -175,7 +175,6 @@ public class DictionaryControllerTest {
                 .file(data)
                 .with(jwt()))
                 .andExpect(status().isCreated())
-                .andExpect(jsonPath("$.id").value(1))
                 .andDo((r) -> System.out.println(r.getResponse().getContentAsString()));
         List<DictionaryEntry> dictionaries = dictionaryRepository.findAll().stream().toList();
         assertEquals(1, dictionaries.size());
@@ -187,7 +186,6 @@ public class DictionaryControllerTest {
     @Sql(scripts = "/fixtures/teardown.sql", executionPhase = Sql.ExecutionPhase.AFTER_TEST_METHOD)
     public void addDictionary_withValidDataAndImage_returns201(@Autowired MockMvc mvc) throws Exception {
         doCallRealMethod().when(fileStorageService).swapImage(any(), any());
-        when(fileStorageService.storeImage(any())).thenReturn("test.jpg");
         DictionaryPostRequest request = DictionaryTestFactory.createDictionaryPostRequest();
         String json = objectMapper.writeValueAsString(request);
         MockMultipartFile data = new MockMultipartFile("data", "test.json", "application/json", json.getBytes());
@@ -197,11 +195,8 @@ public class DictionaryControllerTest {
                    .file(image)
                    .with(jwt()))
            .andExpect(status().isCreated())
-           .andExpect(jsonPath("$.id").value(1))
-                .andExpect(jsonPath("$.imgsrc").value("test.jpg"))
            .andDo((r) -> System.out.println(r.getResponse().getContentAsString()));
         List<DictionaryEntry> dictionaries = dictionaryRepository.findAll().stream().toList();
-        verify(fileStorageService).storeImage(any());
         assertEquals(1, dictionaries.size());
     }
 
@@ -210,7 +205,6 @@ public class DictionaryControllerTest {
     @Sql("/fixtures/student_and_user.sql")
     @Sql(scripts = "/fixtures/teardown.sql", executionPhase = Sql.ExecutionPhase.AFTER_TEST_METHOD)
     public void addDictionary_withValidDataAndImageError_stillReturns201(@Autowired MockMvc mvc) throws Exception {
-        when(fileStorageService.storeImage(any())).thenThrow(FileStorageException.class);
         DictionaryPostRequest request = DictionaryTestFactory.createDictionaryPostRequest();
         String json = objectMapper.writeValueAsString(request);
         MockMultipartFile data = new MockMultipartFile("data", "test.json", "application/json", json.getBytes());
@@ -220,8 +214,6 @@ public class DictionaryControllerTest {
                    .file(image)
                    .with(jwt()))
            .andExpect(status().isCreated())
-           .andExpect(jsonPath("$.id").value(1))
-           .andExpect(jsonPath("$.imgsrc").isEmpty())
            .andDo((r) -> System.out.println(r.getResponse().getContentAsString()));
         List<DictionaryEntry> dictionaries = dictionaryRepository.findAll().stream().toList();
         verify(fileStorageService).swapImage(any(),any());
@@ -300,8 +292,7 @@ public class DictionaryControllerTest {
         mvc.perform(multipart( HttpMethod.PUT, "/dictionary")
                 .file(data)
                 .with(jwt()))
-                .andExpect(status().isOk())
-                .andExpect(jsonPath("$.id").value(request.getId()))
+                .andExpect(status().isNoContent())
                 .andDo((r) -> System.out.println(r.getResponse().getContentAsString()));
 
         DictionaryEntry entry = dictionaryRepository.findById(request.getId()).orElse(null);
@@ -404,8 +395,6 @@ public class DictionaryControllerTest {
     })
     @Sql(scripts = "/fixtures/teardown.sql", executionPhase = Sql.ExecutionPhase.AFTER_TEST_METHOD)
     public void updateDictionary_withValidDataAndImage_updatesDictionaryEntry(@Autowired MockMvc mvc) throws Exception {
-        when(fileStorageService.storeImage(any())).thenReturn("new_image.jpg");
-        doCallRealMethod().when(fileStorageService).swapImage(any(), any());
         DictionaryPutRequest request = DictionaryTestFactory.createDictionaryPutRequest();
         String json = objectMapper.writeValueAsString(request);
         MockMultipartFile data = new MockMultipartFile("data", "test.json", "application/json", json.getBytes());
@@ -414,14 +403,12 @@ public class DictionaryControllerTest {
                    .file(data)
                    .file(image)
                    .with(jwt()))
-           .andExpect(status().isOk())
-           .andExpect(jsonPath("$.id").value(request.getId()))
+           .andExpect(status().isNoContent())
            .andDo((r) -> System.out.println(r.getResponse().getContentAsString()));
 
+        verify(fileStorageService, times(1)).swapImage(eq(image), any());
         DictionaryEntry entry = dictionaryRepository.findById(request.getId()).orElse(null);
-        verify(fileStorageService).deleteImage("example.jpg");
         assertNotNull(entry);
-        assertEquals("new_image.jpg", entry.getImgsrc());
     }
 
     @Test
@@ -432,7 +419,6 @@ public class DictionaryControllerTest {
     })
     @Sql(scripts = "/fixtures/teardown.sql", executionPhase = Sql.ExecutionPhase.AFTER_TEST_METHOD)
     public void updateDictionary_withValidDataAndImageError_updatesDictionaryEntry(@Autowired MockMvc mvc) throws Exception {
-        when(fileStorageService.storeImage(any())).thenThrow(FileStorageException.class);
         DictionaryPutRequest request = DictionaryTestFactory.createDictionaryPutRequest();
         String json = objectMapper.writeValueAsString(request);
         MockMultipartFile data = new MockMultipartFile("data", "test.json", "application/json", json.getBytes());
@@ -441,12 +427,10 @@ public class DictionaryControllerTest {
                    .file(data)
                    .file(image)
                    .with(jwt()))
-           .andExpect(status().isOk())
-           .andExpect(jsonPath("$.id").value(request.getId()))
+           .andExpect(status().isNoContent())
            .andDo((r) -> System.out.println(r.getResponse().getContentAsString()));
 
         DictionaryEntry entry = dictionaryRepository.findById(request.getId()).orElse(null);
-        verify(fileStorageService, never()).deleteImage("example.jpg");
         assertNotNull(entry);
         assertEquals("example.jpg", entry.getImgsrc());
     }
@@ -465,7 +449,7 @@ public class DictionaryControllerTest {
                 .andDo((r) -> System.out.println(r.getResponse().getContentAsString()));
         List<DictionaryEntry> entries = dictionaryRepository.findAll().stream().toList();
         assertEquals(0, entries.size());
-        verify(fileStorageService, times(1)).deleteImage("example.jpg");
+        verify(fileStorageService, times(1)).deleteImage(eq("example.jpg"), any());
     }
 
     @Test
@@ -483,7 +467,7 @@ public class DictionaryControllerTest {
            .andDo((r) -> System.out.println(r.getResponse().getContentAsString()));
         List<DictionaryEntry> entries = dictionaryRepository.findAll().stream().toList();
         assertEquals(1, entries.size());
-        verify(fileStorageService, never()).deleteImage("example.jpg");
+        verify(fileStorageService, never()).deleteImage(eq("example.jpg"),any());
     }
 
     @Test
@@ -502,7 +486,7 @@ public class DictionaryControllerTest {
            .andDo((r) -> System.out.println(r.getResponse().getContentAsString()));
         List<DictionaryEntry> entries = dictionaryRepository.findAll().stream().toList();
         assertEquals(1, entries.size());
-        verify(fileStorageService, never()).deleteImage("example.jpg");
+        verify(fileStorageService, never()).deleteImage(eq("example.jpg"), any());
     }
 
     @Test
@@ -513,14 +497,14 @@ public class DictionaryControllerTest {
     })
     @Sql(scripts = "/fixtures/teardown.sql", executionPhase = Sql.ExecutionPhase.AFTER_TEST_METHOD)
     public void deleteDictionary_whenDeleteFileThrows_stillDeletesDictionaryEntry(@Autowired MockMvc mvc) throws Exception {
-        doThrow(FileStorageException.class).when(fileStorageService).deleteImage("example.jpg");
+        doThrow(FileStorageException.class).when(fileStorageService).deleteImage(eq("example.jpg"), any());
         mvc.perform(delete("/dictionary/1")
                    .with(jwt()))
            .andExpect(status().isNoContent())
            .andDo((r) -> System.out.println(r.getResponse().getContentAsString()));
         List<DictionaryEntry> entries = dictionaryRepository.findAll().stream().toList();
         assertEquals(0, entries.size());
-        verify(fileStorageService, times(1)).deleteImage("example.jpg");
+        verify(fileStorageService, times(1)).deleteImage(eq("example.jpg"), any());
     }
 }
 

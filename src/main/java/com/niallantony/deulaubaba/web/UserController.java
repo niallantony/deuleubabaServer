@@ -9,6 +9,9 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
+import org.springframework.web.servlet.support.ServletUriComponentsBuilder;
+
+import java.net.URI;
 
 
 @RestController
@@ -33,7 +36,10 @@ public class UserController {
             @RequestPart(value = "image", required = false) MultipartFile image,
             @CurrentUser String userId
     )  {
-            return ResponseEntity.ok(userService.createUser(userId, request, image));
+            userService.createUser(userId, request, image);
+            return ResponseEntity.created(
+                    URI.create(ServletUriComponentsBuilder.fromCurrentContextPath().path("/me").toUriString())
+            ).build();
     }
 
     @PostMapping("/link-student")

@@ -10,6 +10,7 @@ import com.niallantony.deulaubaba.domain.User;
 import com.niallantony.deulaubaba.dto.feed.FeedDTO;
 import com.niallantony.deulaubaba.dto.feed.FeedItemDTO;
 import com.niallantony.deulaubaba.dto.feed.FeedPostDTO;
+import com.niallantony.deulaubaba.dto.user.UserAvatar;
 import com.niallantony.deulaubaba.exceptions.BadPageRequestException;
 import com.niallantony.deulaubaba.exceptions.InvalidCommentPostException;
 import com.niallantony.deulaubaba.exceptions.ResourceNotFoundException;
@@ -46,6 +47,9 @@ public class FeedServiceTests {
     @Mock
     StudentFeedMapper studentFeedMapper;
 
+    @Mock
+    FileStorageService fileStorageService;
+
     @InjectMocks
     FeedService feedService;
 
@@ -54,11 +58,15 @@ public class FeedServiceTests {
         Student student = new Student();
         StudentFeedItem studentFeedItem = new StudentFeedItem();
         FeedItemDTO dto = new FeedItemDTO();
+        UserAvatar user = new UserAvatar();
+        dto.setUser(user);
+
 
         when(studentService.getAuthorisedStudent("123", "abc")).thenReturn(student);
         when(studentFeedRepository.findAllByStudentOrderByCreatedAtDesc(student, PageRequest.of(0, 10)))
                 .thenReturn(List.of(studentFeedItem));
         when(studentFeedMapper.entityToDto(studentFeedItem)).thenReturn(dto);
+        when(fileStorageService.generateSignedURL(any())).thenReturn("image.jpg");
 
         FeedDTO feed = feedService.getFeed("abc", "123", 0, 10);
 

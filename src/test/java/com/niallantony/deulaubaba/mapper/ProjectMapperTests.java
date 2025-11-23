@@ -3,18 +3,28 @@ package com.niallantony.deulaubaba.mapper;
 import com.niallantony.deulaubaba.domain.*;
 import com.niallantony.deulaubaba.dto.project.ProjectDTO;
 import com.niallantony.deulaubaba.dto.project.ProjectPostDTO;
+import com.niallantony.deulaubaba.services.FileStorageService;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.InjectMocks;
+import org.mockito.Mock;
+import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.test.context.bean.override.mockito.MockitoBean;
 
 import java.time.LocalDate;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNull;
 
+@ExtendWith(MockitoExtension.class)
 public class ProjectMapperTests {
+    @Mock
+    private FileStorageService fileStorageService;
+    @InjectMocks
+    private ProjectMapperImpl projectMapper;
 
     @Test
     void entityEntityToDto() {
-        ProjectMapper projectMapper = new ProjectMapperImpl();
         CommunicationCategory mockCategory = new CommunicationCategory();
         mockCategory.setLabel(CommunicationCategoryLabel.ATTENTION);
         Student student = new Student();
@@ -53,7 +63,6 @@ public class ProjectMapperTests {
 
     @Test
     void postDtoToEntity() {
-        ProjectMapper mapper = new ProjectMapperImpl();
         ProjectPostDTO p = new ProjectPostDTO();
         p.setObjective("Objective");
         p.setDescription("Description");
@@ -63,7 +72,7 @@ public class ProjectMapperTests {
         p.getUsernames().add("user");
         p.setStudentId("studentId");
 
-        Project project = mapper.requestToEntity(p);
+        Project project = projectMapper.requestToEntity(p);
 
         assertEquals("Objective", project.getObjective());
         assertEquals("Description", project.getDescription());

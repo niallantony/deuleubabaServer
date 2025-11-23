@@ -14,6 +14,9 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
+import org.springframework.web.servlet.support.ServletUriComponentsBuilder;
+
+import java.net.URI;
 
 @RestController
 @Slf4j
@@ -53,7 +56,10 @@ public class DictionaryController {
                 () -> new InvalidDictionaryDataException("Entry data not valid")
         );
         DictionaryEntry entry = dictionaryService.addDictionaryEntry(request, imageFile, userId);
-        return ResponseEntity.status(HttpStatus.CREATED).body(entry);
+        return ResponseEntity.created(
+                                     URI.create(ServletUriComponentsBuilder.fromCurrentContextPath().path("/dictionary").toUriString() + "/" + entry.getId())
+                             )
+                             .build();
     }
 
     @PutMapping
@@ -67,8 +73,12 @@ public class DictionaryController {
                 DictionaryPutRequest.class,
                 () -> new InvalidDictionaryDataException("Entry data not valid")
         );
-        DictionaryEntry entry = dictionaryService.updateDictionaryEntry(request, image, userId);
-        return ResponseEntity.ok(entry);
+        dictionaryService.updateDictionaryEntry(request, image, userId);
+        return ResponseEntity.noContent()
+                             .location(
+                                     URI.create(ServletUriComponentsBuilder.fromCurrentContextPath().path("/dictionary").toUriString() + "/" + request.getId())
+                             )
+                             .build();
     }
 
     @DeleteMapping(path = "/{id}")

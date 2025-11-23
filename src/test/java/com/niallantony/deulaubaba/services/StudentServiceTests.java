@@ -44,6 +44,7 @@ public class StudentServiceTests {
 
     private Student getMockStudent() {
         Student student = new Student();
+        student.setStudentId("abc");
         student.setName("Kyle");
         student.setSchool("School");
         student.setAge(12);
@@ -66,7 +67,6 @@ public class StudentServiceTests {
 
         assertEquals(student.getStudentId(), studentIdAvatar.getStudentId());
         assertEquals(student.getName(), studentIdAvatar.getName());
-        assertEquals(student.getImagesrc(), studentIdAvatar.getImagesrc());
     }
 
     @Test
@@ -100,6 +100,7 @@ public class StudentServiceTests {
         Student student = new Student();
         student.getUsers().add(user);
         when(studentRepository.findById("abc")).thenReturn(Optional.of(student));
+        when(fileStorageService.generateSignedURL(any())).thenReturn("./example.jpg");
         List<UserAvatar> userAvatars = studentService.getStudentTeam("abc");
         assertEquals(1, userAvatars.size());
         assertEquals("user type", userAvatars.getFirst().getUserType());
@@ -128,8 +129,11 @@ public class StudentServiceTests {
                 "Kyle",
                 "example.jpg"
         );
-        when(studentRepository.findAllOfUserId("123")).thenReturn(List.of(student));
+        when(studentRepository.findAllOfUserId("123")).thenReturn(List.of(getMockStudent()));
+        when(fileStorageService.generateSignedURL(any())).thenReturn("example.jpg");
         List<StudentIdAvatar> students = studentService.getStudents("123");
+
+        System.out.println(students.getFirst());
         assertEquals(1, students.size());
         assertEquals("Kyle", students.getFirst().getName());
         assertEquals("example.jpg", students.getFirst().getImagesrc());
@@ -174,12 +178,11 @@ public class StudentServiceTests {
         when(userRepository.findByUserId("abc")).thenReturn(Optional.of(user));
         when(studentMapper.toStudent(request)).thenReturn(student);
         when(studentMapper.toDTO(student)).thenReturn(new StudentDTO());
-        when(fileStorageService.storeImage(image)).thenReturn("new_url");
 
         StudentDTO result = studentService.createStudent(request, image, "abc");
         assertTrue(student.getUsers().contains(user));
-        assertEquals("new_url", student.getImagesrc());
         assertEquals(6, student.getStudentId().length());
+        verify(fileStorageService, times(1)).swapImage(eq(image), any());
         assertNotNull(result);
     }
 
@@ -193,7 +196,6 @@ public class StudentServiceTests {
         when(userRepository.findByUserId("abc")).thenReturn(Optional.of(user));
         when(studentMapper.toStudent(request)).thenReturn(student);
         when(studentMapper.toDTO(student)).thenReturn(new StudentDTO());
-        when(fileStorageService.storeImage(image)).thenThrow(FileStorageException.class);
         StudentDTO result = studentService.createStudent(request, image, "abc");
         assertTrue(student.getUsers().contains(user));
         assertEquals(6, student.getStudentId().length());
@@ -210,7 +212,6 @@ public class StudentServiceTests {
         student.getUsers().add(user);
         when(userRepository.findByUserId("abc")).thenReturn(Optional.of(user));
         when(studentRepository.findById("123")).thenReturn(Optional.of(student));
-        when(studentMapper.toDTO(student)).thenReturn(new StudentDTO());
 
         studentService.updateStudentDetails("123", request, null, "abc");
         assertTrue(student.getUsers().contains(user));
@@ -272,41 +273,14 @@ public class StudentServiceTests {
         student.getUsers().add(user);
         student.setImagesrc("old_url");
         MultipartFile image = mock(MultipartFile.class);
-        doCallRealMethod().when(fileStorageService).swapImage(any(), any());
 
         when(userRepository.findByUserId("abc")).thenReturn(Optional.of(user));
         when(studentRepository.findById("123")).thenReturn(Optional.of(student));
-        when(studentMapper.toDTO(student)).thenReturn(new StudentDTO());
-        when(fileStorageService.storeImage(image)).thenReturn("new_url");
 
         studentService.updateStudentDetails("123", request, image, "abc");
         assertTrue(student.getUsers().contains(user));
         assertEquals("John", student.getName());
-        assertEquals("new_url",student.getImagesrc());
-        verify(fileStorageService).deleteImage("old_url");
-    }
-
-    @Test
-    public void updateStudentDetails_whenImageFileDoesntSave_preservesOldImage() {
-        StudentRequest request = StudentTestFactory.createStudentRequest("user");
-        request.setName("John");
-        User user = new User();
-        Student student = getMockStudent();
-        student.getUsers().add(user);
-        student.setImagesrc("old_url");
-        MultipartFile image = mock(MultipartFile.class);
-
-        doCallRealMethod().when(fileStorageService).swapImage(any(), any());
-        when(userRepository.findByUserId("abc")).thenReturn(Optional.of(user));
-        when(studentRepository.findById("123")).thenReturn(Optional.of(student));
-        when(studentMapper.toDTO(student)).thenReturn(new StudentDTO());
-        when(fileStorageService.storeImage(image)).thenThrow(FileStorageException.class);
-
-        studentService.updateStudentDetails("123", request, image, "abc");
-        verify(fileStorageService).storeImage(image);
-        assertEquals("John", student.getName());
-        assertEquals("old_url",student.getImagesrc());
-        verifyNoMoreInteractions(fileStorageService);
+        verify(fileStorageService,times(1)).swapImage(eq(image), any());
     }
 
     @Test
@@ -317,7 +291,6 @@ public class StudentServiceTests {
         student.getUsers().add(user);
         when(studentRepository.findById("123")).thenReturn(Optional.of(student));
         when(userRepository.findByUserId("abc")).thenReturn(Optional.of(user));
-        when(studentMapper.toDTO(student)).thenReturn(new StudentDTO());
 
         studentService.updateStudentCommunication("123", request, "abc");
         verify(studentRepository).save(student);
@@ -373,7 +346,6 @@ public class StudentServiceTests {
         student.getUsers().add(user);
         when(studentRepository.findById("123")).thenReturn(Optional.of(student));
         when(userRepository.findByUserId("abc")).thenReturn(Optional.of(user));
-        when(studentMapper.toDTO(student)).thenReturn(new StudentDTO());
 
         studentService.updateStudentChallenge("123", request, "abc");
         verify(studentRepository).save(student);

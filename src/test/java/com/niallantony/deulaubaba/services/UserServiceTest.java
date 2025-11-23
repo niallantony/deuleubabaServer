@@ -111,19 +111,16 @@ public class UserServiceTest {
     public void createUser_whenGivenValidDataWithImage_thenReturnUserDTO() {
         MultipartFile mockFile = mock(MultipartFile.class);
         User mockUser = new User();
+        mockUser.setUsername("Username");
         UserDTO mockDTO = new UserDTO();
         String data = "data";
         when(jsonUtils.parse(eq(data), eq(UserRequest.class), any())).thenReturn(mockUserRequest);
         when(userMapper.toNewUser(mockUserRequest, "ABC")).thenReturn(mockUser);
         when(userMapper.toDTO(mockUser)).thenReturn(mockDTO);
-        when(fileStorageService.storeImage(mockFile)).thenReturn("./mock-file.png");
-        doCallRealMethod().when(fileStorageService).swapImage(any(), any());
 
         UserDTO result = userService.createUser("ABC", data, mockFile);
 
-
         assertSame(mockDTO, result);
-        assertEquals("./mock-file.png", mockUser.getImagesrc());
         verify(userMapper).toDTO(mockUser);
         verify(userMapper).toNewUser(argThat(req ->
                 req.getName().equals("Name") &&
@@ -134,7 +131,7 @@ public class UserServiceTest {
         verify(userRepository).existsByUsername(mockUserRequest.getUsername());
         verify(userRepository).existsByEmail(mockUserRequest.getEmail());
         verify(userRepository).save(mockUser);
-        verify(fileStorageService).storeImage(mockFile);
+        verify(fileStorageService, times(1)).swapImage(eq(mockFile), any());
         verifyNoMoreInteractions(userRepository, userMapper, fileStorageService);
     }
 
@@ -153,13 +150,12 @@ public class UserServiceTest {
     public void createUser_whenFileStorageFailure_ThenSavesUserWithNoImage() throws InvalidUserDataException {
         MultipartFile mockFile = mock(MultipartFile.class);
         User mockUser = new User();
+        mockUser.setUsername("Username");
         UserDTO mockDTO = new UserDTO();
         String data = "data";
         when(jsonUtils.parse(eq(data), eq(UserRequest.class), any())).thenReturn(mockUserRequest);
         when(userMapper.toNewUser(mockUserRequest, "ABC")).thenReturn(mockUser);
         when(userMapper.toDTO(mockUser)).thenReturn(mockDTO);
-        when(fileStorageService.storeImage(mockFile)).thenThrow(FileStorageException.class);
-        doCallRealMethod().when(fileStorageService).swapImage(any(), any());
         UserDTO result = userService.createUser("ABC", data, mockFile);
 
         assertSame(mockDTO, result);
@@ -174,7 +170,7 @@ public class UserServiceTest {
         verify(userRepository).existsByUsername(mockUserRequest.getUsername());
         verify(userRepository).existsByEmail(mockUserRequest.getEmail());
         verify(userRepository).save(mockUser);
-        verify(fileStorageService).storeImage(mockFile);
+        verify(fileStorageService, times(1)).swapImage(eq(mockFile), any());
         verifyNoMoreInteractions(userRepository, userMapper, fileStorageService);
     }
 
