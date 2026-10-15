@@ -14,7 +14,7 @@ public class ProjectPreviewDTO {
     private boolean completed;
     private String description;
     private String objective;
-    private String imgsrc;
+    private String imagesrc;
     private LocalDate startedOn;
     private LocalDate completedOn;
 }

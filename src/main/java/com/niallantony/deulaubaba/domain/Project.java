@@ -52,7 +52,9 @@ public class Project extends HasImage{
 
     private String description;
 
-    private String imgsrc;
+    // Column keeps its original name so existing rows keep their images.
+    @Column(name = "imgsrc")
+    private String imagesrc;
 
     @Column(nullable = false)
     private Boolean completed = false;
@@ -85,12 +87,12 @@ public class Project extends HasImage{
 
     @Override
     public String getImage() {
-        return imgsrc;
+        return imagesrc;
     }
 
     @Override
     public void setImage(String image) {
-        imgsrc = image;
+        imagesrc = image;
     }
 
     @Override

@@ -56,7 +56,7 @@ public class DictionaryService {
        List<DictionaryEntryDTO> listingsDTO = listings.stream()
                                                       .map(listing -> {
                                                           DictionaryEntryDTO dto = dictionaryMapper.entityToDto(listing);
-                                                          dto.setImgsrc(fileStorageService.generateSignedURL(listing));
+                                                          dto.setImagesrc(fileStorageService.generateSignedURL(listing));
                                                           return dto;
                                                       })
                                                       .toList();
@@ -109,7 +109,7 @@ public class DictionaryService {
             throw new UserNotAuthorizedException("Unauthorized access");
         }
         dictionaryRepository.deleteById(longId);
-        fileStorageService.deleteImageAfterCommit(entry.getImgsrc(), entry.getBucketId());
+        fileStorageService.deleteImageAfterCommit(entry.getImagesrc(), entry.getBucketId());
     }
 
     private void assignChanges (DictionaryEntry entry, DictionaryRequest dictionaryPostRequest) {

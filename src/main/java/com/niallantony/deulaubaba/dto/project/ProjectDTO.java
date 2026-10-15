@@ -19,7 +19,7 @@ public class ProjectDTO {
     private LocalDate startedOn;
     private Set<CommunicationCategory> categories = new HashSet<>();
     private String description;
-    private String imgsrc;
+    private String imagesrc;
     private boolean completed;
     private LocalDate completedOn;
     private ProjectType type;

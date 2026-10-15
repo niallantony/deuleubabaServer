@@ -43,7 +43,7 @@ public class ProjectMapperTests {
         project.setStudent(student);
         project.setStartedOn(start);
         project.setDescription("Description");
-        project.setImgsrc("Image");
+        project.setImagesrc("Image");
         project.setType(ProjectType.COMMUNICATION);
         project.setCompletedOn(end);
         project.getUsers().add(projectUser);
@@ -55,7 +55,7 @@ public class ProjectMapperTests {
         assertEquals(project.getCategories(), dto.getCategories());
         assertEquals(project.getStartedOn(), dto.getStartedOn());
         assertEquals(project.getDescription(), dto.getDescription());
-        assertEquals(project.getImgsrc(), dto.getImgsrc());
+        assertEquals(project.getImagesrc(), dto.getImagesrc());
         assertEquals(project.getType(), dto.getType());
         assertEquals(project.getCompletedOn(), dto.getCompletedOn());
         assertEquals(1, dto.getUserStatuses().size());

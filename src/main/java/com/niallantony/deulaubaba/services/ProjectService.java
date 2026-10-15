@@ -59,7 +59,7 @@ public class ProjectService {
     public ProjectDTO getProject(Long project_id, String user_id) {
         Project project = getAuthorizedProject(project_id, user_id);
         ProjectDTO projectDTO = projectMapper.entityToDto(project);
-        projectDTO.setImgsrc(fileStorageService.generateSignedURL(project));
+        projectDTO.setImagesrc(fileStorageService.generateSignedURL(project));
         if (project.getCreatedBy().getUserId().equals(user_id)) {
            projectDTO.isOwnProject(true);
         }
@@ -86,7 +86,7 @@ public class ProjectService {
     private ProjectCollectionsDTO getProjectCollectionsDTO(Set<Project> projects) {
         Set<ProjectPreviewDTO> previews = projects.stream().map(project -> {
             ProjectPreviewDTO dto = projectMapper.entityToPreviewDTO(project);
-            dto.setImgsrc(fileStorageService.generateSignedURL(project));
+            dto.setImagesrc(fileStorageService.generateSignedURL(project));
             return dto;
         }).collect(Collectors.toSet());
         return createCollections(previews);
@@ -238,7 +238,7 @@ public class ProjectService {
     public void deleteProject(String user_id, Long project_id) {
         Project project = getCreatedProject(user_id, project_id);
         projectRepository.delete(project);
-        fileStorageService.deleteImageAfterCommit(project.getImgsrc(), project.getBucketId());
+        fileStorageService.deleteImageAfterCommit(project.getImagesrc(), project.getBucketId());
     }
 
     public void deleteComment(String user_id, Long comment_id) {

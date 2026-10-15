@@ -12,7 +12,7 @@ public class StudentTestFactory {
         studentRequest.setGrade(3);
         studentRequest.setSetting("Setting");
         studentRequest.setDisability("Disability");
-        studentRequest.setImgsrc("./example.png");
+        studentRequest.setImagesrc("./example.png");
         return studentRequest;
     }
 

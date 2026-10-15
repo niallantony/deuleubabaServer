@@ -219,7 +219,7 @@ public class DictionaryServiceTests {
         Student student = new Student();
         student.setStudentId("123");
         entry.setStudent(student);
-        entry.setImgsrc("./example.png");
+        entry.setImagesrc("./example.png");
         when(dictionaryRepository.existsById(123L)).thenReturn(true);
         when(dictionaryRepository.getReferenceById(123L)).thenReturn(entry);
         when(studentService.studentBelongsToUser("123", "userId")).thenReturn(true);

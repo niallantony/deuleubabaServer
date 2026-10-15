@@ -601,7 +601,7 @@ public class ProjectControllerTests {
 
         Project project = projectRepository.findById(1L).orElseThrow();
         assertAll(
-                () -> assertEquals("example.jpg", project.getImgsrc()),
+                () -> assertEquals("example.jpg", project.getImagesrc()),
                 () -> assertEquals(projectDetailsPatchDTO.getStartedOn(), project.getStartedOn()),
                 () -> assertEquals(projectDetailsPatchDTO.getDescription(), project.getDescription()),
                 () -> assertEquals(projectDetailsPatchDTO.getObjective(), project.getObjective()),

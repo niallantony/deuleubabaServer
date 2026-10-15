@@ -22,7 +22,7 @@ public class DictionaryMapperTests {
         mockEntry.setType(ExpressionType.BODY);
         mockEntry.setTitle("Movement");
         mockEntry.getCategory().add(mockCategory);
-        mockEntry.setImgsrc("./example.png");
+        mockEntry.setImagesrc("./example.png");
         mockEntry.setDescription("Description");
 
         DictionaryEntryDTO result = dictionaryMapper.entityToDto(mockEntry);
@@ -31,7 +31,7 @@ public class DictionaryMapperTests {
         assertEquals(result.getType(), mockEntry.getType());
         assertEquals(result.getTitle(), mockEntry.getTitle());
         assertEquals(result.getDescription(), mockEntry.getDescription());
-        assertEquals(result.getImgsrc(), mockEntry.getImgsrc());
+        assertEquals(result.getImagesrc(), mockEntry.getImagesrc());
         assertTrue(result.getCategory().contains(mockCategory.getLabel()));
     }
 
@@ -49,7 +49,7 @@ public class DictionaryMapperTests {
         mockEntry.setTitle("Movement");
         mockEntry.getCategory().add(mockCategory1);
         mockEntry.getCategory().add(mockCategory2);
-        mockEntry.setImgsrc("./example.png");
+        mockEntry.setImagesrc("./example.png");
         mockEntry.setDescription("Description");
 
         DictionaryEntryDTO result = dictionaryMapper.entityToDto(mockEntry);
@@ -58,7 +58,7 @@ public class DictionaryMapperTests {
         assertEquals(result.getType(), mockEntry.getType());
         assertEquals(result.getTitle(), mockEntry.getTitle());
         assertEquals(result.getDescription(), mockEntry.getDescription());
-        assertEquals(result.getImgsrc(), mockEntry.getImgsrc());
+        assertEquals(result.getImagesrc(), mockEntry.getImagesrc());
         assertTrue(result.getCategory().contains(mockCategory1.getLabel()));
         assertTrue(result.getCategory().contains(mockCategory2.getLabel()));
     }

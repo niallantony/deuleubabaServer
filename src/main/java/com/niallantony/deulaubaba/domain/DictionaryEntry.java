@@ -37,18 +37,20 @@ public class DictionaryEntry extends HasImage{
     @JsonManagedReference
     private Set<CommunicationCategory> category = new HashSet<>();
 
-    private String imgsrc;
+    // Column keeps its original name so existing rows keep their images.
+    @Column(name = "imgsrc")
+    private String imagesrc;
 
     private String description;
 
     @Override
     public String getImage() {
-        return imgsrc;
+        return imagesrc;
     }
 
     @Override
     public void setImage(String image) {
-        imgsrc = image;
+        imagesrc = image;
     }
 
     @Override

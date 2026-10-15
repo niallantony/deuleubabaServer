@@ -46,7 +46,7 @@ public class StudentMapperTests {
         request.setGrade(3);
         request.setSetting("General");
         request.setDisability("None");
-        request.setImgsrc("./example.png");
+        request.setImagesrc("./example.png");
 
         Student student = studentMapper.toStudent(request);
         assertEquals("John", student.getName());

@@ -266,7 +266,7 @@ public class ProjectServiceTest {
         ProjectDTO result = projectService.createProject(postDTO, image, "abc");
         assertEquals(projectDTO, result);
         verify(projectRepository, times(1)).save(any(Project.class));
-        assertNull(createdproject.getImgsrc());
+        assertNull(createdproject.getImagesrc());
     }
 
     @Test void createProject_whenGivenListOfAdditionalUsernames_populatesProjectUsers() {
@@ -521,7 +521,7 @@ public class ProjectServiceTest {
 
     @Test void deleteProject_withValidDetails_deletesProject() {
         Project mockProject = new Project();
-        mockProject.setImgsrc("example.png");
+        mockProject.setImagesrc("example.png");
         User mockUser = new User();
         mockUser.setUserId("abc");
         mockProject.setCreatedBy(mockUser);

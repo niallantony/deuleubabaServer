@@ -16,6 +16,6 @@ public class DictionaryEntryDTO {
     private ExpressionType type;
     private String title;
     private Set<CommunicationCategoryLabel> category;
-    private String imgsrc;
+    private String imagesrc;
     private String description;
 }

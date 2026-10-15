@@ -11,5 +11,5 @@ public class StudentRequest {
     private Integer grade;
     private String setting;
     private String disability;
-    private String imgsrc;
+    private String imagesrc;
 }

@@ -431,7 +431,7 @@ public class DictionaryControllerTest {
 
         DictionaryEntry entry = dictionaryRepository.findById(request.getId()).orElse(null);
         assertNotNull(entry);
-        assertEquals("example.jpg", entry.getImgsrc());
+        assertEquals("example.jpg", entry.getImagesrc());
     }
 
     @Test
