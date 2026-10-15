@@ -105,12 +105,15 @@ public class ProjectServiceTest {
     }
 
     @Test
-    public void getAllProjectsOfUser_whenProjectsEmpty_throwsNoProjectFoundException() {
+    public void getAllProjectsOfUser_whenProjectsEmpty_returnsEmptyCollections() {
         User user = new User();
         Set<Project> projects = new HashSet<>();
         when(userRepository.findByUserId("abc")).thenReturn(Optional.of(user));
         when(projectRepository.findAllProjectsByUserId(user)).thenReturn(projects);
-        assertThrows(NoProjectsFoundException.class, () -> projectService.getProjectsOfUser("abc"));
+        ProjectCollectionsDTO response = projectService.getProjectsOfUser("abc");
+        assertTrue(response.getCurrent().isEmpty());
+        assertTrue(response.getPending().isEmpty());
+        assertTrue(response.getCompleted().isEmpty());
     }
 
     @Test
@@ -154,7 +157,7 @@ public class ProjectServiceTest {
         assertThrows(UserNotAuthorizedException.class, () -> projectService.getProjectsOfStudent("abc", "123"));
     }
 
-    @Test void getAllProjectsOfStudent_whenStudentHasNoProjects_throwsNoProjectFoundException() {
+    @Test void getAllProjectsOfStudent_whenStudentHasNoProjects_returnsEmptyCollections() {
         Set<Project> projects = new HashSet<>();
         User user = new User();
         Student student = new Student();
@@ -162,7 +165,10 @@ public class ProjectServiceTest {
         when(userRepository.findByUserId("abc")).thenReturn(Optional.of(user));
         when(studentRepository.findById("123")).thenReturn(Optional.of(student));
         when(projectRepository.findAllProjectsByStudentId(user, student)).thenReturn(projects);
-        assertThrows(NoProjectsFoundException.class, () -> projectService.getProjectsOfStudent("abc", "123"));
+        ProjectCollectionsDTO response = projectService.getProjectsOfStudent("abc", "123");
+        assertTrue(response.getCurrent().isEmpty());
+        assertTrue(response.getPending().isEmpty());
+        assertTrue(response.getCompleted().isEmpty());
         verify(projectRepository, times(1)).findAllProjectsByStudentId(user,student);
     }
 

@@ -86,9 +86,6 @@ public class ProjectService {
 
     @NotNull
     private ProjectCollectionsDTO getProjectCollectionsDTO(Set<Project> projects) {
-        if (projects.isEmpty()) {
-            throw new NoProjectsFoundException("No projects found");
-        }
         Set<ProjectPreviewDTO> previews = projects.stream().map(project -> {
             ProjectPreviewDTO dto = projectMapper.entityToPreviewDTO(project);
             dto.setImgsrc(fileStorageService.generateSignedURL(project));

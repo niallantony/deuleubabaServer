@@ -186,11 +186,13 @@ public class ProjectControllerTests {
     @Sql({
             "/fixtures/student_and_user.sql",
     })
-    public void getAllProjectsOfUser_forUserWithNoProjects_returns204(@Autowired MockMvc mvc) throws Exception {
+    public void getAllProjectsOfUser_forUserWithNoProjects_returnsEmptyCollections(@Autowired MockMvc mvc) throws Exception {
         mvc.perform(get("/project/all")
                    .with(jwt()))
-           .andExpect(status().isNoContent())
-                .andExpect(jsonPath("$.message").value("No projects found"))
+           .andExpect(status().isOk())
+           .andExpect(jsonPath("$.current.length()").value(0))
+           .andExpect(jsonPath("$.pending.length()").value(0))
+           .andExpect(jsonPath("$.completed.length()").value(0))
            .andDo((r) -> System.out.println(r.getResponse().getContentAsString()));
     }
 
@@ -244,11 +246,13 @@ public class ProjectControllerTests {
     @Sql({
             "/fixtures/student_and_user.sql",
     })
-    public void getAllProjectsOfStudent_forStudentWithNoProjects_returns204(@Autowired MockMvc mvc) throws Exception {
+    public void getAllProjectsOfStudent_forStudentWithNoProjects_returnsEmptyCollections(@Autowired MockMvc mvc) throws Exception {
         mvc.perform(get("/project/all/abc")
                    .with(jwt()))
-           .andExpect(status().isNoContent())
-           .andExpect(jsonPath("$.message").value("No projects found"))
+           .andExpect(status().isOk())
+           .andExpect(jsonPath("$.current.length()").value(0))
+           .andExpect(jsonPath("$.pending.length()").value(0))
+           .andExpect(jsonPath("$.completed.length()").value(0))
            .andDo((r) -> System.out.println(r.getResponse().getContentAsString()));
     }
 
