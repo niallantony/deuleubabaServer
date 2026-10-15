@@ -9,7 +9,6 @@ import com.niallantony.deulaubaba.domain.CommunicationCategory;
 import com.niallantony.deulaubaba.domain.DictionaryEntry;
 import com.niallantony.deulaubaba.dto.dictionary.DictionaryPostRequest;
 import com.niallantony.deulaubaba.dto.dictionary.DictionaryPutRequest;
-import com.niallantony.deulaubaba.exceptions.FileStorageException;
 import com.niallantony.deulaubaba.services.FileStorageService;
 import com.niallantony.deulaubaba.util.DictionaryTestFactory;
 import org.junit.ClassRule;
@@ -449,7 +448,7 @@ public class DictionaryControllerTest {
                 .andDo((r) -> System.out.println(r.getResponse().getContentAsString()));
         List<DictionaryEntry> entries = dictionaryRepository.findAll().stream().toList();
         assertEquals(0, entries.size());
-        verify(fileStorageService, times(1)).deleteImage(eq("example.jpg"), any());
+        verify(fileStorageService, times(1)).deleteImageAfterCommit(eq("example.jpg"), any());
     }
 
     @Test
@@ -467,7 +466,7 @@ public class DictionaryControllerTest {
            .andDo((r) -> System.out.println(r.getResponse().getContentAsString()));
         List<DictionaryEntry> entries = dictionaryRepository.findAll().stream().toList();
         assertEquals(1, entries.size());
-        verify(fileStorageService, never()).deleteImage(eq("example.jpg"),any());
+        verify(fileStorageService, never()).deleteImageAfterCommit(eq("example.jpg"),any());
     }
 
     @Test
@@ -486,25 +485,6 @@ public class DictionaryControllerTest {
            .andDo((r) -> System.out.println(r.getResponse().getContentAsString()));
         List<DictionaryEntry> entries = dictionaryRepository.findAll().stream().toList();
         assertEquals(1, entries.size());
-        verify(fileStorageService, never()).deleteImage(eq("example.jpg"), any());
-    }
-
-    @Test
-    @SqlMergeMode(SqlMergeMode.MergeMode.MERGE)
-    @Sql({
-            "/fixtures/student_and_user.sql",
-            "/fixtures/dictionary.sql"
-    })
-    @Sql(scripts = "/fixtures/teardown.sql", executionPhase = Sql.ExecutionPhase.AFTER_TEST_METHOD)
-    public void deleteDictionary_whenDeleteFileThrows_stillDeletesDictionaryEntry(@Autowired MockMvc mvc) throws Exception {
-        doThrow(FileStorageException.class).when(fileStorageService).deleteImage(eq("example.jpg"), any());
-        mvc.perform(delete("/dictionary/1")
-                   .with(jwt()))
-           .andExpect(status().isNoContent())
-           .andDo((r) -> System.out.println(r.getResponse().getContentAsString()));
-        List<DictionaryEntry> entries = dictionaryRepository.findAll().stream().toList();
-        assertEquals(0, entries.size());
-        verify(fileStorageService, times(1)).deleteImage(eq("example.jpg"), any());
+        verify(fileStorageService, never()).deleteImageAfterCommit(eq("example.jpg"), any());
     }
 }
-

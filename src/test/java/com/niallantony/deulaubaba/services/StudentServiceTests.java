@@ -284,6 +284,23 @@ public class StudentServiceTests {
     }
 
     @Test
+    public void updateStudentDetails_whenGivenBadRequestWithImage_doesNotTouchStorage() {
+        User user = new User();
+        Student student = getMockStudent();
+        student.getUsers().add(user);
+        MultipartFile image = mock(MultipartFile.class);
+
+        when(userRepository.findByUserId("abc")).thenReturn(Optional.of(user));
+        when(studentRepository.findById("123")).thenReturn(Optional.of(student));
+
+        assertThrows(
+                InvalidStudentDataException.class,
+                () -> studentService.updateStudentDetails("123", new StudentRequest(), image, "abc")
+        );
+        verify(fileStorageService, never()).swapImage(any(), any());
+    }
+
+    @Test
     public void updateStudentCommunicationDetails_whenGivenGoodRequest_updatesStudent() {
         StudentCommunicationRequest request = new StudentCommunicationRequest("New Request");
         User user = new User();

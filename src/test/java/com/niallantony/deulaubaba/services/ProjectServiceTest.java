@@ -456,12 +456,26 @@ public class ProjectServiceTest {
         mockUser.setUserId("abc");
         mockProject.setCreatedBy(mockUser);
         when(projectRepository.findById(1L)).thenReturn(Optional.of(mockProject));
-        doCallRealMethod().when(fileStorageService).swapImage(any(), any());
 
         assertThrows(
                 InvalidProjectDataException.class,
                 () ->projectService.patchProjectDetails("abc", 1L, projectDetailsPatchDTO, null )
         );
+    }
+
+    @Test void patchProjectDetails_whenGivenBadRequestWithImage_doesNotTouchStorage() {
+        Project mockProject = new Project();
+        User mockUser = new User();
+        mockUser.setUserId("abc");
+        mockProject.setCreatedBy(mockUser);
+        MultipartFile image = new MockMultipartFile("image", "image", "image/jpg", "image".getBytes());
+        when(projectRepository.findById(1L)).thenReturn(Optional.of(mockProject));
+
+        assertThrows(
+                InvalidProjectDataException.class,
+                () -> projectService.patchProjectDetails("abc", 1L, new ProjectDetailsPatchDTO(), image)
+        );
+        verify(fileStorageService, never()).swapImage(any(), any());
     }
 
     @Test void patchProjectDetails_whenUserNotCreator_throwsUserNotAuthorizedException() {
@@ -519,7 +533,7 @@ public class ProjectServiceTest {
 
         projectService.deleteProject("abc", 1L);
 
-        verify(fileStorageService, times(1)).deleteImage(eq("example.png"),eq("123"));
+        verify(fileStorageService, times(1)).deleteImageAfterCommit(eq("example.png"),eq("123"));
         verify(projectRepository, times(1)).delete(mockProject);
     }
 
@@ -539,23 +553,13 @@ public class ProjectServiceTest {
         );
     }
 
-    @Test void deleteProject_whenDeleteFileFails_stillDeletesProject() {
-        Project mockProject = new Project();
-        mockProject.setImgsrc("example.png");
-        User mockUser = new User();
-        mockUser.setUserId("abc");
-        mockProject.setCreatedBy(mockUser);
-        Student student = new Student();
-        student.setStudentId("123");
-        mockProject.setStudent(student);
-
-        when(projectRepository.findById(1L)).thenReturn(Optional.of(mockProject));
-        doThrow(FileStorageException.class).when(fileStorageService).deleteImage(any(), any());
-
-        projectService.deleteProject("abc", 1L);
-
-        verify(fileStorageService, times(1)).deleteImage(eq("example.png"), eq("123"));
-        verify(projectRepository, times(1)).delete(mockProject);
+    @Test void deleteProject_whenUnauthorized_doesNotTouchStorage() {
+        when(projectRepository.findById(1L)).thenReturn(Optional.of(new Project()));
+        assertThrows(
+                UserNotAuthorizedException.class,
+                () -> projectService.deleteProject("abc", 1L)
+        );
+        verify(fileStorageService, never()).deleteImageAfterCommit(any(), any());
     }
 
     @Test void addUser_whenValidRequest_addsUsersToProject() {

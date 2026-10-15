@@ -103,6 +103,7 @@ public class StudentService {
     @Transactional
     public void updateStudentDetails(String studentId, StudentRequest studentRequest, MultipartFile image, String userId)  {
         Student student = getAuthorisedStudent(studentId, userId);
+        validateStudentRequest(studentRequest);
         fileStorageService.swapImage(image, student);
         applyDetailUpdates(student, studentRequest);
     }
@@ -134,7 +135,6 @@ public class StudentService {
     }
     
     private void applyDetailUpdates(Student student, StudentRequest studentRequest) {
-        validateStudentRequest(studentRequest);
         student.setName(studentRequest.getName());
         student.setSchool(studentRequest.getSchool());
         student.setAge(studentRequest.getAge());

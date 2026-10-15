@@ -7,7 +7,6 @@ import com.niallantony.deulaubaba.domain.Student;
 import com.niallantony.deulaubaba.data.CommunicationCategoryRepository;
 import com.niallantony.deulaubaba.data.DictionaryRepository;
 import com.niallantony.deulaubaba.dto.dictionary.*;
-import com.niallantony.deulaubaba.exceptions.FileStorageException;
 import com.niallantony.deulaubaba.exceptions.InvalidDictionaryDataException;
 import com.niallantony.deulaubaba.exceptions.ResourceNotFoundException;
 import com.niallantony.deulaubaba.exceptions.UserNotAuthorizedException;
@@ -109,15 +108,8 @@ public class DictionaryService {
         if (!studentService.studentBelongsToUser(entry.getStudent().getStudentId(), userId)) {
             throw new UserNotAuthorizedException("Unauthorized access");
         }
-        if (entry.getImgsrc() != null) {
-            try {
-                fileStorageService.deleteImage(entry.getImgsrc(), entry.getBucketId());
-            } catch (FileStorageException e) {
-                log.warn("Image wasn't deleted");
-                log.warn(entry.getImgsrc());
-            }
-        }
         dictionaryRepository.deleteById(longId);
+        fileStorageService.deleteImageAfterCommit(entry.getImgsrc(), entry.getBucketId());
     }
 
     private void assignChanges (DictionaryEntry entry, DictionaryRequest dictionaryPostRequest) {

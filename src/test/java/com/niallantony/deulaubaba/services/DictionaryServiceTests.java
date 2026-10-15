@@ -225,7 +225,7 @@ public class DictionaryServiceTests {
         when(studentService.studentBelongsToUser("123", "userId")).thenReturn(true);
         dictionaryService.deleteDictionaryEntry(123L, "userId");
         verify(dictionaryRepository).deleteById(123L);
-        verify(fileStorageService).deleteImage(eq("./example.png"),any());
+        verify(fileStorageService).deleteImageAfterCommit(eq("./example.png"),any());
     }
 
 

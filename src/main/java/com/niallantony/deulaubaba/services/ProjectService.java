@@ -165,6 +165,7 @@ public class ProjectService {
         return projectDTO;
     }
 
+    @Transactional
     public void patchProjectDetails(String user_id, Long project_id, ProjectDetailsPatchDTO request, MultipartFile image) {
         Project project = projectRepository.findById(project_id).orElseThrow(
                 () -> new ResourceNotFoundException("Project not found")
@@ -172,8 +173,8 @@ public class ProjectService {
         if (!project.getCreatedBy().getUserId().equals(user_id)) {
             throw new UserNotAuthorizedException("Unauthorized access");
         }
-        fileStorageService.swapImage(image, project);
         validatePatch(request);
+        fileStorageService.swapImage(image, project);
         applyDetailChanges(project, request);
         projectRepository.save(project);
         addSystemEventMessage(project, "프로젝트 업데이트 되었습니다");
@@ -233,16 +234,11 @@ public class ProjectService {
         }
     }
 
+    @Transactional
     public void deleteProject(String user_id, Long project_id) {
         Project project = getCreatedProject(user_id, project_id);
-        if (project.getImgsrc() != null) {
-            try {
-                fileStorageService.deleteImage(project.getImgsrc(), project.getBucketId());
-            } catch (FileStorageException e) {
-                log.warn("Image not deleted: {}", project.getImgsrc(), e);
-            }
-        }
         projectRepository.delete(project);
+        fileStorageService.deleteImageAfterCommit(project.getImgsrc(), project.getBucketId());
     }
 
     public void deleteComment(String user_id, Long comment_id) {
