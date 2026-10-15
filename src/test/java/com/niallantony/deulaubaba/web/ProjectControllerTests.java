@@ -186,11 +186,13 @@ public class ProjectControllerTests {
     @Sql({
             "/fixtures/student_and_user.sql",
     })
-    public void getAllProjectsOfUser_forUserWithNoProjects_returns204(@Autowired MockMvc mvc) throws Exception {
+    public void getAllProjectsOfUser_forUserWithNoProjects_returnsEmptyCollections(@Autowired MockMvc mvc) throws Exception {
         mvc.perform(get("/project/all")
                    .with(jwt()))
-           .andExpect(status().isNoContent())
-                .andExpect(jsonPath("$.message").value("No projects found"))
+           .andExpect(status().isOk())
+           .andExpect(jsonPath("$.current.length()").value(0))
+           .andExpect(jsonPath("$.pending.length()").value(0))
+           .andExpect(jsonPath("$.completed.length()").value(0))
            .andDo((r) -> System.out.println(r.getResponse().getContentAsString()));
     }
 
@@ -244,11 +246,13 @@ public class ProjectControllerTests {
     @Sql({
             "/fixtures/student_and_user.sql",
     })
-    public void getAllProjectsOfStudent_forStudentWithNoProjects_returns204(@Autowired MockMvc mvc) throws Exception {
+    public void getAllProjectsOfStudent_forStudentWithNoProjects_returnsEmptyCollections(@Autowired MockMvc mvc) throws Exception {
         mvc.perform(get("/project/all/abc")
                    .with(jwt()))
-           .andExpect(status().isNoContent())
-           .andExpect(jsonPath("$.message").value("No projects found"))
+           .andExpect(status().isOk())
+           .andExpect(jsonPath("$.current.length()").value(0))
+           .andExpect(jsonPath("$.pending.length()").value(0))
+           .andExpect(jsonPath("$.completed.length()").value(0))
            .andDo((r) -> System.out.println(r.getResponse().getContentAsString()));
     }
 
@@ -1149,44 +1153,11 @@ public class ProjectControllerTests {
             "/fixtures/project_feed_items_many.sql"
     })
     @Test
-    public void getProjectFeed_withValidRequest_returnsJustFirstPage(@Autowired MockMvc mvc) throws Exception {
+    public void getProjectFeed_withManyItems_returnsAllItems(@Autowired MockMvc mvc) throws Exception {
         mvc.perform(get("/project/1/feed")
                    .with(jwt()))
            .andExpect(status().isOk())
-           .andExpect(jsonPath("$.feed.length()").value(10))
-           .andDo(r -> System.out.println(r.getResponse().getContentAsString()));
-    }
-
-    @SqlMergeMode(SqlMergeMode.MergeMode.MERGE)
-    @Sql({
-            "/fixtures/student_and_user.sql",
-            "/fixtures/project.sql",
-            "/fixtures/project_feed_items_many.sql"
-    })
-    @Test
-    public void getProjectFeed_whenRequestingSecondPage_returnsSecondPage(@Autowired MockMvc mvc) throws Exception {
-        mvc.perform(get("/project/1/feed")
-                   .with(jwt())
-                   .param("page", "1"))
-           .andExpect(status().isOk())
-           .andExpect(jsonPath("$.feed.length()").value(2))
-                .andExpect(jsonPath("$.feed[0].id").value(2))
-           .andDo(r -> System.out.println(r.getResponse().getContentAsString()));
-    }
-
-    @SqlMergeMode(SqlMergeMode.MergeMode.MERGE)
-    @Sql({
-            "/fixtures/student_and_user.sql",
-            "/fixtures/project.sql",
-            "/fixtures/project_feed_items_many.sql"
-    })
-    @Test
-    public void getProjectFeed_whenAskingForPageOfFiveItems_returnsFiveItems(@Autowired MockMvc mvc) throws Exception {
-        mvc.perform(get("/project/1/feed")
-                   .with(jwt())
-                   .param("size", "5"))
-           .andExpect(status().isOk())
-           .andExpect(jsonPath("$.feed.length()").value(5))
+           .andExpect(jsonPath("$.feed.length()").value(12))
            .andDo(r -> System.out.println(r.getResponse().getContentAsString()));
     }
 }

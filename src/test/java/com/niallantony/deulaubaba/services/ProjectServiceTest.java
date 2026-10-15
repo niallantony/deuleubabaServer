@@ -14,7 +14,6 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
-import org.springframework.data.domain.PageRequest;
 import org.springframework.mock.web.MockMultipartFile;
 import org.springframework.web.multipart.MultipartFile;
 
@@ -105,12 +104,15 @@ public class ProjectServiceTest {
     }
 
     @Test
-    public void getAllProjectsOfUser_whenProjectsEmpty_throwsNoProjectFoundException() {
+    public void getAllProjectsOfUser_whenProjectsEmpty_returnsEmptyCollections() {
         User user = new User();
         Set<Project> projects = new HashSet<>();
         when(userRepository.findByUserId("abc")).thenReturn(Optional.of(user));
         when(projectRepository.findAllProjectsByUserId(user)).thenReturn(projects);
-        assertThrows(NoProjectsFoundException.class, () -> projectService.getProjectsOfUser("abc"));
+        ProjectCollectionsDTO response = projectService.getProjectsOfUser("abc");
+        assertTrue(response.getCurrent().isEmpty());
+        assertTrue(response.getPending().isEmpty());
+        assertTrue(response.getCompleted().isEmpty());
     }
 
     @Test
@@ -154,7 +156,7 @@ public class ProjectServiceTest {
         assertThrows(UserNotAuthorizedException.class, () -> projectService.getProjectsOfStudent("abc", "123"));
     }
 
-    @Test void getAllProjectsOfStudent_whenStudentHasNoProjects_throwsNoProjectFoundException() {
+    @Test void getAllProjectsOfStudent_whenStudentHasNoProjects_returnsEmptyCollections() {
         Set<Project> projects = new HashSet<>();
         User user = new User();
         Student student = new Student();
@@ -162,7 +164,10 @@ public class ProjectServiceTest {
         when(userRepository.findByUserId("abc")).thenReturn(Optional.of(user));
         when(studentRepository.findById("123")).thenReturn(Optional.of(student));
         when(projectRepository.findAllProjectsByStudentId(user, student)).thenReturn(projects);
-        assertThrows(NoProjectsFoundException.class, () -> projectService.getProjectsOfStudent("abc", "123"));
+        ProjectCollectionsDTO response = projectService.getProjectsOfStudent("abc", "123");
+        assertTrue(response.getCurrent().isEmpty());
+        assertTrue(response.getPending().isEmpty());
+        assertTrue(response.getCompleted().isEmpty());
         verify(projectRepository, times(1)).findAllProjectsByStudentId(user,student);
     }
 
@@ -619,10 +624,10 @@ public class ProjectServiceTest {
         ProjectFeedItemDTO itemDTO = new ProjectFeedItemDTO();
 
         when(projectRepository.findById(1L)).thenReturn(Optional.of(mockProject));
-        when(projectFeedRepository.findByProjectIdOrderByCreatedAtDesc(1L, PageRequest.of(0, 10))).thenReturn(repoReturn);
+        when(projectFeedRepository.findByProjectIdOrderByCreatedAtDesc(1L)).thenReturn(repoReturn);
         when(projectFeedMapper.entityToDto(repoReturn.getFirst())).thenReturn(itemDTO);
 
-        ProjectFeedDTO response = projectService.getProjectFeed(1L, "abc", 0 ,10);
+        ProjectFeedDTO response = projectService.getProjectFeed(1L, "abc");
 
         assertEquals(itemDTO, response.getFeed().getFirst());
     }
@@ -637,8 +642,8 @@ public class ProjectServiceTest {
         mockProject.getUsers().add(projectUser);
 
         when(projectRepository.findById(1L)).thenReturn(Optional.of(mockProject));
-        when(projectFeedRepository.findByProjectIdOrderByCreatedAtDesc(1L, PageRequest.of(0, 10))).thenReturn(List.of());
-        ProjectFeedDTO response = projectService.getProjectFeed(1L, "abc",0, 10);
+        when(projectFeedRepository.findByProjectIdOrderByCreatedAtDesc(1L)).thenReturn(List.of());
+        ProjectFeedDTO response = projectService.getProjectFeed(1L, "abc");
         assertTrue(response.getFeed().isEmpty());
     }
 
@@ -646,7 +651,7 @@ public class ProjectServiceTest {
         when(projectRepository.findById(1L)).thenReturn(Optional.empty());
         assertThrows(
                 ResourceNotFoundException.class,
-                () -> projectService.getProjectFeed(1L, "abc", 0 , 10)
+                () -> projectService.getProjectFeed(1L, "abc")
         );
     }
 
@@ -655,31 +660,9 @@ public class ProjectServiceTest {
         when(projectRepository.findById(1L)).thenReturn(Optional.of(mockProject));
         assertThrows(
                 UserNotAuthorizedException.class,
-                () -> projectService.getProjectFeed(1L, "abc", 0 ,10)
+                () -> projectService.getProjectFeed(1L, "abc")
         );
     }
-
-    @Test void getProjectFeed_whenRequestingNextPage_returnsFeed() {
-        Project mockProject = new Project();
-        User mockUser = new User();
-        mockUser.setUserId("abc");
-        ProjectUser projectUser = new ProjectUser();
-        projectUser.setUser(mockUser);
-        projectUser.setProject(mockProject);
-        mockProject.getUsers().add(projectUser);
-        List<ProjectFeedItem> repoReturn = List.of(new ProjectFeedItem());
-        ProjectFeedItemDTO itemDTO = new ProjectFeedItemDTO();
-
-        when(projectRepository.findById(1L)).thenReturn(Optional.of(mockProject));
-        when(projectFeedRepository.findByProjectIdOrderByCreatedAtDesc(1L, PageRequest.of(1, 10))).thenReturn(repoReturn);
-        when(projectFeedMapper.entityToDto(repoReturn.getFirst())).thenReturn(itemDTO);
-
-        ProjectFeedDTO response = projectService.getProjectFeed(1L, "abc", 1 ,10);
-
-        assertEquals(itemDTO, response.getFeed().getFirst());
-
-    }
-
 
     @Test void addUserComment_withValidRequest_addsAComment() {
         Project mockProject = new Project();

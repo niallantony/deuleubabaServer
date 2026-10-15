@@ -7,4 +7,5 @@ import java.util.List;
 @Data
 public class FeedDTO {
     private List<FeedItemDTO> feed;
+    private boolean hasNext;
 }
