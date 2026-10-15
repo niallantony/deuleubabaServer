@@ -8,8 +8,6 @@ import com.niallantony.deulaubaba.mapper.ProjectFeedMapper;
 import com.niallantony.deulaubaba.mapper.ProjectMapper;
 import lombok.extern.slf4j.Slf4j;
 import org.jetbrains.annotations.NotNull;
-import org.springframework.data.domain.PageRequest;
-import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
@@ -94,11 +92,10 @@ public class ProjectService {
         return createCollections(previews);
     }
 
-    public ProjectFeedDTO getProjectFeed(Long project_id, String user_id, int page, int size) {
+    public ProjectFeedDTO getProjectFeed(Long project_id, String user_id) {
         getAuthorizedProject(project_id, user_id);
-        Pageable pageable = PageRequest.of(page, size);
         List<ProjectFeedItemDTO> feedItems = projectFeedRepository
-                .findByProjectIdOrderByCreatedAtDesc(project_id, pageable)
+                .findByProjectIdOrderByCreatedAtDesc(project_id)
                 .stream()
                 .map(item -> {
                     ProjectFeedItemDTO dto = projectFeedMapper.entityToDto(item);

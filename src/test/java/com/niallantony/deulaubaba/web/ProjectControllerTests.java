@@ -1153,44 +1153,11 @@ public class ProjectControllerTests {
             "/fixtures/project_feed_items_many.sql"
     })
     @Test
-    public void getProjectFeed_withValidRequest_returnsJustFirstPage(@Autowired MockMvc mvc) throws Exception {
+    public void getProjectFeed_withManyItems_returnsAllItems(@Autowired MockMvc mvc) throws Exception {
         mvc.perform(get("/project/1/feed")
                    .with(jwt()))
            .andExpect(status().isOk())
-           .andExpect(jsonPath("$.feed.length()").value(10))
-           .andDo(r -> System.out.println(r.getResponse().getContentAsString()));
-    }
-
-    @SqlMergeMode(SqlMergeMode.MergeMode.MERGE)
-    @Sql({
-            "/fixtures/student_and_user.sql",
-            "/fixtures/project.sql",
-            "/fixtures/project_feed_items_many.sql"
-    })
-    @Test
-    public void getProjectFeed_whenRequestingSecondPage_returnsSecondPage(@Autowired MockMvc mvc) throws Exception {
-        mvc.perform(get("/project/1/feed")
-                   .with(jwt())
-                   .param("page", "1"))
-           .andExpect(status().isOk())
-           .andExpect(jsonPath("$.feed.length()").value(2))
-                .andExpect(jsonPath("$.feed[0].id").value(2))
-           .andDo(r -> System.out.println(r.getResponse().getContentAsString()));
-    }
-
-    @SqlMergeMode(SqlMergeMode.MergeMode.MERGE)
-    @Sql({
-            "/fixtures/student_and_user.sql",
-            "/fixtures/project.sql",
-            "/fixtures/project_feed_items_many.sql"
-    })
-    @Test
-    public void getProjectFeed_whenAskingForPageOfFiveItems_returnsFiveItems(@Autowired MockMvc mvc) throws Exception {
-        mvc.perform(get("/project/1/feed")
-                   .with(jwt())
-                   .param("size", "5"))
-           .andExpect(status().isOk())
-           .andExpect(jsonPath("$.feed.length()").value(5))
+           .andExpect(jsonPath("$.feed.length()").value(12))
            .andDo(r -> System.out.println(r.getResponse().getContentAsString()));
     }
 }
