@@ -16,10 +16,10 @@ import com.niallantony.deulaubaba.exceptions.UserNotAuthorizedException;
 import com.niallantony.deulaubaba.mapper.StudentFeedMapper;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Slice;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDateTime;
-import java.util.List;
 
 @Service
 public class FeedService {
@@ -49,13 +49,14 @@ public class FeedService {
         Student student = studentService.getAuthorisedStudent(student_id, user_id);
         try {
             Pageable pageable = PageRequest.of(page, size);
-            List<StudentFeedItem> feedItems = studentFeedRepository.findAllByStudentOrderByCreatedAtDesc(student, pageable);
+            Slice<StudentFeedItem> feedItems = studentFeedRepository.findAllByStudentOrderByCreatedAtDesc(student, pageable);
             FeedDTO feedDTO = new FeedDTO();
             feedDTO.setFeed(feedItems.stream().map(item -> {
                 FeedItemDTO dto = studentFeedMapper.entityToDto(item);
                 dto.getUser().setImagesrc(fileStorageService.generateSignedURL(item.getUser()));
                 return dto;
             }).toList());
+            feedDTO.setHasNext(feedItems.hasNext());
             return feedDTO;
         } catch (IllegalArgumentException e) {
             throw new BadPageRequestException(e.getMessage());

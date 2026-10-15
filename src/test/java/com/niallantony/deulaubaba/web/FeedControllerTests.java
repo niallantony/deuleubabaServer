@@ -75,6 +75,7 @@ public class FeedControllerTests {
                    .with(jwt()))
            .andExpect(status().isOk())
            .andExpect(jsonPath("$.feed.length()").value(1))
+           .andExpect(jsonPath("$.hasNext").value(false))
            .andExpect(jsonPath("$.feed[0].body").value("Comment Body"))
            .andExpect(jsonPath("$.feed[0].emotions.length()").value(2))
            .andDo(r -> System.out.println(r.getResponse().getContentAsString()));

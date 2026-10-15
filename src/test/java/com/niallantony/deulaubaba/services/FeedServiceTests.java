@@ -22,6 +22,7 @@ import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.SliceImpl;
 
 import java.util.List;
 import java.util.Optional;
@@ -64,7 +65,7 @@ public class FeedServiceTests {
 
         when(studentService.getAuthorisedStudent("123", "abc")).thenReturn(student);
         when(studentFeedRepository.findAllByStudentOrderByCreatedAtDesc(student, PageRequest.of(0, 10)))
-                .thenReturn(List.of(studentFeedItem));
+                .thenReturn(new SliceImpl<>(List.of(studentFeedItem), PageRequest.of(0, 10), false));
         when(studentFeedMapper.entityToDto(studentFeedItem)).thenReturn(dto);
         when(fileStorageService.generateSignedURL(any())).thenReturn("image.jpg");
 
@@ -88,11 +89,29 @@ public class FeedServiceTests {
 
         when(studentService.getAuthorisedStudent("123", "abc")).thenReturn(student);
         when(studentFeedRepository.findAllByStudentOrderByCreatedAtDesc(student, PageRequest.of(0, 10)))
-                .thenReturn(List.of());
+                .thenReturn(new SliceImpl<>(List.of(), PageRequest.of(0, 10), false));
 
         FeedDTO feed = feedService.getFeed("abc", "123", 0, 10);
 
         assertEquals(0, feed.getFeed().size());
+        assertFalse(feed.isHasNext());
+    }
+
+    @Test
+    public void getFeed_withMoreItemsThanPageSize_setsHasNext() {
+        Student student = new Student();
+        StudentFeedItem studentFeedItem = new StudentFeedItem();
+        FeedItemDTO dto = new FeedItemDTO();
+        dto.setUser(new UserAvatar());
+
+        when(studentService.getAuthorisedStudent("123", "abc")).thenReturn(student);
+        when(studentFeedRepository.findAllByStudentOrderByCreatedAtDesc(student, PageRequest.of(0, 1)))
+                .thenReturn(new SliceImpl<>(List.of(studentFeedItem), PageRequest.of(0, 1), true));
+        when(studentFeedMapper.entityToDto(studentFeedItem)).thenReturn(dto);
+
+        FeedDTO feed = feedService.getFeed("abc", "123", 0, 1);
+
+        assertTrue(feed.isHasNext());
     }
 
     @Test
