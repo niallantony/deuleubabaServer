@@ -101,10 +101,10 @@ public class FeedControllerTests {
             "/fixtures/student.sql",
             "/fixtures/user.sql"
     })
-    public void getFeed_ofNoneAffiliatedStudent_returns401(@Autowired MockMvc mvc) throws Exception {
+    public void getFeed_ofNoneAffiliatedStudent_returns403(@Autowired MockMvc mvc) throws Exception {
         mvc.perform(get("/feed/abc")
                    .with(jwt()))
-           .andExpect(status().isUnauthorized())
+           .andExpect(status().isForbidden())
            .andExpect(jsonPath("$.message").value("Unauthorized access"))
            .andDo(r -> System.out.println(r.getResponse().getContentAsString()));
     }
@@ -223,7 +223,7 @@ public class FeedControllerTests {
             "/fixtures/student.sql",
             "/fixtures/user.sql"
     })
-    public void postComment_asUnauthorizedUser_returns401(@Autowired MockMvc mvc) throws Exception {
+    public void postComment_asUnauthorizedUser_returns403(@Autowired MockMvc mvc) throws Exception {
         FeedPostDTO postDTO = new FeedPostDTO();
         postDTO.setBody("Comment");
         postDTO.getEmotions().add(StudentFeedEmotion.HAPPY);
@@ -231,7 +231,7 @@ public class FeedControllerTests {
         mvc.perform(post("/feed/abc")
                    .with(jwt())
                    .content(json))
-           .andExpect(status().isUnauthorized())
+           .andExpect(status().isForbidden())
                 .andExpect(jsonPath("$.message").value("Unauthorized access"));
         List<StudentFeedItem> feed = studentFeedRepository.findAllByStudentIdOrderByCreatedAtDesc("abc");
         assertEquals(0, feed.size());
@@ -289,10 +289,10 @@ public class FeedControllerTests {
             "/fixtures/user_another.sql",
             "/fixtures/student_feed_unowned.sql"
     })
-    public void deleteComment_whenUserNotAuthorized_returns401(@Autowired MockMvc mvc) throws Exception {
+    public void deleteComment_whenUserNotAuthorized_returns403(@Autowired MockMvc mvc) throws Exception {
         mvc.perform(delete("/feed/1")
                    .with(jwt()))
-           .andExpect(status().isUnauthorized());
+           .andExpect(status().isForbidden());
 
         List<StudentFeedItem> feed = studentFeedRepository.findAllByStudentIdOrderByCreatedAtDesc("abc");
         assertEquals(1, feed.size());

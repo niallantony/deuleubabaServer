@@ -27,11 +27,11 @@ class GlobalExceptionHandlerTest {
     }
 
     @Test
-    void handleUserNotAuthorized_returns401WithMessage() {
+    void handleUserNotAuthorized_returns403WithMessage() {
         UserNotAuthorizedException ex = new UserNotAuthorizedException("Nope!");
         ResponseEntity<?> response = handler.handleUserNotAuthorizedException(ex);
 
-        assertEquals(401, response.getStatusCode().value());
+        assertEquals(403, response.getStatusCode().value());
         assertEquals(Map.of("message", "Nope!"), response.getBody());
     }
 

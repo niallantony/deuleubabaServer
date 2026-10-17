@@ -152,12 +152,12 @@ public class DictionaryControllerTest {
             "/fixtures/dictionary.sql"
     })
     @Sql(scripts = "/fixtures/teardown.sql", executionPhase = Sql.ExecutionPhase.AFTER_TEST_METHOD)
-    public void getDictionaryListings_asUnauthorisedUser_returns401(@Autowired MockMvc mvc)
+    public void getDictionaryListings_asUnauthorisedUser_returns403(@Autowired MockMvc mvc)
             throws Exception {
         mvc.perform(get("/dictionary")
                    .with(jwt())
                    .param("student_id", "abc"))
-           .andExpect(status().isUnauthorized())
+           .andExpect(status().isForbidden())
                 .andExpect(jsonPath("$.message").value("Unauthorized access"))
            .andDo((r) -> System.out.println(r.getResponse().getContentAsString()));
     }
@@ -244,14 +244,14 @@ public class DictionaryControllerTest {
             "/fixtures/user.sql"
     })
     @Sql(scripts = "/fixtures/teardown.sql", executionPhase = Sql.ExecutionPhase.AFTER_TEST_METHOD)
-    public void addDictionary_withUnauthorisedUser_returns401(@Autowired MockMvc mvc) throws Exception {
+    public void addDictionary_withUnauthorisedUser_returns403(@Autowired MockMvc mvc) throws Exception {
         DictionaryPostRequest request = DictionaryTestFactory.createDictionaryPostRequest();
         String json = objectMapper.writeValueAsString(request);
         MockMultipartFile data = new MockMultipartFile("data", "test.json", "application/json", json.getBytes());
         mvc.perform(multipart("/dictionary")
                    .file(data)
                    .with(jwt()))
-           .andExpect(status().isUnauthorized())
+           .andExpect(status().isForbidden())
                 .andExpect(jsonPath("$.message").value("Unauthorized access"))
            .andDo((r) -> System.out.println(r.getResponse().getContentAsString()));
         List<DictionaryEntry> dictionaries = dictionaryRepository.findAll().stream().toList();
@@ -374,14 +374,14 @@ public class DictionaryControllerTest {
             "/fixtures/dictionary.sql",
     })
     @Sql(scripts = "/fixtures/teardown.sql", executionPhase = Sql.ExecutionPhase.AFTER_TEST_METHOD)
-    public void updateDictionary_withUnauthorizedUser_returns401(@Autowired MockMvc mvc) throws Exception {
+    public void updateDictionary_withUnauthorizedUser_returns403(@Autowired MockMvc mvc) throws Exception {
         DictionaryPutRequest request = DictionaryTestFactory.createDictionaryPutRequest();
         String json = objectMapper.writeValueAsString(request);
         MockMultipartFile data = new MockMultipartFile("data", "test.json", "application/json", json.getBytes());
         mvc.perform(multipart( HttpMethod.PUT, "/dictionary")
                    .file(data)
                    .with(jwt()))
-           .andExpect(status().isUnauthorized())
+           .andExpect(status().isForbidden())
            .andExpect(jsonPath("$.message").value("Unauthorized access"))
            .andDo((r) -> System.out.println(r.getResponse().getContentAsString()));
     }
@@ -480,7 +480,7 @@ public class DictionaryControllerTest {
     public void deleteDictionary_withUnauthorizedUser_deletesDictionaryEntry(@Autowired MockMvc mvc) throws Exception {
         mvc.perform(delete("/dictionary/1")
                    .with(jwt()))
-           .andExpect(status().isUnauthorized())
+           .andExpect(status().isForbidden())
            .andExpect(jsonPath("$.message").value("Unauthorized access"))
            .andDo((r) -> System.out.println(r.getResponse().getContentAsString()));
         List<DictionaryEntry> entries = dictionaryRepository.findAll().stream().toList();

@@ -156,11 +156,11 @@ public class ProjectControllerTests {
             "/fixtures/student_and_user.sql",
             "/fixtures/project_unrelated.sql"
     })
-    public void getProject_withUnauthorizedUser_returns401(@Autowired MockMvc mvc) throws Exception {
+    public void getProject_withUnauthorizedUser_returns403(@Autowired MockMvc mvc) throws Exception {
         mvc.perform(get("/project")
                    .with(jwt())
                    .param("id", String.valueOf(1)))
-           .andExpect(status().isUnauthorized())
+           .andExpect(status().isForbidden())
            .andExpect(jsonPath("$.message").value("Unauthorized access"))
            .andDo((r) -> System.out.println(r.getResponse().getContentAsString()));
     }
@@ -233,10 +233,10 @@ public class ProjectControllerTests {
             "/fixtures/user.sql",
             "/fixtures/one_of_each_project.sql"
     })
-    public void getAllProjectsOfStudent_asUnauthorizedUser_returns401(@Autowired MockMvc mvc) throws Exception {
+    public void getAllProjectsOfStudent_asUnauthorizedUser_returns403(@Autowired MockMvc mvc) throws Exception {
         mvc.perform(get("/project/all/abc")
                    .with(jwt()))
-           .andExpect(status().isUnauthorized())
+           .andExpect(status().isForbidden())
            .andExpect(jsonPath("$.message").value("Unauthorized access"))
            .andDo((r) -> System.out.println(r.getResponse().getContentAsString()));
     }
@@ -326,13 +326,13 @@ public class ProjectControllerTests {
     @Test
     @SqlMergeMode(SqlMergeMode.MergeMode.MERGE)
     @Sql({"/fixtures/user.sql", "/fixtures/student.sql"})
-    public void createProject_withUnauthorizedUser_returns401(@Autowired MockMvc mvc) throws Exception {
+    public void createProject_withUnauthorizedUser_returns403(@Autowired MockMvc mvc) throws Exception {
         ProjectPostDTO postDTO = ProjectTestFactory.getProjectPostDTOWithUser("user1");
         String json = objectMapper.writeValueAsString(postDTO);
         mvc.perform(multipart("/project")
                    .file("data", json.getBytes())
                    .with(jwt()))
-           .andExpect(status().isUnauthorized())
+           .andExpect(status().isForbidden())
            .andExpect(jsonPath("$.message").value("Unauthorized access"))
            .andDo((r) -> System.out.println(r.getResponse().getContentAsString()));
     }
@@ -380,7 +380,7 @@ public class ProjectControllerTests {
             "/fixtures/student_and_user.sql",
             "/fixtures/project_unrelated.sql"
     })
-    public void changeCompleteStatus_asUnauthorizedUser_returns401(@Autowired MockMvc mvc) throws Exception {
+    public void changeCompleteStatus_asUnauthorizedUser_returns404(@Autowired MockMvc mvc) throws Exception {
         mvc.perform(patch("/project/status/1")
                    .with(jwt())
                    .contentType("application/json")
@@ -534,7 +534,7 @@ public class ProjectControllerTests {
             "/fixtures/student_and_user.sql",
             "/fixtures/project_unowned.sql"
     })
-    public void patchProjectDetails_ofUnownedProject_returns401(@Autowired MockMvc mvc) throws Exception {
+    public void patchProjectDetails_ofUnownedProject_returns403(@Autowired MockMvc mvc) throws Exception {
         ProjectDetailsPatchDTO projectDetailsPatchDTO = new ProjectDetailsPatchDTO();
         projectDetailsPatchDTO.setCategories(Set.of(CommunicationCategoryLabel.PAIN));
         projectDetailsPatchDTO.setDescription("new description");
@@ -546,7 +546,7 @@ public class ProjectControllerTests {
         mvc.perform(multipart(HttpMethod.PATCH, "/project/1")
                    .file(data)
                    .with(jwt()))
-           .andExpect(status().isUnauthorized())
+           .andExpect(status().isForbidden())
             .andExpect(jsonPath("$.message").value("Unauthorized access"))
            .andDo((r) -> System.out.println(r.getResponse().getRedirectedUrl()));
     }
@@ -671,10 +671,10 @@ public class ProjectControllerTests {
             "/fixtures/student_and_user.sql",
             "/fixtures/project_unowned.sql"
     })
-    public void deleteProject_asUnauthorizedUser_throws401(@Autowired MockMvc mvc) throws Exception {
+    public void deleteProject_asUnauthorizedUser_throws403(@Autowired MockMvc mvc) throws Exception {
         mvc.perform(delete("/project/1")
                    .with(jwt()))
-           .andExpect(status().isUnauthorized())
+           .andExpect(status().isForbidden())
                 .andExpect(jsonPath("$.message").value("Unauthorized access"));
 
         List<Project> projects = projectRepository.findAll();
@@ -813,13 +813,13 @@ public class ProjectControllerTests {
             "/fixtures/project_unowned.sql",
     })
     @Test
-    public void addUserToProject_whenProjectIsNotOwned_returns401(@Autowired MockMvc mvc) throws Exception {
+    public void addUserToProject_whenProjectIsNotOwned_returns403(@Autowired MockMvc mvc) throws Exception {
         ProjectAddUserRequestDTO request = new ProjectAddUserRequestDTO(List.of("user2"));
         String json = objectMapper.writeValueAsString(request);
         mvc.perform(patch("/project/1/add-user")
                    .with(jwt())
                    .content(json))
-           .andExpect(status().isUnauthorized())
+           .andExpect(status().isForbidden())
            .andExpect(jsonPath("$.message").value("Unauthorized access"))
            .andDo((r) -> System.out.println(r.getResponse().getContentAsString()));
 
@@ -891,10 +891,10 @@ public class ProjectControllerTests {
             "/fixtures/project_unrelated.sql",
     })
     @Test
-    public void getProjectFeed_withUnauthorizedUser_returns401(@Autowired MockMvc mvc) throws Exception {
+    public void getProjectFeed_withUnauthorizedUser_returns403(@Autowired MockMvc mvc) throws Exception {
         mvc.perform(get("/project/1/feed")
                    .with(jwt()))
-           .andExpect(status().isUnauthorized())
+           .andExpect(status().isForbidden())
             .andExpect(jsonPath("$.message").value("Unauthorized access"))
            .andDo(r -> System.out.println(r.getResponse().getContentAsString()));
     }
@@ -1139,10 +1139,10 @@ public class ProjectControllerTests {
             "/fixtures/project_unowned.sql",
             "/fixtures/project_feed_items_another_user.sql"
     })
-    public void deleteUserComment_asOtherThanCommentCreatorOrProjectCreator_throws401(@Autowired MockMvc mvc) throws Exception {
+    public void deleteUserComment_asOtherThanCommentCreatorOrProjectCreator_throws403(@Autowired MockMvc mvc) throws Exception {
         mvc.perform(delete("/project/comment/1")
                    .with(jwt()))
-           .andExpect(status().isUnauthorized());
+           .andExpect(status().isForbidden());
 
     }
 

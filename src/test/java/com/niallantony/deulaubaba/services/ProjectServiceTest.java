@@ -80,7 +80,7 @@ public class ProjectServiceTest {
     }
 
     @Test
-    public void getProject_whenUserNotAssignedToProject_returns401() {
+    public void getProject_whenUserNotAssignedToProject_throwsUserNotAuthorizedException() {
         Project persistedProject = new Project();
 
         when(projectRepository.findById(1L)).thenReturn(Optional.of(persistedProject));

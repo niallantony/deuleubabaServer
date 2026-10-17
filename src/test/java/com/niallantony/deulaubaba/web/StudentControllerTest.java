@@ -115,11 +115,11 @@ class StudentControllerTest {
 
     @Test
     @Sql({ "/fixtures/student.sql", })
-    public void getStudentPreview_withUnauthorisedUser_returns401(@Autowired MockMvc mvc) throws Exception {
+    public void getStudentPreview_withUnauthorisedUser_returns403(@Autowired MockMvc mvc) throws Exception {
         mvc.perform(get("/student/preview")
                 .with(jwt())
                 .param("id", "ABC"))
-                .andExpect(status().isUnauthorized())
+                .andExpect(status().isForbidden())
                 .andExpect(jsonPath("$.message").value("Unauthorized access"));
     }
 
@@ -154,11 +154,11 @@ class StudentControllerTest {
             "/fixtures/user.sql",
             "/fixtures/student.sql"
     })
-    public void getStudent_notLinkedWithUser_returns401(@Autowired MockMvc mvc) throws Exception {
+    public void getStudent_notLinkedWithUser_returns403(@Autowired MockMvc mvc) throws Exception {
         mvc.perform(get("/student")
                    .param("id", "ABC")
                    .with(jwt()))
-           .andExpect(status().isUnauthorized())
+           .andExpect(status().isForbidden())
            .andExpect(jsonPath("$.message").value("Unauthorized access"))
            .andDo((r) -> System.out.println(r.getResponse().getContentAsString()));
     }
@@ -187,11 +187,11 @@ class StudentControllerTest {
 
     @Test
     @Sql("/fixtures/student.sql")
-    public void getStudentTeam_withUnauthorisedUser_returns401(@Autowired MockMvc mvc) throws Exception {
+    public void getStudentTeam_withUnauthorisedUser_returns403(@Autowired MockMvc mvc) throws Exception {
         mvc.perform(get("/student/team")
                 .with(jwt())
                 .param("id", "ABC"))
-                .andExpect(status().isUnauthorized())
+                .andExpect(status().isForbidden())
                 .andExpect(jsonPath("$.message").value("User not found user"));
     }
 
@@ -200,11 +200,11 @@ class StudentControllerTest {
             "/fixtures/student.sql",
             "/fixtures/user.sql"
     })
-    public void getStudentTeam_withUnlinkedUser_returns401(@Autowired MockMvc mvc) throws Exception {
+    public void getStudentTeam_withUnlinkedUser_returns403(@Autowired MockMvc mvc) throws Exception {
         mvc.perform(get("/student/team")
                 .with(jwt())
                 .param("id", "ABC"))
-                .andExpect(status().isUnauthorized())
+                .andExpect(status().isForbidden())
                 .andExpect(jsonPath("$.message").value("Unauthorized access"));
     }
 
@@ -231,10 +231,10 @@ class StudentControllerTest {
     }
 
     @Test
-    public void getStudents_withNoUserId_returns401(@Autowired MockMvc mvc) throws Exception {
+    public void getStudents_withNoUserId_returns403(@Autowired MockMvc mvc) throws Exception {
         mvc.perform(get("/student/all")
                 .with(jwt()))
-                .andExpect(status().isUnauthorized())
+                .andExpect(status().isForbidden())
                 .andExpect(jsonPath("$.message").value("Unauthorized access"));
     }
 
@@ -276,14 +276,14 @@ class StudentControllerTest {
     }
 
     @Test
-    public void createStudent_asInvalidUser_returns401(@Autowired MockMvc mvc) throws Exception {
+    public void createStudent_asInvalidUser_returns403(@Autowired MockMvc mvc) throws Exception {
         StudentRequest student = StudentTestFactory.createStudentRequest("user");
         String request = objectMapper.writeValueAsString(student);
         MockMultipartFile data = new MockMultipartFile("data", "student.json", "application/json", request.getBytes());
         mvc.perform(multipart("/student")
                 .file(data)
                 .with(jwt()))
-                .andExpect(status().isUnauthorized())
+                .andExpect(status().isForbidden())
                 .andExpect(jsonPath("$.message").value("Unauthorized access"))
                 .andDo((r) -> System.out.println(r.getResponse().getContentAsString()));
     }
@@ -328,7 +328,7 @@ class StudentControllerTest {
             "/fixtures/student.sql",
             "/fixtures/user.sql"
     })
-    public void updateStudent_withUnauthorisedUser_returns401(@Autowired MockMvc mvc) throws Exception {
+    public void updateStudent_withUnauthorisedUser_returns403(@Autowired MockMvc mvc) throws Exception {
         StudentRequest request = StudentTestFactory.createStudentRequest("user");
         request.setName("Jane");
         String json = objectMapper.writeValueAsString(request);
@@ -337,7 +337,7 @@ class StudentControllerTest {
                    .file(data)
                    .with(jwt())
                    .contentType(MediaType.MULTIPART_FORM_DATA))
-           .andExpect(status().isUnauthorized())
+           .andExpect(status().isForbidden())
            .andExpect(jsonPath("$.message").value("Unauthorized access"))
            .andDo((r) -> System.out.println(r.getResponse().getContentAsString()));
 
@@ -429,14 +429,14 @@ class StudentControllerTest {
             "/fixtures/student.sql",
             "/fixtures/user.sql"
     })
-    public void updateStudentCommunication_withUnauthorisedUser_returns401(@Autowired MockMvc mvc) throws Exception {
+    public void updateStudentCommunication_withUnauthorisedUser_returns403(@Autowired MockMvc mvc) throws Exception {
         StudentCommunicationRequest request = new StudentCommunicationRequest("Communication");
         String json = objectMapper.writeValueAsString(request);
         mvc.perform(put("/student/abc/communication")
                    .with(jwt())
                    .content(json)
                    .contentType("application/json"))
-           .andExpect(status().isUnauthorized())
+           .andExpect(status().isForbidden())
            .andExpect(jsonPath("$.message").value("Unauthorized access"))
            .andDo((r) -> System.out.println(r.getResponse().getContentAsString()));
 
@@ -498,14 +498,14 @@ class StudentControllerTest {
             "/fixtures/student.sql",
             "/fixtures/user.sql"
     })
-    public void updateStudentChallenge_withUnauthorisedUser_returns401(@Autowired MockMvc mvc) throws Exception {
+    public void updateStudentChallenge_withUnauthorisedUser_returns403(@Autowired MockMvc mvc) throws Exception {
         StudentChallengeRequest request = new StudentChallengeRequest("Challenge");
         String json = objectMapper.writeValueAsString(request);
         mvc.perform(put("/student/abc/challenge")
                    .with(jwt())
                    .content(json)
                    .contentType("application/json"))
-           .andExpect(status().isUnauthorized())
+           .andExpect(status().isForbidden())
            .andExpect(jsonPath("$.message").value("Unauthorized access"))
            .andDo((r) -> System.out.println(r.getResponse().getContentAsString()));
 
